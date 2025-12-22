@@ -18,3 +18,17 @@ body {
 * {
   -webkit-tap-highlight-color: transparent;
 }
+@keyframes gymSweep {
+  0% { transform: translateX(-30%) rotate(-8deg); opacity: 0.15; }
+  40% { opacity: 0.35; }
+  100% { transform: translateX(30%) rotate(-8deg); opacity: 0.15; }
+}
+
+@keyframes gymSweep2 {
+  0% { transform: translateX(25%) rotate(10deg); opacity: 0.10; }
+  40% { opacity: 0.25; }
+  100% { transform: translateX(-25%) rotate(10deg); opacity: 0.10; }
+}
+
+.animate-gymSweep { animation: gymSweep 10s ease-in-out infinite; }
+.animate-gymSweep2 { animation: gymSweep2 14s ease-in-out infinite; }

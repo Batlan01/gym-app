@@ -14,8 +14,7 @@ import {
   topExercisesByVolume,
   formatK,
 } from "@/lib/workoutMetrics";
-
-const LS_HISTORY = "gym.workouts";
+import { LS_ACTIVE_PROFILE, GUEST_PROFILE_ID, profileKey } from "@/lib/profiles";
 
 function StatPill({ label, value }: { label: string; value: string }) {
   return (
@@ -27,6 +26,13 @@ function StatPill({ label, value }: { label: string; value: string }) {
 }
 
 export default function ProgressPage() {
+  // aktív profil
+  const [activeProfileId] = useLocalStorageState<string | null>(LS_ACTIVE_PROFILE, null);
+  const profileId = activeProfileId ?? GUEST_PROFILE_ID;
+
+  // profilhoz kötött history kulcs
+  const LS_HISTORY = React.useMemo(() => profileKey(profileId, "workouts"), [profileId]);
+
   const [history, setHistory] = useLocalStorageState<Workout[]>(LS_HISTORY, []);
 
   const [detailOpen, setDetailOpen] = React.useState(false);
@@ -63,6 +69,9 @@ export default function ProgressPage() {
       <header className="mb-4">
         <div className="text-xs tracking-widest text-white/50">PROGRESS</div>
         <h1 className="mt-1 text-2xl font-bold text-white">Statisztika</h1>
+        <div className="mt-1 text-xs text-white/40">
+          Profil: <span className="text-white/60">{profileId}</span>
+        </div>
       </header>
 
       <section className="grid grid-cols-3 gap-2">

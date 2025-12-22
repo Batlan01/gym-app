@@ -10,12 +10,20 @@ import type { Workout, WorkoutExercise, SetEntry } from "@/lib/types";
 import { useLocalStorageState } from "@/lib/useLocalStorageState";
 import { lsSet, uid } from "@/lib/storage";
 import { formatLastSummary, newExercise, newSet, newWorkout, normalizeWorkoutForSave, isSetFilled } from "@/lib/workoutHelpers";
+import { RestTimerOverlay } from "@/components/RestTimerOverlay";
+
+const LS_ACTIVE_PROFILE = "gym.activeProfileId";
 
 
-const LS_ACTIVE = "gym.activeWorkout";
-const LS_HISTORY = "gym.workouts";
-const LS_RECENTS = "gym.recents";
-const LS_FAVORITES = "gym.favorites";
+
+
+type Settings = {
+  restSec: number;       // default rest
+  autoRest: boolean;     // auto start on done
+  muted: boolean;        // mute beep
+};
+
+
 
 function nowISO() {
   return new Date().toISOString();
@@ -43,10 +51,24 @@ function findLastExerciseInHistory(history: Workout[], exerciseId: string): Work
 }
 
 export default function WorkoutPage() {
+
+  const [activeProfileId] = useLocalStorageState<string | null>(LS_ACTIVE_PROFILE, null);
+  const profileId = activeProfileId ?? "guest";
+
+  const LS_ACTIVE = `gym.${profileId}.activeWorkout`;
+  const LS_HISTORY = `gym.${profileId}.workouts`;
+  const LS_RECENTS = `gym.${profileId}.recents`;
+  const LS_FAVORITES = `gym.${profileId}.favorites`;
+  const LS_SETTINGS = `gym.${profileId}.settings`;
+
+
   const [active, setActive] = useLocalStorageState<Workout | null>(LS_ACTIVE, null);
   const [history, setHistory] = useLocalStorageState<Workout[]>(LS_HISTORY, []);
   const [recents, setRecents] = useLocalStorageState<string[]>(LS_RECENTS, []);
   const [favorites, setFavorites] = useLocalStorageState<string[]>(LS_FAVORITES, []);
+
+
+
 
   const [addOpen, setAddOpen] = React.useState(false);
 
@@ -79,6 +101,76 @@ export default function WorkoutPage() {
     lsSet(LS_ACTIVE, null);
     setActive(null);
   }, [active, setActive]);
+
+    const [settings, setSettings] = useLocalStorageState<Settings>(LS_SETTINGS, {
+    restSec: 90,
+    autoRest: true,
+    muted: false,
+  });
+
+  const [restEndAt, setRestEndAt] = React.useState<number | null>(null);
+  const [restTotal, setRestTotal] = React.useState<number>(settings.restSec);
+  const [restTick, setRestTick] = React.useState(0);
+
+  React.useEffect(() => {
+    if (!restEndAt) return;
+    const t = window.setInterval(() => setRestTick((x) => x + 1), 200);
+    return () => window.clearInterval(t);
+  }, [restEndAt]);
+
+  const restLeftSec = React.useMemo(() => {
+    if (!restEndAt) return 0;
+    const left = Math.ceil((restEndAt - Date.now()) / 1000);
+    return Math.max(0, left);
+  }, [restEndAt, restTick]);
+
+  React.useEffect(() => {
+    if (!restEndAt) return;
+    if (restLeftSec !== 0) return;
+
+    if (!settings.muted) {
+      try {
+        const Ctx = window.AudioContext || (window as any).webkitAudioContext;
+        const ctx = new Ctx();
+        const o = ctx.createOscillator();
+        const g = ctx.createGain();
+        o.type = "sine";
+        o.frequency.value = 880;
+        g.gain.value = 0.03;
+        o.connect(g);
+        g.connect(ctx.destination);
+        o.start();
+        setTimeout(() => {
+          o.stop();
+          ctx.close();
+        }, 180);
+      } catch {}
+    }
+
+    setRestEndAt(null);
+  }, [restEndAt, restLeftSec, settings.muted]);
+
+  const startRest = React.useCallback(
+    (sec?: number) => {
+      const s = Math.max(10, sec ?? settings.restSec);
+      setRestTotal(s);
+      setRestEndAt(Date.now() + s * 1000);
+    },
+    [settings.restSec]
+  );
+
+  const addRest = React.useCallback(
+    (delta: number) => {
+      setRestEndAt((prev) => (prev ? prev + delta * 1000 : prev));
+      setRestTotal((t) => t + delta);
+    },
+    []
+  );
+
+  const skipRest = React.useCallback(() => {
+    setRestEndAt(null);
+  }, []);
+
 
   const finishWorkout = React.useCallback(() => {
     if (!active) return;
@@ -171,6 +263,37 @@ setHistory((h) => clampHistory([finished, ...h]));
     },
     [setActive]
   );
+
+    const toggleSetDone = React.useCallback(
+    (exerciseInstanceId: string, setId: string) => {
+      if (!active) return;
+
+      const ex = active.exercises.find((e) => e.id === exerciseInstanceId);
+      const set = ex?.sets.find((s) => s.id === setId);
+      if (!set) return;
+
+      const nextDone = !set.done;
+      const shouldStart = settings.autoRest && nextDone && isSetFilled(set);
+
+      setActive((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          exercises: prev.exercises.map((e) => {
+            if (e.id !== exerciseInstanceId) return e;
+            return {
+              ...e,
+              sets: e.sets.map((s) => (s.id === setId ? { ...s, done: nextDone } : s)),
+            };
+          }),
+        };
+      });
+
+      if (shouldStart) startRest(settings.restSec);
+    },
+    [active, setActive, settings.autoRest, settings.restSec, startRest]
+  );
+
 
   const openEdit = React.useCallback((exerciseInstanceId: string, setId: string) => {
     setEditExerciseId(exerciseInstanceId);
@@ -309,8 +432,9 @@ const filledDoneSets = active
               <div>
                 <span className="text-white/85">{elapsed}</span> ·{" "}
                 <span className="text-white/85">{active.exercises.length}</span> ex ·{" "}
-                <span className="text-white/85">{filledDoneSets}/{filledTotalSets}</span> sets ·{" "}
-                <span className="text-white/50">start {startedAtText}</span>
+                <span className="text-white/85">{filledDoneSets}/{filledTotalSets}</span>{" "}
+                <span className="text-white/50">· start {startedAtText}</span>
+
               </div>
               <button
                 onClick={discardWorkout}
@@ -350,7 +474,10 @@ const filledDoneSets = active
                 onAddSet={() => addSetToExercise(ex.id)}
                 onEditSet={(setId) => openEdit(ex.id, setId)}
                 onRemoveExercise={() => removeExercise(ex.id)}
+                onToggleDone={(setId) => toggleSetDone(ex.id, setId)}
+                onStartRest={() => startRest(settings.restSec)}
               />
+
             ))
           )}
         </section>
@@ -378,8 +505,19 @@ const filledDoneSets = active
         onDelete={deleteEditSet}
         onCopyPrev={copyPrevSet}
       />
+            <RestTimerOverlay
+        open={!!restEndAt}
+        totalSec={restTotal}
+        leftSec={restLeftSec}
+        muted={settings.muted}
+        onAdd={(d) => addRest(d)}
+        onSkip={skipRest}
+        onToggleMute={() => setSettings((s) => ({ ...s, muted: !s.muted }))}
+      />
 
       <BottomNav />
+
+
     </main>
   );
 }

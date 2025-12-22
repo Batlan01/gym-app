@@ -3,8 +3,8 @@ import { Tile } from "@/components/Tile";
 
 const tiles = [
   { title: "Mai edzés", subtitle: "Gyors indítás", href: "/workout" },
-  { title: "Programok", subtitle: "Sablonok" },
-  { title: "Gyakorlatok", subtitle: "Katalógus" },
+  { title: "Programok", subtitle: "Sablonok", href: "/programs" }, // ha még nincs oldal, hagyd ki
+  { title: "Gyakorlatok", subtitle: "Katalógus", href: "/exercises" }, // <-- EZ KELL
   { title: "Statisztika", subtitle: "Összegzés", href: "/progress" },
   { title: "Testsúly", subtitle: "Log", href: "/progress" },
   { title: "Beállítások", subtitle: "App", href: "/settings" },

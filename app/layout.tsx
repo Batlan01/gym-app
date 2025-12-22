@@ -1,17 +1,17 @@
+import type { Metadata } from "next";
 import "./globals.css";
-import type { ReactNode } from "react";
-import { ThemeProvider } from "@/components/ThemeProvider";
+import { AppFrame } from "@/components/AppFrame";
 
-export const metadata = {
+export const metadata: Metadata = {
   title: "Gym Webapp",
-  description: "Minimal mobile-first shell",
+  description: "Gym tracker",
 };
 
-export default function RootLayout({ children }: { children: ReactNode }) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="hu" suppressHydrationWarning>
-      <body className="min-h-dvh bg-zinc-50 text-zinc-900 dark:bg-[#07070A] dark:text-zinc-100">
-        <ThemeProvider>{children}</ThemeProvider>
+    <html lang="hu">
+      <body className="min-h-dvh bg-black text-white">
+        <AppFrame>{children}</AppFrame>
       </body>
     </html>
   );

@@ -1,181 +1,188 @@
 export type ExerciseDef = {
   id: string;
   name: string;
-  group?: string; // címke, később szűrhető
+  group?: string; // "Chest (Machine)" => Category + Subcategory
 };
 
 export const EXERCISES: ExerciseDef[] = [
-  // ---------------- Chest (free weights) ----------------
-  { id: "bench_press", name: "Bench Press (Barbell)", group: "Chest" },
-  { id: "incline_bench_press", name: "Incline Bench Press (Barbell)", group: "Chest" },
-  { id: "decline_bench_press", name: "Decline Bench Press (Barbell)", group: "Chest" },
-  { id: "db_bench_press", name: "Dumbbell Bench Press", group: "Chest" },
-  { id: "db_incline_press", name: "Incline Dumbbell Press", group: "Chest" },
-  { id: "db_decline_press", name: "Decline Dumbbell Press", group: "Chest" },
-  { id: "db_fly", name: "Dumbbell Fly", group: "Chest" },
-  { id: "incline_db_fly", name: "Incline Dumbbell Fly", group: "Chest" },
-  { id: "pushup", name: "Push-up", group: "Chest" },
-  { id: "weighted_pushup", name: "Weighted Push-up", group: "Chest" },
-  { id: "dips_chest", name: "Dips (Chest focus)", group: "Chest" },
+  // ---------------- CHEST ----------------
+  { id: "bench_press_bb", name: "Bench Press (Barbell)", group: "Chest (BB)" },
+  { id: "incline_bench_bb", name: "Incline Bench Press (Barbell)", group: "Chest (BB)" },
+  { id: "decline_bench_bb", name: "Decline Bench Press (Barbell)", group: "Chest (BB)" },
+  { id: "bench_press_db", name: "Bench Press (Dumbbell)", group: "Chest (DB)" },
+  { id: "incline_press_db", name: "Incline Press (Dumbbell)", group: "Chest (DB)" },
+  { id: "decline_press_db", name: "Decline Press (Dumbbell)", group: "Chest (DB)" },
+  { id: "fly_db", name: "Dumbbell Fly", group: "Chest (DB)" },
+  { id: "fly_incline_db", name: "Incline DB Fly", group: "Chest (DB)" },
+  { id: "pushup", name: "Push-up", group: "Chest (Bodyweight)" },
+  { id: "pushup_weighted", name: "Weighted Push-up", group: "Chest (Bodyweight)" },
+  { id: "dips_chest", name: "Dips (Chest)", group: "Chest (Bodyweight)" },
 
-  // ---------------- Chest (machines/cables) ----------------
+  // Chest machines / plate
   { id: "machine_chest_press", name: "Machine Chest Press", group: "Chest (Machine)" },
   { id: "machine_incline_press", name: "Machine Incline Press", group: "Chest (Machine)" },
-  { id: "smith_bench_press", name: "Smith Machine Bench Press", group: "Chest (Machine)" },
-  { id: "smith_incline_press", name: "Smith Machine Incline Press", group: "Chest (Machine)" },
-  { id: "pec_deck", name: "Pec Deck (Machine Fly)", group: "Chest (Machine)" },
-  { id: "cable_fly_high_to_low", name: "Cable Fly (High to Low)", group: "Chest (Cable)" },
-  { id: "cable_fly_low_to_high", name: "Cable Fly (Low to High)", group: "Chest (Cable)" },
+  { id: "machine_decline_press", name: "Machine Decline Press", group: "Chest (Machine)" },
+  { id: "plate_chest_press", name: "Plate-Loaded Chest Press", group: "Chest (Plate)" },
+  { id: "plate_incline_press", name: "Plate-Loaded Incline Press", group: "Chest (Plate)" },
+  { id: "pec_deck", name: "Pec Deck", group: "Chest (Machine)" },
+  { id: "machine_fly", name: "Chest Fly Machine", group: "Chest (Machine)" },
+
+  // Chest cable
+  { id: "cable_fly_high_low", name: "Cable Fly (High → Low)", group: "Chest (Cable)" },
+  { id: "cable_fly_low_high", name: "Cable Fly (Low → High)", group: "Chest (Cable)" },
   { id: "cable_fly_mid", name: "Cable Fly (Mid)", group: "Chest (Cable)" },
   { id: "cable_press", name: "Cable Chest Press", group: "Chest (Cable)" },
+  { id: "cable_single_arm_press", name: "Single-Arm Cable Press", group: "Chest (Cable)" },
+  { id: "cable_crossover", name: "Cable Crossover", group: "Chest (Cable)" },
 
-  // ---------------- Back (free weights) ----------------
-  { id: "deadlift", name: "Deadlift", group: "Back" },
-  { id: "rack_pull", name: "Rack Pull", group: "Back" },
-  { id: "barbell_row", name: "Barbell Row", group: "Back" },
-  { id: "pendlay_row", name: "Pendlay Row", group: "Back" },
-  { id: "db_row", name: "One-Arm Dumbbell Row", group: "Back" },
-  { id: "chest_supported_db_row", name: "Chest-Supported DB Row", group: "Back" },
-  { id: "tbar_row", name: "T-Bar Row", group: "Back" },
-  { id: "pullup", name: "Pull-up", group: "Back" },
-  { id: "chinup", name: "Chin-up", group: "Back" },
-  { id: "inverted_row", name: "Inverted Row", group: "Back" },
+  // Chest smith
+  { id: "smith_bench", name: "Smith Machine Bench Press", group: "Chest (Smith)" },
+  { id: "smith_incline", name: "Smith Machine Incline Press", group: "Chest (Smith)" },
+  { id: "smith_decline", name: "Smith Machine Decline Press", group: "Chest (Smith)" },
 
-  // ---------------- Back (machines/cables) ----------------
+  // ---------------- BACK ----------------
+  { id: "deadlift_bb", name: "Deadlift", group: "Back (BB)" },
+  { id: "rack_pull", name: "Rack Pull", group: "Back (BB)" },
+  { id: "row_bb", name: "Barbell Row", group: "Back (BB)" },
+  { id: "row_pendlay", name: "Pendlay Row", group: "Back (BB)" },
+  { id: "row_db_one_arm", name: "One-Arm DB Row", group: "Back (DB)" },
+  { id: "row_db_chest_supported", name: "Chest-Supported DB Row", group: "Back (DB)" },
+  { id: "pullup", name: "Pull-up", group: "Back (Bodyweight)" },
+  { id: "chinup", name: "Chin-up", group: "Back (Bodyweight)" },
+  { id: "inverted_row", name: "Inverted Row", group: "Back (Bodyweight)" },
+
+  // Back machines / plate
   { id: "lat_pulldown_wide", name: "Lat Pulldown (Wide)", group: "Back (Machine)" },
   { id: "lat_pulldown_close", name: "Lat Pulldown (Close)", group: "Back (Machine)" },
-  { id: "lat_pulldown_neutral", name: "Lat Pulldown (Neutral Grip)", group: "Back (Machine)" },
+  { id: "lat_pulldown_neutral", name: "Lat Pulldown (Neutral)", group: "Back (Machine)" },
   { id: "lat_pulldown_underhand", name: "Lat Pulldown (Underhand)", group: "Back (Machine)" },
-  { id: "machine_row_seated", name: "Seated Row Machine", group: "Back (Machine)" },
-  { id: "machine_row_chest_supported", name: "Chest-Supported Row Machine", group: "Back (Machine)" },
-  { id: "hammer_strength_row", name: "Plate-Loaded Row (Hammer)", group: "Back (Machine)" },
+  { id: "pulldown_vbar", name: "Lat Pulldown (V-Bar)", group: "Back (Machine)" },
+  { id: "assisted_pullup_machine", name: "Assisted Pull-up Machine", group: "Back (Machine)" },
+  { id: "row_machine_seated", name: "Seated Row Machine", group: "Back (Machine)" },
+  { id: "row_machine_chest_supported", name: "Chest-Supported Row Machine", group: "Back (Machine)" },
+  { id: "plate_row_hammer", name: "Plate-Loaded Row (Hammer)", group: "Back (Plate)" },
+  { id: "tbar_row_machine", name: "T-Bar Row (Machine)", group: "Back (Plate)" },
+  { id: "pullover_machine", name: "Pullover Machine", group: "Back (Machine)" },
+  { id: "reverse_pec_deck", name: "Reverse Pec Deck", group: "Back (Machine)" },
+
+  // Back cable
   { id: "cable_row_seated", name: "Seated Cable Row", group: "Back (Cable)" },
   { id: "cable_row_wide", name: "Cable Row (Wide)", group: "Back (Cable)" },
   { id: "cable_row_close", name: "Cable Row (Close)", group: "Back (Cable)" },
-  { id: "single_arm_cable_row", name: "Single-Arm Cable Row", group: "Back (Cable)" },
+  { id: "cable_row_single_arm", name: "Single-Arm Cable Row", group: "Back (Cable)" },
   { id: "straight_arm_pulldown", name: "Straight-Arm Cable Pulldown", group: "Back (Cable)" },
   { id: "face_pull", name: "Face Pull", group: "Back (Cable)" },
-  { id: "reverse_pec_deck", name: "Reverse Pec Deck", group: "Back (Machine)" },
+  { id: "cable_pullover", name: "Cable Pullover", group: "Back (Cable)" },
 
-  // ---------------- Shoulders (free weights) ----------------
-  { id: "ohp", name: "Overhead Press (Barbell)", group: "Shoulders" },
-  { id: "db_shoulder_press", name: "Dumbbell Shoulder Press", group: "Shoulders" },
-  { id: "arnold_press", name: "Arnold Press", group: "Shoulders" },
-  { id: "lateral_raise", name: "Lateral Raise (Dumbbell)", group: "Shoulders" },
-  { id: "front_raise_db", name: "Front Raise (Dumbbell)", group: "Shoulders" },
-  { id: "rear_delt_fly_db", name: "Rear Delt Fly (Dumbbell)", group: "Shoulders" },
-  { id: "upright_row", name: "Upright Row (Barbell)", group: "Shoulders" },
-  { id: "db_upright_row", name: "Upright Row (Dumbbell)", group: "Shoulders" },
+  // ---------------- SHOULDERS ----------------
+  { id: "ohp_bb", name: "Overhead Press (Barbell)", group: "Shoulders (BB)" },
+  { id: "press_db", name: "Shoulder Press (Dumbbell)", group: "Shoulders (DB)" },
+  { id: "arnold_press", name: "Arnold Press", group: "Shoulders (DB)" },
+  { id: "lateral_raise_db", name: "Lateral Raise (DB)", group: "Shoulders (DB)" },
+  { id: "front_raise_db", name: "Front Raise (DB)", group: "Shoulders (DB)" },
+  { id: "rear_delt_fly_db", name: "Rear Delt Fly (DB)", group: "Shoulders (DB)" },
+  { id: "upright_row_bb", name: "Upright Row (Barbell)", group: "Shoulders (BB)" },
 
-  // ---------------- Shoulders (machines/cables) ----------------
   { id: "machine_shoulder_press", name: "Machine Shoulder Press", group: "Shoulders (Machine)" },
-  { id: "smith_ohp", name: "Smith Machine Overhead Press", group: "Shoulders (Machine)" },
+  { id: "plate_shoulder_press", name: "Plate-Loaded Shoulder Press", group: "Shoulders (Plate)" },
+  { id: "machine_lateral_raise", name: "Machine Lateral Raise", group: "Shoulders (Machine)" },
   { id: "cable_lateral_raise", name: "Cable Lateral Raise", group: "Shoulders (Cable)" },
   { id: "cable_front_raise", name: "Cable Front Raise", group: "Shoulders (Cable)" },
   { id: "cable_rear_delt_fly", name: "Cable Rear Delt Fly", group: "Shoulders (Cable)" },
-  { id: "machine_lateral_raise", name: "Machine Lateral Raise", group: "Shoulders (Machine)" },
+  { id: "smith_ohp", name: "Smith Machine Overhead Press", group: "Shoulders (Smith)" },
 
-  // ---------------- Legs: Quads (free weights) ----------------
-  { id: "squat", name: "Back Squat", group: "Legs (Quads)" },
-  { id: "front_squat", name: "Front Squat", group: "Legs (Quads)" },
-  { id: "goblet_squat", name: "Goblet Squat", group: "Legs (Quads)" },
-  { id: "bulgarian_split_squat", name: "Bulgarian Split Squat", group: "Legs (Quads)" },
-  { id: "walking_lunge", name: "Walking Lunge", group: "Legs (Quads)" },
-  { id: "reverse_lunge", name: "Reverse Lunge", group: "Legs (Quads)" },
-  { id: "step_up", name: "Step-Up", group: "Legs (Quads)" },
-
-  // ---------------- Legs: Quads (machines) ----------------
+  // ---------------- LEGS ----------------
+  // Quads / machines
   { id: "leg_press", name: "Leg Press", group: "Legs (Machine)" },
-  { id: "hack_squat", name: "Hack Squat", group: "Legs (Machine)" },
-  { id: "smith_squat", name: "Smith Machine Squat", group: "Legs (Machine)" },
+  { id: "leg_press_hack", name: "Hack Squat", group: "Legs (Machine)" },
+  { id: "pendulum_squat", name: "Pendulum Squat", group: "Legs (Machine)" },
+  { id: "belt_squat", name: "Belt Squat", group: "Legs (Machine)" },
   { id: "leg_extension", name: "Leg Extension", group: "Legs (Machine)" },
-  { id: "pendulum_squat", name: "Pendulum Squat (Machine)", group: "Legs (Machine)" },
-  { id: "belt_squat", name: "Belt Squat (Machine)", group: "Legs (Machine)" },
+  { id: "sissy_squat_machine", name: "Sissy Squat (Machine)", group: "Legs (Machine)" },
+  { id: "smith_squat", name: "Smith Machine Squat", group: "Legs (Smith)" },
 
-  // ---------------- Legs: Hamstrings/Glutes (free weights) ----------------
-  { id: "rdl", name: "Romanian Deadlift", group: "Legs (Hams/Glutes)" },
-  { id: "stiff_leg_deadlift", name: "Stiff-Leg Deadlift", group: "Legs (Hams/Glutes)" },
-  { id: "good_morning", name: "Good Morning", group: "Legs (Hams/Glutes)" },
-  { id: "hip_thrust", name: "Hip Thrust (Barbell)", group: "Legs (Glutes)" },
-  { id: "glute_bridge", name: "Glute Bridge", group: "Legs (Glutes)" },
+  // Quads / free
+  { id: "back_squat_bb", name: "Back Squat", group: "Legs (BB)" },
+  { id: "front_squat_bb", name: "Front Squat", group: "Legs (BB)" },
+  { id: "goblet_squat_db", name: "Goblet Squat", group: "Legs (DB)" },
+  { id: "bulgarian_split_squat", name: "Bulgarian Split Squat", group: "Legs (DB)" },
+  { id: "walking_lunge", name: "Walking Lunge", group: "Legs (DB)" },
+  { id: "step_up", name: "Step-Up", group: "Legs (DB)" },
 
-  // ---------------- Legs: Hamstrings/Glutes (machines/cables) ----------------
+  // Hams/Glutes machines
   { id: "lying_leg_curl", name: "Lying Leg Curl", group: "Legs (Machine)" },
   { id: "seated_leg_curl", name: "Seated Leg Curl", group: "Legs (Machine)" },
   { id: "standing_leg_curl", name: "Standing Leg Curl", group: "Legs (Machine)" },
   { id: "glute_ham_raise", name: "Glute-Ham Raise (GHR)", group: "Legs (Machine)" },
-  { id: "back_extension", name: "Back Extension (Hyperextension)", group: "Legs (Hams/Glutes)" },
-  { id: "machine_hip_thrust", name: "Hip Thrust Machine", group: "Legs (Machine)" },
-  { id: "cable_pull_through", name: "Cable Pull-Through", group: "Legs (Cable)" },
-  { id: "cable_kickback", name: "Cable Glute Kickback", group: "Legs (Cable)" },
+  { id: "back_extension", name: "Back Extension", group: "Legs (Machine)" },
   { id: "hip_abductor", name: "Hip Abductor Machine", group: "Legs (Machine)" },
   { id: "hip_adductor", name: "Hip Adductor Machine", group: "Legs (Machine)" },
+  { id: "hip_thrust_machine", name: "Hip Thrust Machine", group: "Legs (Machine)" },
+  { id: "glute_drive", name: "Glute Drive Machine", group: "Legs (Machine)" },
+  { id: "kickback_machine", name: "Glute Kickback Machine", group: "Legs (Machine)" },
 
-  // ---------------- Calves ----------------
-  { id: "standing_calf_raise", name: "Standing Calf Raise", group: "Calves" },
-  { id: "seated_calf_raise", name: "Seated Calf Raise", group: "Calves" },
-  { id: "leg_press_calf_raise", name: "Leg Press Calf Raise", group: "Calves" },
-  { id: "smith_calf_raise", name: "Smith Machine Calf Raise", group: "Calves" },
+  // Hams/Glutes free + cable
+  { id: "rdl_bb", name: "Romanian Deadlift", group: "Legs (BB)" },
+  { id: "stiff_leg_deadlift", name: "Stiff-Leg Deadlift", group: "Legs (BB)" },
+  { id: "good_morning", name: "Good Morning", group: "Legs (BB)" },
+  { id: "hip_thrust_bb", name: "Hip Thrust (Barbell)", group: "Legs (BB)" },
+  { id: "glute_bridge", name: "Glute Bridge", group: "Legs (BB)" },
+  { id: "cable_pull_through", name: "Cable Pull-Through", group: "Legs (Cable)" },
+  { id: "cable_kickback", name: "Cable Glute Kickback", group: "Legs (Cable)" },
 
-  // ---------------- Arms: Biceps (free weights) ----------------
-  { id: "biceps_curl", name: "Dumbbell Curl", group: "Arms (Biceps)" },
-  { id: "barbell_curl", name: "Barbell Curl", group: "Arms (Biceps)" },
-  { id: "ez_bar_curl", name: "EZ-Bar Curl", group: "Arms (Biceps)" },
-  { id: "hammer_curl", name: "Hammer Curl", group: "Arms (Biceps)" },
-  { id: "incline_db_curl", name: "Incline DB Curl", group: "Arms (Biceps)" },
-  { id: "concentration_curl", name: "Concentration Curl", group: "Arms (Biceps)" },
-  { id: "preacher_curl_free", name: "Preacher Curl (Free Weight)", group: "Arms (Biceps)" },
+  // Calves
+  { id: "standing_calf_raise", name: "Standing Calf Raise", group: "Legs (Machine)" },
+  { id: "seated_calf_raise", name: "Seated Calf Raise", group: "Legs (Machine)" },
+  { id: "leg_press_calf_raise", name: "Leg Press Calf Raise", group: "Legs (Machine)" },
+  { id: "smith_calf_raise", name: "Smith Calf Raise", group: "Legs (Smith)" },
 
-  // ---------------- Arms: Biceps (machines/cables) ----------------
+  // ---------------- ARMS ----------------
+  // Biceps
+  { id: "curl_db", name: "Dumbbell Curl", group: "Arms (DB)" },
+  { id: "curl_hammer_db", name: "Hammer Curl", group: "Arms (DB)" },
+  { id: "curl_incline_db", name: "Incline DB Curl", group: "Arms (DB)" },
+  { id: "curl_bb", name: "Barbell Curl", group: "Arms (BB)" },
+  { id: "curl_ez", name: "EZ-Bar Curl", group: "Arms (BB)" },
+  { id: "preacher_curl_machine", name: "Preacher Curl Machine", group: "Arms (Machine)" },
+  { id: "biceps_curl_machine", name: "Biceps Curl Machine", group: "Arms (Machine)" },
   { id: "cable_curl", name: "Cable Curl", group: "Arms (Cable)" },
-  { id: "cable_hammer_curl", name: "Cable Hammer Curl (Rope)", group: "Arms (Cable)" },
+  { id: "cable_rope_hammer_curl", name: "Cable Rope Hammer Curl", group: "Arms (Cable)" },
   { id: "cable_preacher_curl", name: "Cable Preacher Curl", group: "Arms (Cable)" },
-  { id: "machine_biceps_curl", name: "Biceps Curl Machine", group: "Arms (Machine)" },
 
-  // ---------------- Arms: Triceps (free weights) ----------------
-  { id: "close_grip_bench", name: "Close-Grip Bench Press", group: "Arms (Triceps)" },
-  { id: "skull_crushers", name: "Skull Crushers (EZ-Bar)", group: "Arms (Triceps)" },
-  { id: "overhead_db_extension", name: "Overhead DB Triceps Extension", group: "Arms (Triceps)" },
-  { id: "dips_triceps", name: "Dips (Triceps focus)", group: "Arms (Triceps)" },
-  { id: "triceps_kickback_db", name: "DB Triceps Kickback", group: "Arms (Triceps)" },
-
-  // ---------------- Arms: Triceps (machines/cables) ----------------
-  { id: "triceps_pushdown_rope", name: "Triceps Pushdown (Rope)", group: "Arms (Cable)" },
-  { id: "triceps_pushdown_bar", name: "Triceps Pushdown (Bar)", group: "Arms (Cable)" },
-  { id: "overhead_cable_extension", name: "Overhead Cable Extension", group: "Arms (Cable)" },
+  // Triceps
+  { id: "close_grip_bench", name: "Close-Grip Bench Press", group: "Arms (BB)" },
+  { id: "skull_crushers_ez", name: "Skull Crushers (EZ-Bar)", group: "Arms (BB)" },
+  { id: "overhead_triceps_db", name: "Overhead Triceps Extension (DB)", group: "Arms (DB)" },
+  { id: "dip_machine", name: "Dip Machine (Assisted/Weighted)", group: "Arms (Machine)" },
+  { id: "triceps_extension_machine", name: "Triceps Extension Machine", group: "Arms (Machine)" },
+  { id: "pushdown_rope", name: "Triceps Pushdown (Rope)", group: "Arms (Cable)" },
+  { id: "pushdown_bar", name: "Triceps Pushdown (Bar)", group: "Arms (Cable)" },
+  { id: "overhead_triceps_cable", name: "Overhead Cable Extension", group: "Arms (Cable)" },
   { id: "single_arm_pushdown", name: "Single-Arm Cable Pushdown", group: "Arms (Cable)" },
-  { id: "machine_triceps_extension", name: "Triceps Extension Machine", group: "Arms (Machine)" },
-  { id: "assisted_dip_machine", name: "Assisted Dip Machine", group: "Arms (Machine)" },
 
-  // ---------------- Core ----------------
-  { id: "plank", name: "Plank", group: "Core" },
-  { id: "side_plank", name: "Side Plank", group: "Core" },
-  { id: "hanging_knee_raise", name: "Hanging Knee Raise", group: "Core" },
-  { id: "hanging_leg_raise", name: "Hanging Leg Raise", group: "Core" },
+  // ---------------- CORE ----------------
+  { id: "plank", name: "Plank", group: "Core (Bodyweight)" },
+  { id: "side_plank", name: "Side Plank", group: "Core (Bodyweight)" },
+  { id: "hanging_knee_raise", name: "Hanging Knee Raise", group: "Core (Bodyweight)" },
+  { id: "hanging_leg_raise", name: "Hanging Leg Raise", group: "Core (Bodyweight)" },
+  { id: "ab_wheel", name: "Ab Wheel Rollout", group: "Core (Other)" },
   { id: "cable_crunch", name: "Cable Crunch", group: "Core (Cable)" },
   { id: "machine_crunch", name: "Ab Crunch Machine", group: "Core (Machine)" },
-  { id: "ab_wheel", name: "Ab Wheel Rollout", group: "Core" },
-  { id: "back_extension_core", name: "Back Extension (Core)", group: "Core" },
+  { id: "roman_chair_leg_raise", name: "Roman Chair Leg Raise", group: "Core (Machine)" },
 
-  // ---------------- Cardio / Conditioning (machines) ----------------
-  { id: "treadmill", name: "Treadmill", group: "Cardio" },
-  { id: "bike", name: "Stationary Bike", group: "Cardio" },
-  { id: "rowing_machine", name: "Rowing Machine", group: "Cardio" },
-  { id: "stair_climber", name: "Stair Climber", group: "Cardio" },
-  { id: "elliptical", name: "Elliptical", group: "Cardio" },
+  // ---------------- CARDIO ----------------
+  { id: "treadmill", name: "Treadmill", group: "Cardio (Machine)" },
+  { id: "bike", name: "Stationary Bike", group: "Cardio (Machine)" },
+  { id: "rowing_machine", name: "Rowing Machine", group: "Cardio (Machine)" },
+  { id: "stair_climber", name: "Stair Climber", group: "Cardio (Machine)" },
+  { id: "elliptical", name: "Elliptical", group: "Cardio (Machine)" },
 
-  // ---------------- Extra: Back/Chest common machines ----------------
-  { id: "assisted_pullup_machine", name: "Assisted Pull-up Machine", group: "Back (Machine)" },
-  { id: "machine_pullover", name: "Pullover Machine", group: "Back (Machine)" },
-  { id: "cable_pullover", name: "Cable Pullover", group: "Back (Cable)" },
+  // ---------------- TRAPS / FOREARMS ----------------
+  { id: "shrug_db", name: "Dumbbell Shrug", group: "Traps (DB)" },
+  { id: "shrug_bb", name: "Barbell Shrug", group: "Traps (BB)" },
+  { id: "shrug_machine", name: "Shrug Machine", group: "Traps (Machine)" },
 
-  // ---------------- Extra: Traps / Neck ----------------
-  { id: "db_shrug", name: "Dumbbell Shrug", group: "Traps" },
-  { id: "barbell_shrug", name: "Barbell Shrug", group: "Traps" },
-  { id: "machine_shrug", name: "Shrug Machine", group: "Traps (Machine)" },
-
-  // ---------------- Extra: Forearms ----------------
-  { id: "wrist_curl", name: "Wrist Curl", group: "Forearms" },
-  { id: "reverse_wrist_curl", name: "Reverse Wrist Curl", group: "Forearms" },
-  { id: "farmer_walk", name: "Farmer Walk", group: "Forearms" },
+  { id: "wrist_curl", name: "Wrist Curl", group: "Forearms (DB)" },
+  { id: "reverse_wrist_curl", name: "Reverse Wrist Curl", group: "Forearms (DB)" },
+  { id: "farmer_walk", name: "Farmer Walk", group: "Forearms (DB)" },
 ];
