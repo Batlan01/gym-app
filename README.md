@@ -1,4 +1,4 @@
-# Gym Webapp (starter)
+# Gym Webapp (V2)
 
 Mobile-first Next.js (App Router) + Tailwind starter:
 - Home page with 2-column tile layout
