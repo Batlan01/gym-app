@@ -4,13 +4,16 @@ import * as React from "react";
 import { lsGet, lsSet } from "./storage";
 
 export function useLocalStorageState<T>(key: string, initial: T) {
-  const [value, setValue] = React.useState<T>(() => lsGet<T>(key, initial));
+  // SSR-safe: első renderben csak az initial
+  const [value, setValue] = React.useState<T>(initial);
 
+  // kliensen betöltjük a localStorage értéket
   React.useEffect(() => {
     setValue(lsGet<T>(key, initial));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key]);
 
+  // több tab között sync
   React.useEffect(() => {
     const onStorage = (e: StorageEvent) => {
       if (e.key === key) setValue(lsGet<T>(key, initial));
