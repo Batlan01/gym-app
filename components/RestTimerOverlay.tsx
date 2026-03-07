@@ -11,69 +11,70 @@ export function RestTimerOverlay({ open, totalSec, leftSec, muted, onAdd, onSkip
   open: boolean; totalSec: number; leftSec: number; muted: boolean;
   onAdd: (d: number) => void; onSkip: () => void; onToggleMute: () => void;
 }) {
-  if (!open) return null;
-
   const pct = totalSec > 0 ? Math.min(100, (leftSec / totalSec) * 100) : 0;
-  const urgent = leftSec <= 10;
-
-  // SVG arc
-  const R = 48; const C = 60;
-  const circ = 2 * Math.PI * R;
-  const dash = circ * (1 - pct / 100);
+  const urgent = leftSec <= 10 && open;
 
   return (
-    <div className="fixed inset-0 z-[80] pointer-events-none flex items-end justify-center pb-28"
-      style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 6rem)' }}>
-      <div className="pointer-events-auto w-full max-w-md px-4">
-        <div className="rounded-3xl p-5 shadow-2xl"
-          style={{ background: 'rgba(8,11,15,0.96)', border: `1px solid ${urgent ? 'rgba(251,191,36,0.4)' : 'rgba(34,211,238,0.25)'}`,
-            backdropFilter: 'blur(20px)', boxShadow: `0 0 40px ${urgent ? 'rgba(251,191,36,0.15)' : 'rgba(34,211,238,0.1)'}` }}>
+    <>
+      {/* Sticky top banner */}
+      <div className="fixed top-0 left-0 right-0 z-[80] mx-auto max-w-md transition-all duration-300"
+        style={{
+          transform: open ? 'translateY(0)' : 'translateY(-110%)',
+          paddingTop: 'env(safe-area-inset-top)',
+        }}>
+        <div className="mx-3 mt-2 overflow-hidden rounded-2xl shadow-2xl"
+          style={{
+            background: urgent ? 'rgba(251,191,36,0.15)' : 'rgba(8,11,15,0.95)',
+            border: `1px solid ${urgent ? 'rgba(251,191,36,0.5)' : 'rgba(34,211,238,0.3)'}`,
+            backdropFilter: 'blur(20px)',
+          }}>
 
-          <div className="flex items-center gap-4">
-            {/* SVG ring */}
-            <div className="relative shrink-0">
-              <svg width={C * 2} height={C * 2} style={{ transform: 'rotate(-90deg)' }}>
-                <circle cx={C} cy={C} r={R} fill="none" stroke="rgba(255,255,255,0.07)" strokeWidth="6" />
-                <circle cx={C} cy={C} r={R} fill="none"
-                  stroke={urgent ? '#fbbf24' : '#22d3ee'} strokeWidth="6"
-                  strokeLinecap="round" strokeDasharray={circ} strokeDashoffset={dash}
-                  style={{ transition: 'stroke-dashoffset 0.2s linear, stroke 0.3s ease' }} />
-              </svg>
-              <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <div className={`text-2xl font-bold tabular-nums ${urgent ? 'text-amber-300' : 'text-white'}`}>
-                  {fmt(leftSec)}
-                </div>
-                <div className="text-[10px] uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>rest</div>
+          {/* Progress bar a tetején */}
+          <div className="h-1 w-full" style={{ background: 'rgba(255,255,255,0.07)' }}>
+            <div className="h-full transition-all duration-200 rounded-full"
+              style={{
+                width: `${pct}%`,
+                background: urgent ? '#fbbf24' : 'var(--accent-primary)',
+              }} />
+          </div>
+
+          <div className="flex items-center gap-3 px-4 py-3">
+            {/* Timer szám */}
+            <div className="shrink-0">
+              <div className="text-[10px] uppercase tracking-widest mb-0.5" style={{ color: 'var(--text-muted)' }}>Rest</div>
+              <div className={`text-2xl font-black tabular-nums ${urgent ? 'text-amber-300' : ''}`}
+                style={{ color: urgent ? '#fbbf24' : 'var(--text-primary)' }}>
+                {fmt(leftSec)}
               </div>
             </div>
 
-            {/* Gombok */}
-            <div className="flex flex-1 flex-col gap-2">
-              <div className="grid grid-cols-3 gap-2">
-                {[15, 30, 60].map(d => (
-                  <button key={d} onClick={() => onAdd(d)}
-                    className="rounded-xl py-2.5 text-sm font-semibold pressable"
-                    style={{ background: 'rgba(255,255,255,0.06)', color: 'var(--text-secondary)', border: '1px solid var(--border-subtle)' }}>
-                    +{d}s
-                  </button>
-                ))}
-              </div>
-              <div className="grid grid-cols-2 gap-2">
-                <button onClick={onSkip}
-                  className="rounded-xl py-2.5 text-sm font-bold pressable"
-                  style={{ background: 'rgba(34,211,238,0.12)', color: 'var(--accent-primary)', border: '1px solid rgba(34,211,238,0.25)' }}>
-                  Skip
+            {/* +idő gombok */}
+            <div className="flex flex-1 gap-1.5">
+              {[15, 30, 60].map(d => (
+                <button key={d} onClick={() => onAdd(d)}
+                  className="flex-1 rounded-xl py-2 text-xs font-bold pressable"
+                  style={{ background: 'rgba(255,255,255,0.08)', color: 'var(--text-secondary)', border: '1px solid var(--border-subtle)' }}>
+                  +{d}s
                 </button>
-                <button onClick={onToggleMute}
-                  className="rounded-xl py-2.5 text-sm pressable"
-                  style={{ background: 'rgba(255,255,255,0.05)', color: 'var(--text-muted)', border: '1px solid var(--border-subtle)' }}>
-                  {muted ? '🔇 Mute' : '🔊 Hang'}
-                </button>
-              </div>
+              ))}
+            </div>
+
+            {/* Skip + Mute */}
+            <div className="flex gap-1.5 shrink-0">
+              <button onClick={onSkip}
+                className="rounded-xl px-3 py-2 text-xs font-black pressable"
+                style={{ background: 'rgba(34,211,238,0.15)', color: 'var(--accent-primary)', border: '1px solid rgba(34,211,238,0.3)' }}>
+                Skip
+              </button>
+              <button onClick={onToggleMute}
+                className="grid h-9 w-9 place-items-center rounded-xl pressable"
+                style={{ background: 'rgba(255,255,255,0.05)', color: 'var(--text-muted)', border: '1px solid var(--border-subtle)' }}>
+                {muted ? '🔇' : '🔊'}
+              </button>
             </div>
           </div>
         </div>
       </div>
-    </div>
+    </>
   );
 }
