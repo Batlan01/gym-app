@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { AppFrame } from "@/components/AppFrame";
 import { PendingSyncRunner } from "@/components/PendingSyncRunner";
@@ -7,12 +7,15 @@ export const metadata: Metadata = {
   title: "Gym Webapp",
   description: "Gym tracker",
   manifest: "/manifest.json",
-  themeColor: "#0a0a0a",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
     title: "GymApp",
   },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#080B0F",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
