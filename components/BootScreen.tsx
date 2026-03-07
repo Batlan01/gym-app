@@ -13,7 +13,7 @@ export function BootScreen({
   title = "Gym",
   subtitle = "Betöltés…",
   backgroundVideo = "/boot/gym-bg.mp4",
-  fit = "contain", // <-- ezt állítsd "cover"-re, ha inkább kitöltse
+  fit = "cover",
 }: Props) {
   const lines = React.useMemo(
     () => ["Profil betöltése…", "Edzések előkészítése…", "Szinkron ellenőrzés…", "Készülünk…"],
@@ -27,7 +27,7 @@ export function BootScreen({
   }, [lines.length]);
 
   return (
-    <div className="fixed inset-0 z-[200] overflow-hidden bg-black text-white">
+    <div className="fixed inset-0 z-[200] overflow-hidden bg-black text-white" style={{ paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' }}>
       {/* VIDEO háttér */}
       <div className="pointer-events-none absolute inset-0">
         <video
