@@ -32,3 +32,24 @@ body {
 
 .animate-gymSweep { animation: gymSweep 10s ease-in-out infinite; }
 .animate-gymSweep2 { animation: gymSweep2 14s ease-in-out infinite; }
+
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(10px); filter: blur(2px); }
+  to   { opacity: 1; transform: translateY(0);  filter: blur(0); }
+}
+
+.animate-in {
+  animation: fadeUp 260ms ease-out both;
+}
+
+.pressable {
+  transition: transform 120ms ease, filter 180ms ease, background-color 180ms ease, border-color 180ms ease;
+}
+.pressable:active {
+  transform: scale(0.985);
+}
+
+/* hide scrollbars (chips / rows) */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }

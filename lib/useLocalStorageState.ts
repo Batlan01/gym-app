@@ -1,29 +1,41 @@
 "use client";
 
 import * as React from "react";
-import { lsGet, lsSet } from "./storage";
+import { lsGet, lsSet, lsSubscribe } from "@/lib/storage";
 
+type Setter<T> = (next: T | ((prev: T) => T)) => void;
+
+/**
+ * returns: [value, setValue, hydrated]
+ * - SSR-safe: initial értéket ad első renderben
+ * - hydration után beolvassa LS-t
+ * - sync: más tab + same-tab custom event
+ */
 export function useLocalStorageState<T>(key: string, initial: T) {
-  // SSR-safe: első renderben csak az initial
-  const [value, setValue] = React.useState<T>(initial);
+  const initialRef = React.useRef(initial);
 
-  // kliensen betöltjük a localStorage értéket
-  React.useEffect(() => {
-    setValue(lsGet<T>(key, initial));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+  const [value, setValue] = React.useState<T>(initialRef.current);
+  const [hydrated, setHydrated] = React.useState(false);
+
+  const read = React.useCallback(() => {
+    const next = lsGet<T>(key, initialRef.current);
+    setValue(next);
+    setHydrated(true);
   }, [key]);
 
-  // több tab között sync
   React.useEffect(() => {
-    const onStorage = (e: StorageEvent) => {
-      if (e.key === key) setValue(lsGet<T>(key, initial));
-    };
-    window.addEventListener("storage", onStorage);
-    return () => window.removeEventListener("storage", onStorage);
-  }, [key, initial]);
+    read();
+  }, [read]);
 
-  const set = React.useCallback(
-    (next: T | ((prev: T) => T)) => {
+  React.useEffect(() => {
+    const unsub = lsSubscribe((changedKey) => {
+      if (changedKey === key) read();
+    });
+    return () => unsub();
+  }, [key, read]);
+
+  const set: Setter<T> = React.useCallback(
+    (next) => {
       setValue((prev) => {
         const computed = typeof next === "function" ? (next as any)(prev) : next;
         lsSet(key, computed);
@@ -33,5 +45,5 @@ export function useLocalStorageState<T>(key: string, initial: T) {
     [key]
   );
 
-  return [value, set] as const;
+  return [value, set, hydrated] as const;
 }

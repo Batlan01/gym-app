@@ -1,27 +1,74 @@
 "use client";
 
-export function safeJsonParse<T>(raw: string | null, fallback: T): T {
-  if (!raw) return fallback;
+export const LS_EVENT = "gym:ls";
+
+export function lsGet<T>(key: string, fallback: T): T {
+  if (typeof window === "undefined") return fallback;
   try {
+    const raw = localStorage.getItem(key);
+    if (raw === null) return fallback;
     return JSON.parse(raw) as T;
   } catch {
     return fallback;
   }
 }
 
-export function lsGet<T>(key: string, fallback: T): T {
-  if (typeof window === "undefined") return fallback;
-  return safeJsonParse<T>(localStorage.getItem(key), fallback);
-}
-
 export function lsSet<T>(key: string, value: T) {
   if (typeof window === "undefined") return;
-  localStorage.setItem(key, JSON.stringify(value));
+
+  try {
+    if (value === null || value === undefined) localStorage.removeItem(key);
+    else localStorage.setItem(key, JSON.stringify(value));
+  } catch {
+    // ignore
+  }
+
+  // same-tab notify
+  try {
+    window.dispatchEvent(new CustomEvent(LS_EVENT, { detail: { key } }));
+  } catch {
+    // ignore
+  }
 }
 
-export function uid(): string {
-  // csak kliens oldalon kell (workout page client)
-  const c: any = typeof crypto !== "undefined" ? crypto : null;
-  if (c?.randomUUID) return c.randomUUID();
-  return `${Date.now()}_${Math.random().toString(16).slice(2)}`;
+// ✅ Overload: lsSubscribe(cb) OR lsSubscribe(key, cb)
+export function lsSubscribe(
+  keyOrCb: string | ((changedKey: string) => void),
+  maybeCb?: () => void
+) {
+  const key = typeof keyOrCb === "string" ? keyOrCb : null;
+  const cb =
+    typeof keyOrCb === "function"
+      ? keyOrCb
+      : (_changedKey: string) => {
+          maybeCb?.();
+        };
+
+  const onCustom = (e: Event) => {
+    const changedKey = (e as CustomEvent)?.detail?.key as string | undefined;
+    if (!changedKey) return;
+    if (key && changedKey !== key) return;
+    cb(changedKey);
+  };
+
+  const onStorage = (e: StorageEvent) => {
+    const changedKey = e.key ?? "";
+    if (!changedKey) return;
+    if (key && changedKey !== key) return;
+    cb(changedKey);
+  };
+
+  window.addEventListener(LS_EVENT, onCustom as any);
+  window.addEventListener("storage", onStorage);
+
+  return () => {
+    window.removeEventListener(LS_EVENT, onCustom as any);
+    window.removeEventListener("storage", onStorage);
+  };
+}
+
+export function uid() {
+  return typeof crypto !== "undefined" && "randomUUID" in crypto
+    ? crypto.randomUUID()
+    : String(Date.now() + Math.random());
 }

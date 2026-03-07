@@ -5,25 +5,32 @@ import { BottomNav } from "@/components/BottomNav";
 import { AddExerciseSheet } from "@/components/AddExerciseSheet";
 import { ExerciseCard } from "@/components/ExerciseCard";
 import { SetEditSheet } from "@/components/SetEditSheet";
+import { RestTimerOverlay } from "@/components/RestTimerOverlay";
+
 import { EXERCISES } from "@/lib/exercises";
 import type { Workout, WorkoutExercise, SetEntry } from "@/lib/types";
 import { useLocalStorageState } from "@/lib/useLocalStorageState";
 import { lsSet, uid } from "@/lib/storage";
-import { formatLastSummary, newExercise, newSet, newWorkout, normalizeWorkoutForSave, isSetFilled } from "@/lib/workoutHelpers";
-import { RestTimerOverlay } from "@/components/RestTimerOverlay";
+import {
+  formatLastSummary,
+  newExercise,
+  newSet,
+  newWorkout,
+  normalizeWorkoutForSave,
+  isSetFilled,
+} from "@/lib/workoutHelpers";
+
+import { auth } from "@/lib/firebase";
+import { saveWorkoutToCloud } from "@/lib/workoutsCloud";
+import { enqueueWorkout, pendingCount } from "@/lib/pendingSync";
 
 const LS_ACTIVE_PROFILE = "gym.activeProfileId";
 
-
-
-
 type Settings = {
-  restSec: number;       // default rest
-  autoRest: boolean;     // auto start on done
-  muted: boolean;        // mute beep
+  restSec: number;
+  autoRest: boolean;
+  muted: boolean;
 };
-
-
 
 function nowISO() {
   return new Date().toISOString();
@@ -50,8 +57,21 @@ function findLastExerciseInHistory(history: Workout[], exerciseId: string): Work
   return null;
 }
 
-export default function WorkoutPage() {
+// fb:<uid> -> uid
+function cloudUidFromProfileId(profileId: string | null | undefined): string | null {
+  if (!profileId) return null;
+  if (!profileId.startsWith("fb:")) return null;
+  const uid = profileId.slice(3).trim();
+  return uid.length ? uid : null;
+}
 
+type Toast = null | {
+  tone: "ok" | "warn";
+  title: string;
+  body?: string;
+};
+
+export default function WorkoutPage() {
   const [activeProfileId] = useLocalStorageState<string | null>(LS_ACTIVE_PROFILE, null);
   const profileId = activeProfileId ?? "guest";
 
@@ -61,14 +81,16 @@ export default function WorkoutPage() {
   const LS_FAVORITES = `gym.${profileId}.favorites`;
   const LS_SETTINGS = `gym.${profileId}.settings`;
 
-
   const [active, setActive] = useLocalStorageState<Workout | null>(LS_ACTIVE, null);
   const [history, setHistory] = useLocalStorageState<Workout[]>(LS_HISTORY, []);
   const [recents, setRecents] = useLocalStorageState<string[]>(LS_RECENTS, []);
   const [favorites, setFavorites] = useLocalStorageState<string[]>(LS_FAVORITES, []);
 
-
-
+  const [settings, setSettings] = useLocalStorageState<Settings>(LS_SETTINGS, {
+    restSec: 90,
+    autoRest: true,
+    muted: false,
+  });
 
   const [addOpen, setAddOpen] = React.useState(false);
 
@@ -76,7 +98,41 @@ export default function WorkoutPage() {
   const [editExerciseId, setEditExerciseId] = React.useState<string | null>(null);
   const [editSetId, setEditSetId] = React.useState<string | null>(null);
 
-  // timer tick (pro session feeling)
+  // ===== Toast (lokál / cloud / queue infó) =====
+  const [toast, setToast] = React.useState<Toast>(null);
+  React.useEffect(() => {
+    if (!toast) return;
+    const t = window.setTimeout(() => setToast(null), 4500);
+    return () => window.clearTimeout(t);
+  }, [toast]);
+
+  // ===== Pending badge (pro feeling) =====
+  const [pendingN, setPendingN] = React.useState(0);
+  React.useEffect(() => {
+    const cloudUid = cloudUidFromProfileId(activeProfileId);
+    const user = auth.currentUser;
+    const ok = !!cloudUid && user?.uid === cloudUid;
+    if (!ok || !user) {
+      setPendingN(0);
+      return;
+    }
+
+    const refresh = () => setPendingN(pendingCount(user.uid));
+    refresh();
+
+    const t = window.setInterval(refresh, 1500);
+    const onVis = () => {
+      if (document.visibilityState === "visible") refresh();
+    };
+    document.addEventListener("visibilitychange", onVis);
+
+    return () => {
+      window.clearInterval(t);
+      document.removeEventListener("visibilitychange", onVis);
+    };
+  }, [activeProfileId]);
+
+  // timer tick
   const [tick, setTick] = React.useState(0);
   React.useEffect(() => {
     if (!active) return;
@@ -100,14 +156,9 @@ export default function WorkoutPage() {
     if (!ok) return;
     lsSet(LS_ACTIVE, null);
     setActive(null);
-  }, [active, setActive]);
+  }, [active, setActive, LS_ACTIVE]);
 
-    const [settings, setSettings] = useLocalStorageState<Settings>(LS_SETTINGS, {
-    restSec: 90,
-    autoRest: true,
-    muted: false,
-  });
-
+  // ===== REST TIMER =====
   const [restEndAt, setRestEndAt] = React.useState<number | null>(null);
   const [restTotal, setRestTotal] = React.useState<number>(settings.restSec);
   const [restTick, setRestTick] = React.useState(0);
@@ -159,43 +210,78 @@ export default function WorkoutPage() {
     [settings.restSec]
   );
 
-  const addRest = React.useCallback(
-    (delta: number) => {
-      setRestEndAt((prev) => (prev ? prev + delta * 1000 : prev));
-      setRestTotal((t) => t + delta);
-    },
-    []
-  );
+  const addRest = React.useCallback((delta: number) => {
+    setRestEndAt((prev) => (prev ? prev + delta * 1000 : prev));
+    setRestTotal((t) => t + delta);
+  }, []);
 
   const skipRest = React.useCallback(() => {
     setRestEndAt(null);
   }, []);
 
-
-  const finishWorkout = React.useCallback(() => {
+  // ===== FINISH (lokál + cloud + queue + ALWAYS close UI) =====
+  const finishWorkout = React.useCallback(async () => {
     if (!active) return;
 
-    // minimal sanity: ha full üres, inkább kérdezzen rá
     if (active.exercises.length === 0) {
       const okEmpty = window.confirm("Üres edzés. Mented így is?");
       if (!okEmpty) return;
     }
 
     let finished: Workout = { ...active, finishedAt: nowISO() };
-finished = normalizeWorkoutForSave(finished);
+    finished = normalizeWorkoutForSave(finished);
 
-// ha a végén semmi nem maradt, ne mentsük el “üres edzésként”
-if (finished.exercises.length === 0) {
-  const ok = window.confirm("Nincs kitöltött set. Mented így is?");
-  if (!ok) return;
-}
+    if (finished.exercises.length === 0) {
+      const ok = window.confirm("Nincs kitöltött set. Mented így is?");
+      if (!ok) return;
+    }
 
-setHistory((h) => clampHistory([finished, ...h]));
+    // 1) LOKÁL mentés (mindig)
+    setHistory((h) => clampHistory([finished, ...h]));
 
+    // 2) CLOUD csak ha fb:<uid> profil aktív + ugyanaz a user
+    const cloudUid = cloudUidFromProfileId(activeProfileId);
+    const user = auth.currentUser;
+    const shouldCloud = !!cloudUid && user?.uid === cloudUid;
 
-    lsSet(LS_ACTIVE, null);
-    setActive(null);
-  }, [active, setHistory, setActive]);
+    let cloudState: "none" | "ok" | "queued" = "none";
+
+    try {
+      if (shouldCloud && user) {
+        const online = typeof navigator !== "undefined" ? navigator.onLine !== false : true;
+
+        if (!online) {
+          enqueueWorkout(user.uid, finished, new Error("offline"));
+          cloudState = "queued";
+        } else {
+          try {
+            await saveWorkoutToCloud(user.uid, finished);
+            cloudState = "ok";
+          } catch (e) {
+            enqueueWorkout(user.uid, finished, e);
+            cloudState = "queued";
+          }
+        }
+      }
+    } finally {
+      // 3) UI/Flow: az edzés MINDIG tűnjön el Finish után
+      lsSet(LS_ACTIVE, null);
+      setActive(null);
+    }
+
+    // 4) Toast
+    if (!shouldCloud) {
+      setToast({ tone: "ok", title: "Elmentve lokálisan", body: "Vendég / lokális profil." });
+    } else if (cloudState === "ok") {
+      setToast({ tone: "ok", title: "Elmentve", body: "Lokálisan és a felhőbe is." });
+    } else {
+      setToast({
+        tone: "warn",
+        title: "Elmentve lokálisan",
+        body: "Offline vagy / hiba volt. Csatlakozz netre — a szinkron automatikusan megpróbálja később.",
+      });
+    }
+  }, [active, activeProfileId, setHistory, setActive, LS_ACTIVE]);
 
   const toggleFavorite = React.useCallback(
     (exerciseId: string) => {
@@ -218,13 +304,11 @@ setHistory((h) => clampHistory([finished, ...h]));
     [setRecents]
   );
 
-  // *** KEY FIX: minden gyakorlat mindig ugyanahhoz az aktív session-höz megy ***
   const addExercise = React.useCallback(
     (exerciseId: string, name: string) => {
       setActive((prev) => {
         const base = prev ?? newWorkout();
 
-        // template: last time sets
         const last = findLastExerciseInHistory(history, exerciseId);
         const templateSets: SetEntry[] | undefined = last
           ? last.sets.map((s) => ({ id: uid(), weight: s.weight, reps: s.reps, done: false }))
@@ -264,7 +348,7 @@ setHistory((h) => clampHistory([finished, ...h]));
     [setActive]
   );
 
-    const toggleSetDone = React.useCallback(
+  const toggleSetDone = React.useCallback(
     (exerciseInstanceId: string, setId: string) => {
       if (!active) return;
 
@@ -294,7 +378,6 @@ setHistory((h) => clampHistory([finished, ...h]));
     [active, setActive, settings.autoRest, settings.restSec, startRest]
   );
 
-
   const openEdit = React.useCallback((exerciseInstanceId: string, setId: string) => {
     setEditExerciseId(exerciseInstanceId);
     setEditSetId(setId);
@@ -323,10 +406,7 @@ setHistory((h) => clampHistory([finished, ...h]));
           ...prev,
           exercises: prev.exercises.map((e) => {
             if (e.id !== editExerciseId) return e;
-            return {
-              ...e,
-              sets: e.sets.map((s) => (s.id === editSetId ? { ...s, ...patch } : s)),
-            };
+            return { ...e, sets: e.sets.map((s) => (s.id === editSetId ? { ...s, ...patch } : s)) };
           }),
         };
       });
@@ -386,20 +466,45 @@ setHistory((h) => clampHistory([finished, ...h]));
     : "";
 
   const filledTotalSets = active
-  ? active.exercises.reduce((acc, ex) => acc + ex.sets.filter(isSetFilled).length, 0)
-  : 0;
+    ? active.exercises.reduce((acc, ex) => acc + ex.sets.filter(isSetFilled).length, 0)
+    : 0;
 
-const filledDoneSets = active
-  ? active.exercises.reduce((acc, ex) => acc + ex.sets.filter((s) => isSetFilled(s) && s.done).length, 0)
-  : 0;
+  const filledDoneSets = active
+    ? active.exercises.reduce((acc, ex) => acc + ex.sets.filter((s) => isSetFilled(s) && s.done).length, 0)
+    : 0;
 
   return (
     <main className="mx-auto max-w-md px-4 pt-5 pb-28">
+      {/* Toast */}
+      {toast ? (
+        <div className="fixed left-0 right-0 bottom-24 z-50 mx-auto max-w-md px-4">
+          <div
+            className={`rounded-2xl border p-4 backdrop-blur ${
+              toast.tone === "ok"
+                ? "border-emerald-500/30 bg-emerald-500/15 text-emerald-100"
+                : "border-amber-500/30 bg-amber-500/15 text-amber-100"
+            }`}
+          >
+            <div className="text-sm font-semibold">{toast.title}</div>
+            {toast.body ? <div className="mt-1 text-xs opacity-90">{toast.body}</div> : null}
+          </div>
+        </div>
+      ) : null}
+
       <header className="mb-4">
         <div className="text-xs tracking-widest text-white/50">EDZÉS</div>
 
         <div className="mt-1 flex items-end justify-between gap-3">
-          <h1 className="text-2xl font-bold text-white">Mai edzés</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-bold text-white">Mai edzés</h1>
+
+            {/* Pending badge */}
+            {pendingN > 0 ? (
+              <span className="rounded-full border border-amber-500/30 bg-amber-500/15 px-2 py-1 text-[11px] text-amber-100">
+                Sync: {pendingN}
+              </span>
+            ) : null}
+          </div>
 
           <div className="flex gap-2">
             <button
@@ -432,10 +537,12 @@ const filledDoneSets = active
               <div>
                 <span className="text-white/85">{elapsed}</span> ·{" "}
                 <span className="text-white/85">{active.exercises.length}</span> ex ·{" "}
-                <span className="text-white/85">{filledDoneSets}/{filledTotalSets}</span>{" "}
+                <span className="text-white/85">
+                  {filledDoneSets}/{filledTotalSets}
+                </span>{" "}
                 <span className="text-white/50">· start {startedAtText}</span>
-
               </div>
+
               <button
                 onClick={discardWorkout}
                 className="rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs text-red-200 hover:bg-red-500/15"
@@ -477,7 +584,6 @@ const filledDoneSets = active
                 onToggleDone={(setId) => toggleSetDone(ex.id, setId)}
                 onStartRest={() => startRest(settings.restSec)}
               />
-
             ))
           )}
         </section>
@@ -505,7 +611,8 @@ const filledDoneSets = active
         onDelete={deleteEditSet}
         onCopyPrev={copyPrevSet}
       />
-            <RestTimerOverlay
+
+      <RestTimerOverlay
         open={!!restEndAt}
         totalSec={restTotal}
         leftSec={restLeftSec}
@@ -516,8 +623,6 @@ const filledDoneSets = active
       />
 
       <BottomNav />
-
-
     </main>
   );
 }
