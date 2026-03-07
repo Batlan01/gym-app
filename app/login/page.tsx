@@ -25,6 +25,8 @@ import {
   createUserWithEmailAndPassword,
   GoogleAuthProvider,
   signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
   signOut,
   type User,
 } from "firebase/auth";
@@ -105,11 +107,28 @@ export default function LoginPage() {
     }
   }, [email, pass, activateFirebaseUser]);
 
+  // iOS PWA redirect result kezelése
+  React.useEffect(() => {
+    getRedirectResult(auth)
+      .then((cred) => {
+        if (cred?.user) activateFirebaseUser(cred.user);
+      })
+      .catch(() => {});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const doGoogle = React.useCallback(async () => {
     setErr(null);
     setBusy(true);
     try {
       const provider = new GoogleAuthProvider();
+      // iOS Safari PWA-ban a popup blokkolva van, redirect kell
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+      const isStandalone = window.matchMedia("(display-mode: standalone)").matches;
+      if (isIOS || isStandalone) {
+        await signInWithRedirect(auth, provider);
+        return; // redirect után az oldal újratölt
+      }
       const cred = await signInWithPopup(auth, provider);
       activateFirebaseUser(cred.user);
     } catch (e: any) {
