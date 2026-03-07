@@ -7,7 +7,7 @@ const withPWA = require("next-pwa")({
 });
 
 const nextConfig: NextConfig = {
-  // ide jöjjenek a meglévő beállításaid ha vannak
+  turbopack: {},
 };
 
 module.exports = withPWA(nextConfig);
