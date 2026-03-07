@@ -5,15 +5,13 @@ import * as React from "react";
 type Props = {
   title?: string;
   subtitle?: string;
-  backgroundVideo?: string; // "/boot/gym-bg.mp4"
-  fit?: "cover" | "contain";
+  backgroundImage?: string;
 };
 
 export function BootScreen({
   title = "Gym",
   subtitle = "Betöltés…",
-  backgroundVideo = "/boot/gym-bg.mp4",
-  fit = "cover",
+  backgroundImage = "/boot/gym-bg.jpg",
 }: Props) {
   const lines = React.useMemo(
     () => ["Profil betöltése…", "Edzések előkészítése…", "Szinkron ellenőrzés…", "Készülünk…"],
@@ -27,26 +25,27 @@ export function BootScreen({
   }, [lines.length]);
 
   return (
-    <div className="fixed inset-0 z-[200] overflow-hidden bg-black text-white" style={{ paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' }}>
-      {/* VIDEO háttér */}
-      <div className="pointer-events-none absolute inset-0">
-        <video
-          className="absolute inset-0 h-full w-full"
-          style={{ objectFit: fit }}
-          autoPlay
-          muted
-          loop
-          playsInline
-          preload="auto"
-        >
-          <source src={backgroundVideo} type="video/mp4" />
-        </video>
+    <div
+      className="fixed inset-0 z-[200] overflow-hidden text-white"
+      style={{
+        paddingTop: 'env(safe-area-inset-top)',
+        paddingBottom: 'env(safe-area-inset-bottom)',
+      }}
+    >
+      {/* KÉP háttér */}
+      <div
+        className="pointer-events-none absolute inset-0"
+        style={{
+          backgroundImage: `url(${backgroundImage})`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundRepeat: 'no-repeat',
+        }}
+      />
 
-        {/* overlay + vignette a readability-hez */}
-        <div className="absolute inset-0 bg-black/55" />
-        <div className="absolute inset-0 bg-[radial-gradient(900px_600px_at_50%_30%,transparent_35%,rgba(0,0,0,0.88)_80%)]" />
-        <div className="absolute inset-0 backdrop-blur-[2px]" />
-      </div>
+      {/* overlay + vignette */}
+      <div className="pointer-events-none absolute inset-0 bg-black/55" />
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(900px_600px_at_50%_30%,transparent_35%,rgba(0,0,0,0.88)_80%)]" />
 
       {/* tartalom */}
       <div className="relative mx-auto flex min-h-dvh max-w-md flex-col justify-between px-5 pb-8 pt-16">
