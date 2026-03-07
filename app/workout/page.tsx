@@ -473,156 +473,148 @@ export default function WorkoutPage() {
     ? active.exercises.reduce((acc, ex) => acc + ex.sets.filter((s) => isSetFilled(s) && s.done).length, 0)
     : 0;
 
+  const totalVolume = active
+    ? active.exercises.reduce((acc, ex) =>
+        acc + ex.sets.reduce((s, st) => s + (st.done ? (st.weight ?? 0) * (st.reps ?? 0) : 0), 0), 0)
+    : 0;
+
   return (
-    <main className="mx-auto max-w-md px-4 pt-5 pb-28">
+    <>
       {/* Toast */}
-      {toast ? (
-        <div className="fixed left-0 right-0 bottom-24 z-50 mx-auto max-w-md px-4">
-          <div
-            className={`rounded-2xl border p-4 backdrop-blur ${
-              toast.tone === "ok"
-                ? "border-emerald-500/30 bg-emerald-500/15 text-emerald-100"
-                : "border-amber-500/30 bg-amber-500/15 text-amber-100"
-            }`}
-          >
-            <div className="text-sm font-semibold">{toast.title}</div>
-            {toast.body ? <div className="mt-1 text-xs opacity-90">{toast.body}</div> : null}
+      {toast && (
+        <div className="fixed left-0 right-0 bottom-28 z-[90] mx-auto max-w-md px-4">
+          <div className="rounded-2xl px-4 py-3 text-sm font-medium shadow-2xl"
+            style={toast.tone === "ok"
+              ? { background: 'rgba(74,222,128,0.15)', border: '1px solid rgba(74,222,128,0.3)', color: '#86efac' }
+              : { background: 'rgba(251,191,36,0.12)', border: '1px solid rgba(251,191,36,0.3)', color: '#fde68a' }}>
+            <div className="font-semibold">{toast.title}</div>
+            {toast.body && <div className="mt-0.5 text-xs opacity-80">{toast.body}</div>}
           </div>
         </div>
-      ) : null}
+      )}
 
-      <header className="mb-4">
-        <div className="text-xs tracking-widest text-white/50">EDZÉS</div>
+      <main className="mx-auto max-w-md px-4 pt-6 pb-32 animate-in">
 
-        <div className="mt-1 flex items-end justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold text-white">Mai edzés</h1>
+        {/* ── HEADER ── */}
+        <header className="mb-5">
+          <div className="label-xs mb-1">EDZÉS</div>
 
-            {/* Pending badge */}
-            {pendingN > 0 ? (
-              <span className="rounded-full border border-amber-500/30 bg-amber-500/15 px-2 py-1 text-[11px] text-amber-100">
-                Sync: {pendingN}
-              </span>
-            ) : null}
-          </div>
-
-          <div className="flex gap-2">
-            <button
-              onClick={() => {
-                startWorkout();
-                setAddOpen(true);
-              }}
-              className="rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white/85 hover:bg-white/10"
-            >
-              + Gyakorlat
-            </button>
-
-            <button
-              onClick={finishWorkout}
-              disabled={!active}
-              className={`rounded-2xl px-3 py-2 text-sm ${
-                active
-                  ? "border border-emerald-500/30 bg-emerald-500/15 text-emerald-200 hover:bg-emerald-500/20"
-                  : "border border-white/10 bg-white/5 text-white/30"
-              }`}
-            >
-              Finish
-            </button>
-          </div>
-        </div>
-
-        <div className="mt-2 flex items-center justify-between gap-3 text-sm text-white/60">
           {active ? (
-            <>
-              <div>
-                <span className="text-white/85">{elapsed}</span> ·{" "}
-                <span className="text-white/85">{active.exercises.length}</span> ex ·{" "}
-                <span className="text-white/85">
-                  {filledDoneSets}/{filledTotalSets}
-                </span>{" "}
-                <span className="text-white/50">· start {startedAtText}</span>
+            /* Aktív header */
+            <div>
+              <div className="flex items-center justify-between gap-2">
+                {/* Nagy timer */}
+                <div>
+                  <div className="text-4xl font-bold tabular-nums" style={{ color: 'var(--accent-primary)' }}>
+                    {elapsed}
+                  </div>
+                  <div className="mt-1 flex items-center gap-3 text-xs" style={{ color: 'var(--text-muted)' }}>
+                    <span>{active.exercises.length} gyakorlat</span>
+                    <span style={{ color: filledDoneSets === filledTotalSets && filledTotalSets > 0 ? '#4ade80' : 'var(--text-muted)' }}>
+                      {filledDoneSets}/{filledTotalSets} set
+                    </span>
+                    {totalVolume > 0 && <span>{Math.round(totalVolume)} vol</span>}
+                    {pendingN > 0 && <span style={{ color: '#fbbf24' }}>sync: {pendingN}</span>}
+                  </div>
+                </div>
+
+                {/* Akció gombok */}
+                <div className="flex flex-col gap-2 items-end">
+                  <button onClick={finishWorkout}
+                    className="rounded-2xl px-4 py-2.5 text-sm font-bold pressable"
+                    style={{ background: 'rgba(74,222,128,0.15)', color: '#4ade80', border: '1px solid rgba(74,222,128,0.3)' }}>
+                    Finish ✓
+                  </button>
+                  <div className="flex gap-2">
+                    <button onClick={() => setAddOpen(true)}
+                      className="rounded-xl px-3 py-2 text-sm pressable"
+                      style={{ background: 'rgba(34,211,238,0.08)', color: 'var(--accent-primary)', border: '1px solid rgba(34,211,238,0.2)' }}>
+                      + Gyakorlat
+                    </button>
+                    <button onClick={discardWorkout}
+                      className="rounded-xl px-3 py-2 text-sm pressable"
+                      style={{ background: 'rgba(239,68,68,0.08)', color: '#fca5a5', border: '1px solid rgba(239,68,68,0.2)' }}>
+                      ✕
+                    </button>
+                  </div>
+                </div>
               </div>
 
-              <button
-                onClick={discardWorkout}
-                className="rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs text-red-200 hover:bg-red-500/15"
-              >
-                Discard
-              </button>
-            </>
-          ) : (
-            <div className="w-full">
-              <button
-                onClick={() => {
-                  startWorkout();
-                  setAddOpen(true);
-                }}
-                className="w-full rounded-3xl border border-white/10 bg-white/10 py-3 text-sm text-white hover:bg-white/15"
-              >
-                Edzés indítása
-              </button>
-            </div>
-          )}
-        </div>
-      </header>
-
-      {active ? (
-        <section className="space-y-3">
-          {active.exercises.length === 0 ? (
-            <div className="rounded-3xl border border-white/10 bg-white/5 p-5 text-sm text-white/60">
-              + Gyakorlat
+              {/* Progress bar */}
+              {filledTotalSets > 0 && (
+                <div className="mt-3 h-1.5 overflow-hidden rounded-full" style={{ background: 'var(--border-subtle)' }}>
+                  <div className="h-full rounded-full transition-all duration-500"
+                    style={{ width: `${(filledDoneSets / filledTotalSets) * 100}%`,
+                      background: filledDoneSets === filledTotalSets ? '#4ade80' : 'var(--accent-primary)' }} />
+                </div>
+              )}
             </div>
           ) : (
-            active.exercises.map((ex) => (
-              <ExerciseCard
-                key={ex.id}
-                ex={ex}
-                lastSummary={lastSummaryFor(ex.exerciseId)}
-                onAddSet={() => addSetToExercise(ex.id)}
-                onEditSet={(setId) => openEdit(ex.id, setId)}
-                onRemoveExercise={() => removeExercise(ex.id)}
-                onToggleDone={(setId) => toggleSetDone(ex.id, setId)}
-                onStartRest={() => startRest(settings.restSec)}
-              />
-            ))
+            /* Empty state */
+            <div>
+              <h1 className="text-2xl font-bold mb-4" style={{ color: 'var(--text-primary)' }}>Mai edzés</h1>
+              <button
+                onClick={() => { startWorkout(); setAddOpen(true); }}
+                className="w-full rounded-3xl py-5 text-base font-bold pressable"
+                style={{ background: 'linear-gradient(135deg, rgba(34,211,238,0.15), rgba(34,211,238,0.05))',
+                  border: '1px solid rgba(34,211,238,0.3)', color: 'var(--accent-primary)',
+                  boxShadow: '0 0 30px rgba(34,211,238,0.08)' }}>
+                Edzés indítása →
+              </button>
+              {history.length > 0 && (
+                <div className="mt-3 rounded-2xl px-4 py-3 text-sm"
+                  style={{ background: 'var(--bg-card)', border: '1px solid var(--border-subtle)' }}>
+                  <span style={{ color: 'var(--text-muted)' }}>Utolsó: </span>
+                  <span style={{ color: 'var(--text-secondary)' }}>
+                    {new Date(history[0]?.startedAt).toLocaleDateString("hu", { weekday: "long", month: "short", day: "numeric" })}
+                    {" · "}{history[0]?.exercises?.length ?? 0} gyakorlat
+                  </span>
+                </div>
+              )}
+            </div>
           )}
-        </section>
-      ) : null}
+        </header>
 
-      <AddExerciseSheet
-        open={addOpen}
-        onClose={() => setAddOpen(false)}
-        exercises={EXERCISES}
-        favorites={favorites}
-        recents={recents}
+        {/* ── EXERCISE KÁRTYÁK ── */}
+        {active && (
+          <section className="space-y-3">
+            {active.exercises.length === 0 ? (
+              <button onClick={() => setAddOpen(true)}
+                className="w-full rounded-3xl py-8 text-sm pressable"
+                style={{ background: 'var(--bg-card)', border: '1px dashed var(--border-mid)', color: 'var(--text-muted)' }}>
+                + Adj hozzá egy gyakorlatot
+              </button>
+            ) : (
+              active.exercises.map(ex => (
+                <ExerciseCard
+                  key={ex.id} ex={ex}
+                  lastSummary={lastSummaryFor(ex.exerciseId)}
+                  onAddSet={() => addSetToExercise(ex.id)}
+                  onEditSet={setId => openEdit(ex.id, setId)}
+                  onRemoveExercise={() => removeExercise(ex.id)}
+                  onToggleDone={setId => toggleSetDone(ex.id, setId)}
+                  onStartRest={() => startRest(settings.restSec)}
+                />
+              ))
+            )}
+          </section>
+        )}
+      </main>
+
+      <AddExerciseSheet open={addOpen} onClose={() => setAddOpen(false)}
+        exercises={EXERCISES} favorites={favorites} recents={recents}
         onToggleFavorite={toggleFavorite}
-        onPick={(e) => {
-          addExercise(e.id, e.name);
-          setAddOpen(false);
-        }}
-      />
+        onPick={e => { addExercise(e.id, e.name); setAddOpen(false); }} />
 
-      <SetEditSheet
-        open={editOpen}
-        onClose={closeEdit}
-        title={currentEdit?.ex?.name ?? "—"}
-        set={currentEdit?.set ?? null}
-        onSave={patchEditSet}
-        onDelete={deleteEditSet}
-        onCopyPrev={copyPrevSet}
-      />
+      <SetEditSheet open={editOpen} onClose={closeEdit}
+        title={currentEdit?.ex?.name ?? "—"} set={currentEdit?.set ?? null}
+        onSave={patchEditSet} onDelete={deleteEditSet} onCopyPrev={copyPrevSet} />
 
-      <RestTimerOverlay
-        open={!!restEndAt}
-        totalSec={restTotal}
-        leftSec={restLeftSec}
-        muted={settings.muted}
-        onAdd={(d) => addRest(d)}
-        onSkip={skipRest}
-        onToggleMute={() => setSettings((s) => ({ ...s, muted: !s.muted }))}
-      />
+      <RestTimerOverlay open={!!restEndAt} totalSec={restTotal} leftSec={restLeftSec}
+        muted={settings.muted} onAdd={addRest} onSkip={skipRest}
+        onToggleMute={() => setSettings(s => ({ ...s, muted: !s.muted }))} />
 
       <BottomNav />
-    </main>
+    </>
   );
 }

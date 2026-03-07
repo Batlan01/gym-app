@@ -3,106 +3,108 @@
 import * as React from "react";
 import type { SetEntry } from "@/lib/types";
 
-export function SetEditSheet({
-  open,
-  onClose,
-  title,
-  set,
-  onSave,
-  onDelete,
-  onCopyPrev,
-}: {
-  open: boolean;
-  onClose: () => void;
-  title: string;
+export function SetEditSheet({ open, onClose, title, set, onSave, onDelete, onCopyPrev }: {
+  open: boolean; onClose: () => void; title: string;
   set: SetEntry | null;
   onSave: (patch: Partial<SetEntry>) => void;
-  onDelete: () => void;
-  onCopyPrev: () => void;
+  onDelete: () => void; onCopyPrev: () => void;
 }) {
   if (!open || !set) return null;
 
   const w = set.weight ?? 0;
   const r = set.reps ?? 0;
 
-  const bumpWeight = (d: number) => onSave({ weight: Math.max(0, Number((w + d).toFixed(2))) });
-  const bumpReps = (d: number) => onSave({ reps: Math.max(0, r + d) });
-
   return (
-    <div className="fixed inset-0 z-[70]">
-      <button className="absolute inset-0 bg-black/60" onClick={onClose} aria-label="Close" />
-      <div className="absolute bottom-0 left-0 right-0 mx-auto w-full max-w-md pb-[env(safe-area-inset-bottom)]">
-        <div className="rounded-t-3xl border border-white/10 bg-zinc-950/90 backdrop-blur p-4 shadow-2xl">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <div className="text-sm text-white/60">{title}</div>
-              <div className="text-base font-semibold text-white">Set szerkesztés</div>
-            </div>
-            <button onClick={onClose} className="rounded-xl px-3 py-2 text-sm text-white/70 hover:bg-white/5 hover:text-white">
-              Kész
-            </button>
+    <div className="fixed inset-0 z-[70]" style={{ isolation: 'isolate' }}>
+      <button className="absolute inset-0" style={{ background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)' }}
+        onClick={onClose} aria-label="Close" />
+
+      <div className="absolute bottom-0 left-0 right-0 mx-auto w-full max-w-md"
+        style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
+        <div className="rounded-t-[2rem] p-5 shadow-2xl"
+          style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-mid)', borderBottom: 'none' }}>
+
+          {/* Handle */}
+          <div className="mx-auto mb-4 h-1 w-10 rounded-full" style={{ background: 'var(--border-mid)' }} />
+
+          {/* Title */}
+          <div className="mb-5">
+            <div className="text-xs uppercase tracking-widest" style={{ color: 'var(--accent-primary)' }}>Set szerkesztés</div>
+            <div className="mt-0.5 text-lg font-bold truncate" style={{ color: 'var(--text-primary)' }}>{title}</div>
           </div>
 
-          <div className="mt-4 grid grid-cols-2 gap-3">
-            <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
-              <div className="text-xs text-white/50">Súly (kg)</div>
-              <input
-                type="number"
-                inputMode="decimal"
-                value={set.weight ?? ""}
-                onChange={(e) => onSave({ weight: e.target.value === "" ? null : Number(e.target.value) })}
-                className="mt-2 w-full rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-white outline-none focus:border-white/20"
-                placeholder="—"
-              />
-              <div className="mt-2 flex gap-2">
-                <button onClick={() => bumpWeight(-2.5)} className="flex-1 rounded-xl bg-white/10 py-2 text-sm text-white/90 hover:bg-white/15">-2.5</button>
-                <button onClick={() => bumpWeight(+2.5)} className="flex-1 rounded-xl bg-white/10 py-2 text-sm text-white/90 hover:bg-white/15">+2.5</button>
-              </div>
-              <div className="mt-2 flex gap-2">
-                <button onClick={() => bumpWeight(-5)} className="flex-1 rounded-xl bg-white/5 py-2 text-sm text-white/80 hover:bg-white/10">-5</button>
-                <button onClick={() => bumpWeight(+5)} className="flex-1 rounded-xl bg-white/5 py-2 text-sm text-white/80 hover:bg-white/10">+5</button>
+          {/* Súly + Reps */}
+          <div className="grid grid-cols-2 gap-3">
+            {/* Súly */}
+            <div className="rounded-2xl p-3" style={{ background: 'var(--bg-card)', border: '1px solid var(--border-subtle)' }}>
+              <div className="mb-2 text-xs font-semibold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Súly kg</div>
+              <input type="number" inputMode="decimal"
+                value={set.weight ?? ''}
+                onChange={e => onSave({ weight: e.target.value === '' ? null : Number(e.target.value) })}
+                className="w-full rounded-xl px-3 py-2.5 text-center text-xl font-bold tabular-nums outline-none"
+                style={{ background: 'rgba(0,0,0,0.3)', border: '1px solid var(--border-subtle)', color: 'var(--text-primary)' }}
+                placeholder="0" />
+              <div className="mt-2 grid grid-cols-2 gap-1.5">
+                {[-5, -2.5, +2.5, +5].map(d => (
+                  <button key={d} onClick={() => onSave({ weight: Math.max(0, Number(((w + d)).toFixed(2))) })}
+                    className="rounded-xl py-2 text-sm font-semibold pressable"
+                    style={{ background: d < 0 ? 'rgba(255,255,255,0.05)' : 'rgba(34,211,238,0.1)',
+                      color: d < 0 ? 'var(--text-secondary)' : 'var(--accent-primary)',
+                      border: `1px solid ${d < 0 ? 'var(--border-subtle)' : 'rgba(34,211,238,0.2)'}` }}>
+                    {d > 0 ? `+${d}` : d}
+                  </button>
+                ))}
               </div>
             </div>
 
-            <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
-              <div className="text-xs text-white/50">Reps</div>
-              <input
-                type="number"
-                inputMode="numeric"
-                value={set.reps ?? ""}
-                onChange={(e) => onSave({ reps: e.target.value === "" ? null : Number(e.target.value) })}
-                className="mt-2 w-full rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-white outline-none focus:border-white/20"
-                placeholder="—"
-              />
-              <div className="mt-2 flex gap-2">
-                <button onClick={() => bumpReps(-1)} className="flex-1 rounded-xl bg-white/10 py-2 text-sm text-white/90 hover:bg-white/15">-1</button>
-                <button onClick={() => bumpReps(+1)} className="flex-1 rounded-xl bg-white/10 py-2 text-sm text-white/90 hover:bg-white/15">+1</button>
-              </div>
-              <div className="mt-2">
-                <button
-                  onClick={() => onSave({ done: !set.done })}
-                  className={`w-full rounded-xl py-2 text-sm ${
-                    set.done ? "bg-emerald-500/20 text-emerald-200 border border-emerald-500/30" : "bg-white/5 text-white/80 border border-white/10 hover:bg-white/10"
-                  }`}
-                >
-                  {set.done ? "Done ✓" : "Mark as done"}
-                </button>
+            {/* Reps */}
+            <div className="rounded-2xl p-3" style={{ background: 'var(--bg-card)', border: '1px solid var(--border-subtle)' }}>
+              <div className="mb-2 text-xs font-semibold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Reps</div>
+              <input type="number" inputMode="numeric"
+                value={set.reps ?? ''}
+                onChange={e => onSave({ reps: e.target.value === '' ? null : Number(e.target.value) })}
+                className="w-full rounded-xl px-3 py-2.5 text-center text-xl font-bold tabular-nums outline-none"
+                style={{ background: 'rgba(0,0,0,0.3)', border: '1px solid var(--border-subtle)', color: 'var(--text-primary)' }}
+                placeholder="0" />
+              <div className="mt-2 grid grid-cols-2 gap-1.5">
+                {[-2, -1, +1, +2].map(d => (
+                  <button key={d} onClick={() => onSave({ reps: Math.max(0, r + d) })}
+                    className="rounded-xl py-2 text-sm font-semibold pressable"
+                    style={{ background: d < 0 ? 'rgba(255,255,255,0.05)' : 'rgba(74,222,128,0.1)',
+                      color: d < 0 ? 'var(--text-secondary)' : 'var(--accent-green)',
+                      border: `1px solid ${d < 0 ? 'var(--border-subtle)' : 'rgba(74,222,128,0.2)'}` }}>
+                    {d > 0 ? `+${d}` : d}
+                  </button>
+                ))}
               </div>
             </div>
           </div>
 
+          {/* Done toggle */}
+          <button onClick={() => onSave({ done: !set.done })}
+            className="mt-3 w-full rounded-2xl py-3.5 text-sm font-bold transition-all pressable"
+            style={set.done
+              ? { background: 'rgba(74,222,128,0.15)', color: '#4ade80', border: '1px solid rgba(74,222,128,0.3)', boxShadow: '0 0 16px rgba(74,222,128,0.15)' }
+              : { background: 'rgba(255,255,255,0.05)', color: 'var(--text-secondary)', border: '1px solid var(--border-subtle)' }}>
+            {set.done ? '✓ Done' : 'Mark as Done'}
+          </button>
+
+          {/* Akciók */}
           <div className="mt-3 flex gap-2">
-            <button
-              onClick={onCopyPrev}
-              className="flex-1 rounded-2xl border border-white/10 bg-white/5 py-3 text-sm text-white/85 hover:bg-white/10"
-            >
-              Copy prev set
+            <button onClick={onCopyPrev}
+              className="flex-1 rounded-2xl py-3 text-sm font-medium pressable"
+              style={{ background: 'rgba(255,255,255,0.05)', color: 'var(--text-secondary)', border: '1px solid var(--border-subtle)' }}>
+              Copy prev
             </button>
-            <button
-              onClick={onDelete}
-              className="rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-200 hover:bg-red-500/15"
-            >
+            <button onClick={onDelete}
+              className="rounded-2xl px-5 py-3 text-sm font-medium pressable"
+              style={{ background: 'rgba(239,68,68,0.1)', color: '#fca5a5', border: '1px solid rgba(239,68,68,0.2)' }}>
               Törlés
+            </button>
+            <button onClick={onClose}
+              className="rounded-2xl px-5 py-3 text-sm font-bold pressable"
+              style={{ background: 'rgba(34,211,238,0.12)', color: 'var(--accent-primary)', border: '1px solid rgba(34,211,238,0.25)' }}>
+              Kész
             </button>
           </div>
         </div>

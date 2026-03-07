@@ -4,77 +4,73 @@ import * as React from "react";
 
 function fmt(sec: number) {
   const s = Math.max(0, Math.floor(sec));
-  const m = Math.floor(s / 60);
-  const r = s % 60;
-  return `${m}:${String(r).padStart(2, "0")}`;
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 }
 
-export function RestTimerOverlay({
-  open,
-  totalSec,
-  leftSec,
-  muted,
-  onAdd,
-  onSkip,
-  onToggleMute,
-}: {
-  open: boolean;
-  totalSec: number;
-  leftSec: number;
-  muted: boolean;
-  onAdd: (deltaSec: number) => void;
-  onSkip: () => void;
-  onToggleMute: () => void;
+export function RestTimerOverlay({ open, totalSec, leftSec, muted, onAdd, onSkip, onToggleMute }: {
+  open: boolean; totalSec: number; leftSec: number; muted: boolean;
+  onAdd: (d: number) => void; onSkip: () => void; onToggleMute: () => void;
 }) {
   if (!open) return null;
 
-  const pct = totalSec > 0 ? Math.min(100, Math.max(0, (leftSec / totalSec) * 100)) : 0;
+  const pct = totalSec > 0 ? Math.min(100, (leftSec / totalSec) * 100) : 0;
+  const urgent = leftSec <= 10;
+
+  // SVG arc
+  const R = 48; const C = 60;
+  const circ = 2 * Math.PI * R;
+  const dash = circ * (1 - pct / 100);
 
   return (
-    <div className="fixed inset-0 z-[80] pointer-events-none">
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-[1px]" />
+    <div className="fixed inset-0 z-[80] pointer-events-none flex items-end justify-center pb-28"
+      style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 6rem)' }}>
+      <div className="pointer-events-auto w-full max-w-md px-4">
+        <div className="rounded-3xl p-5 shadow-2xl"
+          style={{ background: 'rgba(8,11,15,0.96)', border: `1px solid ${urgent ? 'rgba(251,191,36,0.4)' : 'rgba(34,211,238,0.25)'}`,
+            backdropFilter: 'blur(20px)', boxShadow: `0 0 40px ${urgent ? 'rgba(251,191,36,0.15)' : 'rgba(34,211,238,0.1)'}` }}>
 
-      <div className="absolute bottom-24 left-0 right-0 mx-auto w-full max-w-md px-4 pointer-events-auto">
-        <div className="rounded-3xl border border-white/10 bg-zinc-950/90 p-4 shadow-2xl">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <div className="text-xs tracking-widest text-white/50">REST</div>
-              <div className="mt-1 text-3xl font-bold text-white tabular-nums">{fmt(leftSec)}</div>
+          <div className="flex items-center gap-4">
+            {/* SVG ring */}
+            <div className="relative shrink-0">
+              <svg width={C * 2} height={C * 2} style={{ transform: 'rotate(-90deg)' }}>
+                <circle cx={C} cy={C} r={R} fill="none" stroke="rgba(255,255,255,0.07)" strokeWidth="6" />
+                <circle cx={C} cy={C} r={R} fill="none"
+                  stroke={urgent ? '#fbbf24' : '#22d3ee'} strokeWidth="6"
+                  strokeLinecap="round" strokeDasharray={circ} strokeDashoffset={dash}
+                  style={{ transition: 'stroke-dashoffset 0.2s linear, stroke 0.3s ease' }} />
+              </svg>
+              <div className="absolute inset-0 flex flex-col items-center justify-center">
+                <div className={`text-2xl font-bold tabular-nums ${urgent ? 'text-amber-300' : 'text-white'}`}>
+                  {fmt(leftSec)}
+                </div>
+                <div className="text-[10px] uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>rest</div>
+              </div>
             </div>
 
-            <button
-              onClick={onSkip}
-              className="rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white/80 hover:bg-white/10"
-            >
-              Skip
-            </button>
-          </div>
-
-          <div className="mt-3 h-2 overflow-hidden rounded-full bg-white/10">
-            <div className="h-full bg-white/40" style={{ width: `${pct}%` }} />
-          </div>
-
-          <div className="mt-3 flex gap-2">
-            <button
-              onClick={() => onAdd(15)}
-              className="flex-1 rounded-2xl border border-white/10 bg-white/5 py-3 text-sm text-white/80 hover:bg-white/10"
-            >
-              +15s
-            </button>
-            <button
-              onClick={() => onAdd(30)}
-              className="flex-1 rounded-2xl border border-white/10 bg-white/5 py-3 text-sm text-white/80 hover:bg-white/10"
-            >
-              +30s
-            </button>
-            <button
-              onClick={onToggleMute}
-              className="w-16 rounded-2xl border border-white/10 bg-white/5 py-3 text-sm text-white/80 hover:bg-white/10"
-              title="Mute"
-              aria-label="Mute"
-            >
-              {muted ? "🔇" : "🔊"}
-            </button>
+            {/* Gombok */}
+            <div className="flex flex-1 flex-col gap-2">
+              <div className="grid grid-cols-3 gap-2">
+                {[15, 30, 60].map(d => (
+                  <button key={d} onClick={() => onAdd(d)}
+                    className="rounded-xl py-2.5 text-sm font-semibold pressable"
+                    style={{ background: 'rgba(255,255,255,0.06)', color: 'var(--text-secondary)', border: '1px solid var(--border-subtle)' }}>
+                    +{d}s
+                  </button>
+                ))}
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <button onClick={onSkip}
+                  className="rounded-xl py-2.5 text-sm font-bold pressable"
+                  style={{ background: 'rgba(34,211,238,0.12)', color: 'var(--accent-primary)', border: '1px solid rgba(34,211,238,0.25)' }}>
+                  Skip
+                </button>
+                <button onClick={onToggleMute}
+                  className="rounded-xl py-2.5 text-sm pressable"
+                  style={{ background: 'rgba(255,255,255,0.05)', color: 'var(--text-muted)', border: '1px solid var(--border-subtle)' }}>
+                  {muted ? '🔇 Mute' : '🔊 Hang'}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
