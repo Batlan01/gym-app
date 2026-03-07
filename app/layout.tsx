@@ -23,7 +23,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
       </head>
-      <body className="min-h-dvh bg-black text-white">
+      <body className="min-h-dvh text-white" style={{ backgroundColor: 'var(--bg-base)' }}>
         <AppFrame>
           {children}
           <PendingSyncRunner />
