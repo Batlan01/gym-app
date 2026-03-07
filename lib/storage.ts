@@ -72,3 +72,7 @@ export function uid() {
     ? crypto.randomUUID()
     : String(Date.now() + Math.random());
 }
+export function lsRemove(key: string): void {
+  if (typeof window === "undefined") return;
+  localStorage.removeItem(key);
+}
