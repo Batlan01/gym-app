@@ -8,6 +8,9 @@ export type WorkoutSet = {
   done?: boolean;
 };
 
+// Alias for backward compatibility
+export type SetEntry = WorkoutSet;
+
 export type WorkoutExercise = {
   id: string;
   exerciseId: string; // a library-ből
