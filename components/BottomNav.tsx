@@ -26,6 +26,19 @@ const items = [
     ),
   },
   {
+    label: "Naptár",
+    href: "/calendar",
+    icon: (active: boolean) => (
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={active ? 2.2 : 1.8} strokeLinecap="round" strokeLinejoin="round">
+        <rect x="3" y="4" width="18" height="18" rx="2"/>
+        <path d="M16 2v4M8 2v4M3 10h18"/>
+        <circle cx="8" cy="16" r="1.2" fill="currentColor" stroke="none"/>
+        <circle cx="12" cy="16" r="1.2" fill="currentColor" stroke="none"/>
+        <circle cx="16" cy="16" r="1.2" fill="currentColor" stroke="none"/>
+      </svg>
+    ),
+  },
+  {
     label: "Programok",
     href: "/programs",
     icon: (active: boolean) => (
@@ -34,18 +47,6 @@ const items = [
         <rect x="14" y="3" width="7" height="7" rx="1.5"/>
         <rect x="3" y="14" width="7" height="7" rx="1.5"/>
         <rect x="14" y="14" width="7" height="7" rx="1.5"/>
-      </svg>
-    ),
-  },
-  {
-    label: "Gyakorlat",
-    href: "/exercises",
-    icon: (active: boolean) => (
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={active ? 2.2 : 1.8} strokeLinecap="round" strokeLinejoin="round">
-        <path d="M4 12h2m12 0h2M7 12a5 5 0 0 1 10 0"/>
-        <circle cx="5" cy="12" r="1.5"/>
-        <circle cx="19" cy="12" r="1.5"/>
-        <path d="M7 9v6M17 9v6"/>
       </svg>
     ),
   },
