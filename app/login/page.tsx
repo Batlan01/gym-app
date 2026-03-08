@@ -3,7 +3,6 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { useLocalStorageState } from "@/lib/useLocalStorageState";
-import { lsGet, lsSet } from "@/lib/storage";
 import { ProfileGate } from "@/components/ProfileGate";
 import { LS_ACTIVE_PROFILE, LS_PROFILES, type Profile, fbProfileId, onboardedKey } from "@/lib/profiles";
 import { auth } from "@/lib/firebase";
@@ -42,19 +41,28 @@ export default function LoginPage() {
   const activateFirebaseUser = React.useCallback((u: User) => {
     const id = fbProfileId(u.uid);
 
-    // Direkten írjuk localStorage-ba — ne legyen race condition a hook setState-ek között
+    // Töröljük az összes régi gym.* kulcsot hogy ne legyen stale adat
+    const keysToRemove: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k && k.startsWith("gym.") && k !== LS_PROFILES && !k.startsWith(`gym.${id}`)) {
+        keysToRemove.push(k);
+      }
+    }
+    keysToRemove.forEach(k => localStorage.removeItem(k));
+
+    // Írjuk be a helyes kulcsokkal
     const existingProfiles: Profile[] = JSON.parse(localStorage.getItem(LS_PROFILES) ?? "[]");
     const updatedProfiles = ensureFirebaseProfile(existingProfiles, u);
     localStorage.setItem(LS_PROFILES, JSON.stringify(updatedProfiles));
     localStorage.setItem(LS_AUTH_MODE, JSON.stringify("firebase"));
     localStorage.setItem(LS_ACTIVE_PROFILE, JSON.stringify(id));
+    localStorage.setItem(onboardedKey(id), JSON.stringify(true));
 
-    const existing = lsGet<boolean | null>(onboardedKey(id), null);
-    if (existing === null) lsSet(onboardedKey(id), false);
-
-    // Kis delay hogy a localStorage írás propagáljon, aztán navigál
-    setTimeout(() => router.replace("/workout"), 50);
-  }, [router]);
+    // Hard navigate — nem router.replace, hanem teljes oldalbetöltés
+    // így az AppFrame frissen indul és biztosan látja az auth state-et
+    window.location.href = "/workout";
+  }, []);
 
   // Google redirect result kezelése — mindig lefut oldalbetöltéskor
   React.useEffect(() => {
