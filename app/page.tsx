@@ -6,7 +6,93 @@ import { useRouter } from "next/navigation";
 import { BottomNav } from "@/components/BottomNav";
 import { useLocalStorageState } from "@/lib/useLocalStorageState";
 import { LS_ACTIVE_PROFILE, profileKey, profileMetaKey, type ProfileMeta } from "@/lib/profiles";
+import { PROGRAM_TEMPLATES } from "@/lib/programTemplates";
 import type { Workout } from "@/lib/types";
+
+// --- Netflix-stílusú katalógus hero ---
+const CATALOG_TABS = ["🏋️ Gym", "🏠 Home", "🏃 Futás", "🥊 Box", "🧘 Mobil"];
+
+function CatalogHero() {
+  const router = useRouter();
+  const featured = PROGRAM_TEMPLATES[0];
+  const [active, setActive] = React.useState(0);
+  const GRAD: Record<string, string> = {
+    emerald: "rgba(52,211,153,0.7)", sky: "rgba(56,189,248,0.7)",
+    ember: "rgba(251,146,60,0.7)", violet: "rgba(167,139,250,0.7)", slate: "rgba(148,163,184,0.5)",
+  };
+
+  React.useEffect(() => {
+    const t = setInterval(() => setActive(a => (a + 1) % CATALOG_TABS.length), 3800);
+    return () => clearInterval(t);
+  }, []);
+
+  return (
+    <div className="rounded-3xl overflow-hidden relative"
+      style={{ background: "linear-gradient(160deg, #1a0505 0%, #0d0000 100%)", border: "1px solid rgba(220,38,38,0.35)", boxShadow: "0 8px 40px rgba(220,38,38,0.12)" }}>
+
+      {/* Vörös glow fent */}
+      <div className="absolute top-0 left-0 right-0 h-40 pointer-events-none"
+        style={{ background: "radial-gradient(ellipse 90% 80% at 50% -10%, rgba(220,38,38,0.22) 0%, transparent 70%)" }} />
+
+      {/* Header */}
+      <div className="relative px-5 pt-5 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <div className="h-2 w-2 rounded-full" style={{ background: "#ef4444", boxShadow: "0 0 6px #ef4444", animation: "pulse 2s infinite" }} />
+          <span className="text-[10px] font-black tracking-widest" style={{ color: "#ef4444" }}>PROGRAM KATALÓGUS</span>
+        </div>
+        {/* Progress dots */}
+        <div className="flex gap-1.5 items-center">
+          {CATALOG_TABS.map((_, i) => (
+            <button key={i} onClick={() => setActive(i)}
+              className="rounded-full transition-all duration-500"
+              style={{ height: 4, width: i === active ? 18 : 5, background: i === active ? "#ef4444" : "rgba(255,255,255,0.18)" }} />
+          ))}
+        </div>
+      </div>
+
+      {/* Fő tartalom */}
+      <div className="relative px-5 pt-4 pb-4">
+        <div className="text-[10px] font-bold mb-1" style={{ color: "rgba(239,68,68,0.7)" }}>
+          {CATALOG_TABS[active]}
+        </div>
+        <div className="text-2xl font-black mb-1" style={{ color: "#fff", textShadow: "0 2px 12px rgba(0,0,0,0.5)" }}>
+          {featured?.title ?? "Edzésprogramok"}
+        </div>
+        <div className="text-xs mb-4" style={{ color: "rgba(255,255,255,0.4)" }}>
+          {PROGRAM_TEMPLATES.length} program · Válassz a sablonok közül
+        </div>
+
+        {/* Gombok */}
+        <div className="flex gap-3">
+          <button onClick={() => router.push("/programs")}
+            className="flex-1 flex items-center justify-center gap-2 rounded-2xl py-3 text-sm font-black pressable"
+            style={{ background: "linear-gradient(135deg, #ef4444, #dc2626)", color: "#fff", boxShadow: "0 4px 20px rgba(239,68,68,0.35)" }}>
+            ▶ Programok
+          </button>
+          <button onClick={() => router.push("/exercises")}
+            className="flex items-center justify-center rounded-2xl py-3 px-4 text-sm font-bold pressable"
+            style={{ background: "rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.7)", border: "1px solid rgba(255,255,255,0.12)" }}>
+            📚 Gyakorlatok
+          </button>
+        </div>
+      </div>
+
+      {/* Thumbnail csík */}
+      <div className="relative flex gap-2 px-5 pb-5">
+        {PROGRAM_TEMPLATES.slice(0, 5).map((t, i) => (
+          <button key={t.id} onClick={() => router.push("/programs")}
+            className="flex-1 rounded-xl overflow-hidden relative pressable"
+            style={{ height: 54, background: `linear-gradient(160deg, ${GRAD[t.cover?.gradient ?? "slate"]}, rgba(8,11,15,0.95))`, border: "1px solid rgba(255,255,255,0.07)" }}>
+            <div className="absolute inset-0 flex items-center justify-center text-xl">{t.cover?.emoji ?? "🏋️"}</div>
+            {i === active % PROGRAM_TEMPLATES.length && (
+              <div className="absolute inset-0 rounded-xl" style={{ border: "2px solid rgba(239,68,68,0.7)" }} />
+            )}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 // --- helpers ---
 function isSameDay(a: Date, b: Date) {
@@ -224,6 +310,11 @@ export default function Home() {
         {/* Hero */}
         <HeroCard lastWorkout={lastWorkout} hasActiveToday={hasActiveToday} />
 
+        {/* Netflix-stílusú katalógus banner */}
+        <div className="mt-4">
+          <CatalogHero />
+        </div>
+
         {/* Stat sor */}
         <div className="mt-4 flex gap-2">
           <StatPill icon="🔥" label="streak" value={streak ? `${streak} nap` : "—"} />
@@ -242,9 +333,9 @@ export default function Home() {
         <div className="mt-5">
           <div className="label-xs mb-3">GYORS ELÉRÉS</div>
           <div className="grid grid-cols-3 gap-3">
-            <QuickTile title="Programok" subtitle="Sablonok" href="/programs" accent="green" />
-            <QuickTile title="Statisztika" subtitle="Haladás" href="/progress" accent="cyan" />
-            <QuickTile title="Gyakorlatok" subtitle="Katalógus" href="/exercises" accent="amber" />
+            <QuickTile title="Naptár" subtitle="Ütemezés" href="/calendar" accent="cyan" />
+            <QuickTile title="Statisztika" subtitle="Haladás" href="/progress" accent="green" />
+            <QuickTile title="Profil" subtitle="Beállítások" href="/profile" accent="amber" />
           </div>
         </div>
 
