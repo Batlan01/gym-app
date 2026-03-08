@@ -2,8 +2,10 @@
 
 import * as React from "react";
 import type { ExerciseDef } from "@/lib/exercises";
+import type { CustomExercise } from "@/lib/customExercises";
+import { makeCustomExercise } from "@/lib/customExercises";
 
-type Tab = "recent" | "favorites" | "all";
+type Tab = "recent" | "favorites" | "all" | "custom";
 
 type TileMeta = { label: string; emoji: string };
 
@@ -64,6 +66,9 @@ export function AddExerciseSheet({
   recents,
   onToggleFavorite,
   onPick,
+  customExercises = [],
+  onCreateCustom,
+  onDeleteCustom,
 }: {
   open: boolean;
   onClose: () => void;
@@ -72,11 +77,19 @@ export function AddExerciseSheet({
   recents: string[];
   onToggleFavorite: (exerciseId: string) => void;
   onPick: (exercise: ExerciseDef) => void;
+  customExercises?: CustomExercise[];
+  onCreateCustom?: (ex: CustomExercise) => void;
+  onDeleteCustom?: (id: string) => void;
 }) {
   const [tab, setTab] = React.useState<Tab>("recent");
   const [q, setQ] = React.useState("");
   const [cat, setCat] = React.useState<string | null>(null);
   const [sub, setSub] = React.useState<string | null>(null);
+
+  // Saját gyakorlat form
+  const [newName, setNewName] = React.useState("");
+  const [newDesc, setNewDesc] = React.useState("");
+  const [createError, setCreateError] = React.useState("");
 
   React.useEffect(() => {
     if (!open) return;
@@ -84,13 +97,17 @@ export function AddExerciseSheet({
     setQ("");
     setCat(null);
     setSub(null);
+    setNewName("");
+    setNewDesc("");
+    setCreateError("");
   }, [open]);
 
   const byId = React.useMemo(() => {
     const m = new Map<string, ExerciseDef>();
     exercises.forEach((e) => m.set(e.id, e));
+    customExercises.forEach((e) => m.set(e.id, e));
     return m;
-  }, [exercises]);
+  }, [exercises, customExercises]);
 
   const recentList = React.useMemo(() => {
     return recents.map((id) => byId.get(id)).filter(Boolean) as ExerciseDef[];
@@ -103,6 +120,7 @@ export function AddExerciseSheet({
   const base =
     tab === "recent" ? recentList :
     tab === "favorites" ? favList :
+    tab === "custom" ? customExercises :
     exercises;
 
   // categories from ALL dataset (not filtered base)
@@ -219,7 +237,7 @@ export function AddExerciseSheet({
                 tab === "favorites" ? "bg-white/10 text-white" : "text-white/70 hover:bg-white/5"
               }`}
             >
-              Favorites
+              Kedvenc
             </button>
             <button
               onClick={() => setTab("all")}
@@ -227,7 +245,15 @@ export function AddExerciseSheet({
                 tab === "all" ? "bg-white/10 text-white" : "text-white/70 hover:bg-white/5"
               }`}
             >
-              All
+              Mind
+            </button>
+            <button
+              onClick={() => { setTab("custom"); setCat(null); setSub(null); }}
+              className={`flex-1 rounded-xl px-3 py-2 text-sm ${
+                tab === "custom" ? "bg-cyan-400/20 text-cyan-300" : "text-white/70 hover:bg-white/5"
+              }`}
+            >
+              ✚ Saját
             </button>
           </div>
 
@@ -240,6 +266,70 @@ export function AddExerciseSheet({
             />
           </div>
 
+          {/* CUSTOM TAB */}
+          {tab === "custom" ? (
+            <div className="mt-3 space-y-3">
+              {/* Létrehozás form */}
+              <div className="rounded-2xl border border-cyan-400/20 bg-cyan-400/5 p-4 space-y-3">
+                <div className="text-sm font-bold text-cyan-300">Új saját gyakorlat</div>
+                <input
+                  value={newName}
+                  onChange={e => { setNewName(e.target.value); setCreateError(""); }}
+                  placeholder="Gyakorlat neve *"
+                  className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 text-sm text-white placeholder:text-white/40 outline-none focus:border-cyan-400/40"
+                />
+                <textarea
+                  value={newDesc}
+                  onChange={e => setNewDesc(e.target.value)}
+                  placeholder="Leírás (opcionális)"
+                  rows={2}
+                  className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 text-sm text-white placeholder:text-white/40 outline-none focus:border-cyan-400/40 resize-none"
+                />
+                {createError && <div className="text-xs text-red-400">{createError}</div>}
+                <button
+                  onClick={() => {
+                    if (!newName.trim()) { setCreateError("Adj meg egy nevet!"); return; }
+                    const ex = makeCustomExercise(newName, newDesc);
+                    onCreateCustom?.(ex);
+                    setNewName("");
+                    setNewDesc("");
+                  }}
+                  className="w-full rounded-xl py-2.5 text-sm font-bold bg-cyan-400/15 text-cyan-300 border border-cyan-400/30 hover:bg-cyan-400/20 transition"
+                >
+                  + Létrehozás
+                </button>
+              </div>
+
+              {/* Saját gyakorlatok listája */}
+              {customExercises.length === 0 ? (
+                <div className="rounded-2xl border border-white/10 p-6 text-sm text-white/50 text-center">
+                  Még nincs saját gyakorlatod.
+                </div>
+              ) : (
+                <div className="rounded-2xl border border-white/10 divide-y divide-white/10 max-h-[40vh] overflow-auto">
+                  {customExercises.map((ex) => (
+                    <div key={ex.id} className="flex items-center gap-3 p-3">
+                      <button onClick={() => onPick(ex)} className="flex-1 text-left">
+                        <div className="text-sm font-medium text-white">{ex.name}</div>
+                        {ex.description && (
+                          <div className="text-xs text-white/50 mt-0.5 line-clamp-1">{ex.description}</div>
+                        )}
+                      </button>
+                      {onDeleteCustom && (
+                        <button
+                          onClick={() => onDeleteCustom(ex.id)}
+                          className="h-8 w-8 rounded-xl border border-white/10 bg-red-400/10 text-red-400 text-xs hover:bg-red-400/20 transition"
+                        >
+                          ✕
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : (
+          <>
           {/* CATEGORY GRID */}
           {showCategoryGrid ? (
             <div className="mt-3 grid grid-cols-2 gap-3">
@@ -315,6 +405,8 @@ export function AddExerciseSheet({
                 </ul>
               )}
             </div>
+          )}
+          </>
           )}
         </div>
       </div>

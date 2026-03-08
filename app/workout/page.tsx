@@ -8,6 +8,9 @@ import { SetEditSheet } from "@/components/SetEditSheet";
 import { RestTimerOverlay } from "@/components/RestTimerOverlay";
 
 import { EXERCISES } from "@/lib/exercises";
+import { readCustomExercises, saveCustomExercise, deleteCustomExercise } from "@/lib/customExercises";
+import type { CustomExercise } from "@/lib/customExercises";
+import { readPrograms } from "@/lib/programsStorage";
 import type { Workout, WorkoutExercise, SetEntry } from "@/lib/types";
 import { useLocalStorageState } from "@/lib/useLocalStorageState";
 import { lsSet, uid } from "@/lib/storage";
@@ -25,6 +28,46 @@ import { saveWorkoutToCloud } from "@/lib/workoutsCloud";
 import { enqueueWorkout, pendingCount } from "@/lib/pendingSync";
 
 const LS_ACTIVE_PROFILE = "gym.activeProfileId";
+
+// Napi edzés program meghatározása a naptárból
+function todayDayIdx() { return (new Date().getDay() + 6) % 7; }
+
+function encodePinnedEntry(slotId: string, sessionId: string, programId: string) {
+  return `${slotId}:${sessionId}:${programId}`;
+}
+function decodePinnedEntry(entry: string) {
+  const parts = entry.split(":");
+  if (parts.length < 3) return null;
+  const [slotId, sessionId, ...rest] = parts;
+  return { slotId, sessionId, programId: rest.join(":") };
+}
+
+type TodaySession = { slotId: string; sessionName: string; exercises: string[]; };
+
+function getTodaySessions(profileId: string): TodaySession[] {
+  const programs = readPrograms(profileId);
+  const dayIdx = todayDayIdx();
+  const results: TodaySession[] = [];
+
+  for (const prog of programs) {
+    const pinned = prog.schedule?.pinnedDays ?? {};
+    const entries = pinned[String(dayIdx)];
+    if (!entries) continue;
+    const arr: string[] = Array.isArray(entries) ? entries : [entries];
+    for (const entry of arr) {
+      const d = decodePinnedEntry(entry);
+      if (!d) continue;
+      const sess = prog.sessions.find(s => s.id === d.sessionId);
+      if (!sess) continue;
+      results.push({
+        slotId: d.slotId,
+        sessionName: sess.name,
+        exercises: sess.blocks.map(b => b.name),
+      });
+    }
+  }
+  return results;
+}
 
 type Settings = {
   restSec: number;
@@ -94,6 +137,14 @@ export default function WorkoutPage() {
 
   const [addOpen, setAddOpen] = React.useState(false);
 
+  // Custom exercises
+  const [customExercises, setCustomExercises] = React.useState<CustomExercise[]>([]);
+  React.useEffect(() => { setCustomExercises(readCustomExercises(profileId)); }, [profileId]);
+
+  // Mai napi program a naptárból
+  const todaySessions = React.useMemo(() => getTodaySessions(profileId), [profileId]);
+  const allExercises = React.useMemo(() => [...EXERCISES, ...customExercises], [customExercises]);
+
   const [editOpen, setEditOpen] = React.useState(false);
   const [editExerciseId, setEditExerciseId] = React.useState<string | null>(null);
   const [editSetId, setEditSetId] = React.useState<string | null>(null);
@@ -147,8 +198,23 @@ export default function WorkoutPage() {
   }, [active, tick]);
 
   const startWorkout = React.useCallback(() => {
-    setActive((prev) => prev ?? newWorkout());
-  }, [setActive]);
+    setActive((prev) => {
+      if (prev) return prev;
+      const base = newWorkout();
+      // Ha van mai naptári program, betöltjük az összes sessiont
+      if (todaySessions.length > 0) {
+        const exercises = todaySessions.flatMap(sess =>
+          sess.exercises.map(exName => {
+            const found = allExercises.find(e => e.name === exName);
+            const id = found?.id ?? `custom_${exName.replace(/\s+/g, "_").toLowerCase()}`;
+            return newExercise(id, exName);
+          })
+        );
+        return { ...base, exercises };
+      }
+      return base;
+    });
+  }, [setActive, todaySessions, allExercises]);
 
   const discardWorkout = React.useCallback(() => {
     if (!active) return;
@@ -553,13 +619,42 @@ export default function WorkoutPage() {
             /* Empty state */
             <div>
               <h1 className="text-2xl font-bold mb-4" style={{ color: 'var(--text-primary)' }}>Mai edzés</h1>
+
+              {/* Ha van mai tervezett program */}
+              {todaySessions.length > 0 && (
+                <div className="mb-4 rounded-2xl p-4 space-y-2"
+                  style={{ background: 'rgba(34,211,238,0.06)', border: '1px solid rgba(34,211,238,0.2)' }}>
+                  <div className="text-xs font-bold tracking-widest mb-3" style={{ color: 'var(--accent-primary)' }}>
+                    📅 MAI PROGRAM
+                  </div>
+                  {todaySessions.map((sess, i) => {
+                    const SLOT_EMOJIS: Record<string, string> = { warmup: "🔥", main: "💪", cardio: "🏃", cooldown: "🧘" };
+                    return (
+                      <div key={i} className="flex items-start gap-2">
+                        <span className="text-base">{SLOT_EMOJIS[sess.slotId] ?? "💪"}</span>
+                        <div>
+                          <div className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>{sess.sessionName}</div>
+                          <div className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
+                            {sess.exercises.slice(0, 3).join(" · ")}
+                            {sess.exercises.length > 3 ? ` +${sess.exercises.length - 3}` : ""}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
               <button
-                onClick={() => { startWorkout(); setAddOpen(true); }}
+                onClick={() => {
+                  startWorkout();
+                  if (todaySessions.length === 0) setAddOpen(true);
+                }}
                 className="w-full rounded-3xl py-5 text-base font-bold pressable"
                 style={{ background: 'linear-gradient(135deg, rgba(34,211,238,0.15), rgba(34,211,238,0.05))',
                   border: '1px solid rgba(34,211,238,0.3)', color: 'var(--accent-primary)',
                   boxShadow: '0 0 30px rgba(34,211,238,0.08)' }}>
-                Edzés indítása →
+                {todaySessions.length > 0 ? "Edzés indítása →" : "Edzés indítása →"}
               </button>
               {history.length > 0 && (
                 <div className="mt-3 rounded-2xl px-4 py-3 text-sm"
@@ -602,9 +697,19 @@ export default function WorkoutPage() {
       </main>
 
       <AddExerciseSheet open={addOpen} onClose={() => setAddOpen(false)}
-        exercises={EXERCISES} favorites={favorites} recents={recents}
+        exercises={allExercises} favorites={favorites} recents={recents}
         onToggleFavorite={toggleFavorite}
-        onPick={e => { addExercise(e.id, e.name); setAddOpen(false); }} />
+        onPick={e => { addExercise(e.id, e.name); setAddOpen(false); }}
+        customExercises={customExercises}
+        onCreateCustom={ex => {
+          saveCustomExercise(profileId, ex);
+          setCustomExercises(readCustomExercises(profileId));
+        }}
+        onDeleteCustom={id => {
+          deleteCustomExercise(profileId, id);
+          setCustomExercises(readCustomExercises(profileId));
+        }}
+      />
 
       <SetEditSheet open={editOpen} onClose={closeEdit}
         title={currentEdit?.ex?.name ?? "—"} set={currentEdit?.set ?? null}

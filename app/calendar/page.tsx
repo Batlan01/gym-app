@@ -418,11 +418,11 @@ export default function CalendarPage() {
       )}
 
       {programs.length === 0 && (
-        <div className="mx-4 mt-4 rounded-3xl p-6 text-center" style={{ background: "var(--bg-surface)", border: "1px solid var(--border-subtle)" }}>
-          <div className="text-3xl mb-2">📅</div>
-          <div className="text-sm font-bold mb-1" style={{ color: "var(--text-primary)" }}>Nincs program</div>
-          <div className="text-xs mb-4" style={{ color: "var(--text-muted)" }}>Hozz létre programot az ütemezéshez</div>
-          <button onClick={() => router.push("/programs")} className="rounded-2xl px-4 py-2.5 text-sm font-bold pressable"
+        <div className="mx-4 mt-4 rounded-3xl p-8 flex flex-col items-center justify-center text-center" style={{ background: "var(--bg-surface)", border: "1px solid var(--border-subtle)", minHeight: 200 }}>
+          <div className="text-4xl mb-3">📅</div>
+          <div className="text-base font-bold mb-1" style={{ color: "var(--text-primary)" }}>Nincs program</div>
+          <div className="text-sm mb-5" style={{ color: "var(--text-muted)" }}>Hozz létre programot az ütemezéshez</div>
+          <button onClick={() => router.push("/programs")} className="rounded-2xl px-5 py-3 text-sm font-bold pressable"
             style={{ background: "rgba(34,211,238,0.12)", color: "var(--accent-primary)", border: "1px solid rgba(34,211,238,0.3)" }}>
             Programok →
           </button>
