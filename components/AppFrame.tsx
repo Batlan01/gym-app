@@ -4,111 +4,86 @@ import * as React from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "@/lib/firebase";
-import { useLocalStorageState } from "@/lib/useLocalStorageState";
-import {
-  LS_ACTIVE_PROFILE,
-  isCloudProfileId,
-  cloudUidFromProfileId,
-  onboardedKey,
-} from "@/lib/profiles";
-import { lsSet } from "@/lib/storage";
 import { BootScreen } from "@/components/BootScreen";
+import { lsGet } from "@/lib/storage";
+import { LS_ACTIVE_PROFILE, isCloudProfileId, cloudUidFromProfileId, onboardedKey } from "@/lib/profiles";
 
 export function AppFrame({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
 
-  const [activeProfileId, , activeHydrated] =
-    useLocalStorageState<string | null>(LS_ACTIVE_PROFILE, null);
-
-  const onboardedStorageKey = activeProfileId
-    ? onboardedKey(activeProfileId)
-    : "gym.__noop_onboarded__";
-
-  const [onboarded, , onboardedHydrated] =
-    useLocalStorageState<boolean | null>(onboardedStorageKey, null);
-
-  const [authUid, setAuthUid] = React.useState<string | null>(null);
-  const [authReady, setAuthReady] = React.useState(false);
-
-  // Minimum boot idő
+  const [ready, setReady] = React.useState(false);
   const [minBootDone, setMinBootDone] = React.useState(false);
+
   React.useEffect(() => {
     const t = window.setTimeout(() => setMinBootDone(true), 2500);
     return () => window.clearTimeout(t);
   }, []);
 
-  // Firebase auth state — emelt timeout redirect után
+  // Egyszer fut le oldalbetöltéskor — megvárja a Firebase auth-ot majd dönt
   React.useEffect(() => {
-    // 8 másodperc: Google redirect után a getRedirectResult is kell idő
-    const timeout = window.setTimeout(() => {
-      setAuthReady(true);
-    }, 8000);
+    const unsub = onAuthStateChanged(auth, (firebaseUser) => {
+      unsub(); // csak egyszer kell az initial state
 
-    const unsub = onAuthStateChanged(auth, (u) => {
-      window.clearTimeout(timeout);
-      setAuthUid(u?.uid ?? null);
-      setAuthReady(true);
-    });
+      const activeProfileId = lsGet<string | null>(LS_ACTIVE_PROFILE, null);
+      const isLogin = pathname === "/login";
+      const isOnboarding = pathname === "/onboarding";
 
-    return () => {
-      window.clearTimeout(timeout);
-      unsub();
-    };
-  }, []);
-
-  const needsAuth = !!(activeProfileId && isCloudProfileId(activeProfileId));
-  const appReady = activeHydrated && onboardedHydrated && (!needsAuth || authReady);
-
-  React.useEffect(() => {
-    if (!appReady) return;
-
-    const isLogin = pathname === "/login";
-    const isOnboarding = pathname === "/onboarding";
-
-    // 1) nincs profil → login
-    if (!activeProfileId) {
-      if (!isLogin) router.replace("/login");
-      return;
-    }
-
-    // 2) cloud profil → auth egyezés kell
-    if (isCloudProfileId(activeProfileId)) {
-      const expected = cloudUidFromProfileId(activeProfileId);
-      if (!authUid || authUid !== expected) {
-        // Ne tegyünk semmit amíg az auth nem ready — ne töröljük a profilt
-        if (!authReady) return;
-        // Auth ready de nem egyezik → valóban nem bejelentkezve
-        lsSet(LS_ACTIVE_PROFILE, null);
-        router.replace("/login");
+      // 1) Nincs aktív profil → login
+      if (!activeProfileId) {
+        setReady(true);
+        if (!isLogin) router.replace("/login");
         return;
       }
-    }
 
-    // 3) onboarding
-    if (onboarded !== true) {
-      if (!isOnboarding) router.replace("/onboarding");
-      return;
-    }
+      // 2) Cloud profil → Firebase auth kell
+      if (isCloudProfileId(activeProfileId)) {
+        const expectedUid = cloudUidFromProfileId(activeProfileId);
+        if (!firebaseUser || firebaseUser.uid !== expectedUid) {
+          // Auth nem egyezik → töröljük a profilt és loginra
+          localStorage.removeItem(LS_ACTIVE_PROFILE);
+          setReady(true);
+          router.replace("/login");
+          return;
+        }
+      }
 
-    // 4) ha minden kész, ne maradjon login/onboarding oldalon
-    if (isLogin || isOnboarding) {
-      router.replace("/workout");
-    }
-  }, [appReady, pathname, router, activeProfileId, authUid, authReady, onboarded]);
+      // 3) Onboarding kell-e?
+      const onboarded = lsGet<boolean | null>(onboardedKey(activeProfileId), null);
+      if (onboarded !== true) {
+        setReady(true);
+        if (!isOnboarding) router.replace("/onboarding");
+        return;
+      }
 
-  const showBoot = !appReady || !minBootDone;
+      // 4) Minden OK — ha login/onboarding oldalon van, tovább
+      setReady(true);
+      if (isLogin || isOnboarding) {
+        router.replace("/workout");
+      }
+    });
+
+    // Max 6mp timeout ha a Firebase nem válaszol (pl. offline)
+    const timeout = window.setTimeout(() => {
+      unsub();
+      const activeProfileId = lsGet<string | null>(LS_ACTIVE_PROFILE, null);
+      setReady(true);
+      if (!activeProfileId && pathname !== "/login") {
+        router.replace("/login");
+      }
+    }, 6000);
+
+    return () => {
+      unsub();
+      window.clearTimeout(timeout);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname]);
+
+  const showBoot = !ready || !minBootDone;
 
   return showBoot ? (
-    <BootScreen
-      subtitle={
-        !activeHydrated
-          ? "Loading local data…"
-          : needsAuth && !authReady
-          ? "Connecting your account…"
-          : "Preparing your session…"
-      }
-    />
+    <BootScreen subtitle="Connecting your account…" />
   ) : (
     <div className="min-h-dvh bg-black text-white">{children}</div>
   );
