@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { BottomNav } from "@/components/BottomNav";
 import { Tile } from "@/components/Tile";
 import { VideoModal } from "@/components/VideoModal";
-import { EXERCISES, EXERCISE_VIDEOS } from "@/lib/exercises";
+import { EXERCISES, EXERCISE_VIDEOS, type ExerciseVideo } from "@/lib/exercises";
 
 type AnyExercise = (typeof EXERCISES)[number];
 
@@ -35,7 +35,7 @@ export default function ExercisesClient() {
   const sp = useSearchParams();
   const group = sp.get("g");
   const [q, setQ] = React.useState("");
-  const [video, setVideo] = React.useState<{ id: string; title: string } | null>(null);
+  const [video, setVideo] = React.useState<{ clips: ExerciseVideo; title: string } | null>(null);
 
   const groups = React.useMemo(() => {
     const set = new Set<string>();
@@ -143,7 +143,7 @@ export default function ExercisesClient() {
 
                     {/* Jobb: videó gomb ha van */}
                     {vid ? (
-                      <button onClick={() => setVideo({ id: vid, title: ex.name })}
+                      <button onClick={() => setVideo({ clips: vid, title: ex.name })}
                         className="shrink-0 flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-bold pressable"
                         style={{ background: "rgba(34,211,238,0.1)", color: "var(--accent-primary)", border: "1px solid rgba(34,211,238,0.25)" }}>
                         ▶ Videó
@@ -161,7 +161,7 @@ export default function ExercisesClient() {
 
       {/* Video modal */}
       {video && (
-        <VideoModal videoId={video.id} title={video.title} onClose={() => setVideo(null)} />
+        <VideoModal clips={video.clips} title={video.title} onClose={() => setVideo(null)} />
       )}
 
       <BottomNav />

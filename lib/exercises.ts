@@ -7,20 +7,73 @@ export type ExerciseDef = {
 
 /**
  * VIDEÓK HOZZÁADÁSA:
- * Keresd meg a YouTube videót (pl. "bench press form tutorial"),
- * másold ki az ID-t az URL-ből: youtube.com/watch?v=ID_ITT
- * Add hozzá ide: { id: "bench_press_bb", videoId: "ID_ITT" }
- * Automatikusan megjelenik a ▶ gomb a gyakorlat kártyán.
+ * 1. Keresd meg a YouTube videót
+ * 2. Másold ki az ID-t: youtube.com/watch?v=ID_ITT
+ * 3. Add hozzá:
+ *    egyszerű:  bench_press_bb: { videoId: "SCVCLChPQFY" }
+ *    időzített: bench_press_bb: { videoId: "SCVCLChPQFY", start: 45, end: 180 }
+ *    start/end = másodpercben (pl. start:45 = 0:45-től kezd)
  */
-export const EXERCISE_VIDEOS: Record<string, string> = {
-  // Chest
-  bench_press_bb:      "SCVCLChPQFY", // Alan Thrall - How To Bench Press
-  incline_bench_bb:    "DbFgADa2PL8", // Incline Bench Press tutorial
-  deadlift_bb:         "op9kVnSso6Q", // Alan Thrall - How To Deadlift
-  squat_bb:            "ultWZbUMPL8", // Squat University
-  pullup:              "eGo4IYlbE5g", // Pull-up tutorial
-  row_bb:              "T3N-TO4reLQ", // Barbell Row
-  overhead_press_bb:   "2yjwXTZTDaE", // OHP tutorial
+/**
+ * VIDEÓ KLIP — egy részlet egy YouTube videóból
+ *   videoId : YouTube video ID (youtube.com/watch?v=ID)
+ *   start   : kezdés másodpercben  (pl. 45  = 0:45-től)
+ *   end     : vég másodpercben     (pl. 180 = 3:00-ig)
+ *   label   : rövid felirat a klip gombján (pl. "Technika", "Hibák")
+ *
+ * HOZZÁADÁS:
+ *   1 klip:   bench_press_bb: [{ videoId: "ID", start: 30, end: 90, label: "Technika" }]
+ *   3 klip:   squat_bb: [
+ *               { videoId: "ID", start: 0,   end: 60,  label: "Beállás" },
+ *               { videoId: "ID", start: 90,  end: 180, label: "Leereszkedés" },
+ *               { videoId: "ID", start: 240, end: 360, label: "Hibák" },
+ *             ]
+ */
+export type ExerciseClip = {
+  videoId: string;
+  start?: number;
+  end?: number;
+  label: string;  // kötelező — megjelenik a klip gombján
+};
+
+// Típus-alias: mindig tömb, így egységes a kezelés
+export type ExerciseVideo = ExerciseClip[];
+
+export const EXERCISE_VIDEOS: Record<string, ExerciseVideo> = {
+  // ── CHEST ──────────────────────────────────────────────────
+  bench_press_bb: [
+    { videoId: "SCVCLChPQFY", start: 30,  end: 120, label: "Fogás & beállás" },
+    { videoId: "SCVCLChPQFY", start: 180, end: 300, label: "Mozgás ív" },
+    { videoId: "SCVCLChPQFY", start: 380, end: 480, label: "Gyakori hibák" },
+  ],
+  incline_bench_bb: [
+    { videoId: "DbFgADa2PL8", label: "Teljes technika" },
+  ],
+
+  // ── BACK ───────────────────────────────────────────────────
+  deadlift_bb: [
+    { videoId: "op9kVnSso6Q", start: 60,  end: 180, label: "Kiindulás" },
+    { videoId: "op9kVnSso6Q", start: 200, end: 320, label: "Húzás fázis" },
+    { videoId: "op9kVnSso6Q", start: 400, end: 500, label: "Visszaengedés" },
+  ],
+  row_bb: [
+    { videoId: "T3N-TO4reLQ", start: 20, end: 150, label: "Technika" },
+  ],
+  pullup: [
+    { videoId: "eGo4IYlbE5g", label: "Teljes technika" },
+  ],
+
+  // ── LEGS ───────────────────────────────────────────────────
+  squat_bb: [
+    { videoId: "ultWZbUMPL8", start: 45,  end: 140, label: "Beállás & fogás" },
+    { videoId: "ultWZbUMPL8", start: 150, end: 260, label: "Leereszkedés" },
+    { videoId: "ultWZbUMPL8", start: 270, end: 360, label: "Emelkedés" },
+  ],
+
+  // ── SHOULDERS ──────────────────────────────────────────────
+  overhead_press_bb: [
+    { videoId: "2yjwXTZTDaE", start: 30, end: 180, label: "Technika" },
+  ],
 };
 
 export const EXERCISES: ExerciseDef[] = [
