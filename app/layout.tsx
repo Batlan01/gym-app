@@ -4,13 +4,13 @@ import { AppFrame } from "@/components/AppFrame";
 import { PendingSyncRunner } from "@/components/PendingSyncRunner";
 
 export const metadata: Metadata = {
-  title: "Gym Webapp",
-  description: "Gym tracker",
+  title: "ARCX — Train Smarter",
+  description: "ARCX — Az okos edzésnapló. Programok, statisztikák, XP rendszer.",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "GymApp",
+    title: "ARCX",
   },
 };
 

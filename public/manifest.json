@@ -1,11 +1,11 @@
 {
-  "name": "Gym Webapp",
-  "short_name": "GymApp",
-  "description": "Your personal gym tracker",
+  "name": "ARCX — Train Smarter",
+  "short_name": "ARCX",
+  "description": "Az okos edzésnapló. Programok, statisztikák, XP rendszer.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#0a0a0a",
-  "theme_color": "#0a0a0a",
+  "background_color": "#080B0F",
+  "theme_color": "#080B0F",
   "orientation": "portrait",
   "icons": [
     {
