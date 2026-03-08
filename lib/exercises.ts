@@ -2,6 +2,25 @@ export type ExerciseDef = {
   id: string;
   name: string;
   group?: string; // "Chest (Machine)" => Category + Subcategory
+  videoId?: string; // YouTube video ID, pl. "dQw4w9WgXcQ"
+};
+
+/**
+ * VIDEÓK HOZZÁADÁSA:
+ * Keresd meg a YouTube videót (pl. "bench press form tutorial"),
+ * másold ki az ID-t az URL-ből: youtube.com/watch?v=ID_ITT
+ * Add hozzá ide: { id: "bench_press_bb", videoId: "ID_ITT" }
+ * Automatikusan megjelenik a ▶ gomb a gyakorlat kártyán.
+ */
+export const EXERCISE_VIDEOS: Record<string, string> = {
+  // Chest
+  bench_press_bb:      "SCVCLChPQFY", // Alan Thrall - How To Bench Press
+  incline_bench_bb:    "DbFgADa2PL8", // Incline Bench Press tutorial
+  deadlift_bb:         "op9kVnSso6Q", // Alan Thrall - How To Deadlift
+  squat_bb:            "ultWZbUMPL8", // Squat University
+  pullup:              "eGo4IYlbE5g", // Pull-up tutorial
+  row_bb:              "T3N-TO4reLQ", // Barbell Row
+  overhead_press_bb:   "2yjwXTZTDaE", // OHP tutorial
 };
 
 export const EXERCISES: ExerciseDef[] = [
