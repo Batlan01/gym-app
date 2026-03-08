@@ -85,21 +85,3 @@ export function createProgramFromTemplate(profileId: string, tpl: ProgramTemplat
   upsertProgram(profileId, p);
   return p;
 }
-
-
-/** Egyszeri cleanup: eltávolítja a duplikált fromTemplateId-jű programokat,
- *  csak a legrégebbi példányt tartja meg minden sablonból. */
-export function deduplicatePrograms(profileId: string) {
-  const list = readPrograms(profileId);
-  const seen = new Map<string, boolean>();
-  const deduped = list.filter(p => {
-    if (!p.fromTemplateId) return true; // saját (nem sablon alapú) → mindig marad
-    if (seen.has(p.fromTemplateId)) return false; // duplikát → törlés
-    seen.set(p.fromTemplateId, true);
-    return true;
-  });
-  if (deduped.length !== list.length) {
-    writePrograms(profileId, deduped);
-  }
-  return deduped;
-}
