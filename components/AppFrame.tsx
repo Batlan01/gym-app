@@ -31,65 +31,72 @@ export function AppFrame({ children }: { children: React.ReactNode }) {
   const [authUid, setAuthUid] = React.useState<string | null>(null);
   const [authReady, setAuthReady] = React.useState(false);
 
-  // minimum boot idő (ne villogjon)
+  // Minimum boot idő
   const [minBootDone, setMinBootDone] = React.useState(false);
   React.useEffect(() => {
-    const t = window.setTimeout(() => setMinBootDone(true), 5250);
+    const t = window.setTimeout(() => setMinBootDone(true), 2500);
     return () => window.clearTimeout(t);
   }, []);
 
-  // firebase auth state
+  // Firebase auth state — emelt timeout redirect után
   React.useEffect(() => {
+    // Adunk 5 másodpercet az auth-nak hogy beálljon (redirect után kell)
+    const timeout = window.setTimeout(() => {
+      setAuthReady(true); // ha 5mp alatt nem jött válasz, továbbenged
+    }, 5000);
+
     const unsub = onAuthStateChanged(auth, (u) => {
+      window.clearTimeout(timeout);
       setAuthUid(u?.uid ?? null);
       setAuthReady(true);
     });
-    return () => unsub();
+
+    return () => {
+      window.clearTimeout(timeout);
+      unsub();
+    };
   }, []);
 
   const needsAuth = !!(activeProfileId && isCloudProfileId(activeProfileId));
+  const appReady = activeHydrated && onboardedHydrated && (!needsAuth || authReady);
 
-  // app “döntéshez” szükséges state-ek készen vannak-e
-  const appReady =
-    activeHydrated && onboardedHydrated && (!needsAuth || authReady);
-
-  // Redirect logika: mindig deklarált useEffect (NEM lehet feltételes!)
   React.useEffect(() => {
     if (!appReady) return;
 
     const isLogin = pathname === "/login";
     const isOnboarding = pathname === "/onboarding";
 
-    // 1) nincs profil -> csak loginon maradhat
+    // 1) nincs profil → login
     if (!activeProfileId) {
       if (!isLogin) router.replace("/login");
       return;
     }
 
-    // 2) cloud profil -> auth egyezés kell
+    // 2) cloud profil → auth egyezés kell
     if (isCloudProfileId(activeProfileId)) {
       const expected = cloudUidFromProfileId(activeProfileId);
       if (!authUid || authUid !== expected) {
-        // töröljük az aktív profilt, különben loopolhat
-        lsSet(LS_ACTIVE_PROFILE, null);
-        router.replace("/login");
+        // CSAK töröljük ha az auth tényleg ready és nem egyezik
+        // (ne töröljük ha csak lassú volt a betöltés)
+        if (authReady) {
+          lsSet(LS_ACTIVE_PROFILE, null);
+          router.replace("/login");
+        }
         return;
       }
     }
 
-    // 3) onboarding döntés
-    const needsOnboarding = onboarded !== true;
-
-    if (needsOnboarding) {
+    // 3) onboarding
+    if (onboarded !== true) {
       if (!isOnboarding) router.replace("/onboarding");
       return;
     }
 
-    // 4) ha kész az onboarding, ne maradjon login/onboarding alatt
+    // 4) ha minden kész, ne maradjon login/onboarding oldalon
     if (isLogin || isOnboarding) {
       router.replace("/workout");
     }
-  }, [appReady, pathname, router, activeProfileId, authUid, onboarded]);
+  }, [appReady, pathname, router, activeProfileId, authUid, authReady, onboarded]);
 
   const showBoot = !appReady || !minBootDone;
 
