@@ -203,7 +203,7 @@ export default function Home() {
         {/* Header */}
         <header className="mb-5 flex items-center justify-between">
           <div>
-            <div className="label-xs mb-1">GYM WEBAPP</div>
+            <div className="label-xs mb-1">ARCX</div>
             <h1 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>
               {greeting}{name ? `, ${name}` : ""}
             </h1>

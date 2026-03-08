@@ -226,7 +226,7 @@ export default function OnboardingPage() {
   return (
     <main className="mx-auto max-w-md px-4 pt-8 pb-28">
       <div className="mb-4">
-        <div className="text-[11px] tracking-[0.35em] text-white/50">ONBOARDING</div>
+        <div className="text-[11px] tracking-[0.35em] text-white/50">ARCX</div>
         <h1 className="mt-2 text-2xl font-semibold text-white">Profil beállítás</h1>
         <div className="mt-1 text-sm text-white/55">
           {stepIdx + 1}/{steps.length} — {step.title}

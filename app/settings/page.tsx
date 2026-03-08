@@ -12,7 +12,7 @@ export default function SettingsPage() {
   return (
     <main className="mx-auto max-w-md px-4 pt-5 pb-28">
       <header className="mb-4">
-        <div className="text-xs tracking-widest text-white/50">BEÁLL.</div>
+        <div className="text-xs tracking-widest text-white/50">ARCX</div>
         <h1 className="mt-1 text-2xl font-bold text-white">Beállítások</h1>
         <div className="mt-1 text-xs text-white/50">Profil, szinkron, app információk.</div>
       </header>

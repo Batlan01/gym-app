@@ -9,7 +9,7 @@ type Props = {
 };
 
 export function BootScreen({
-  title = "Gym",
+  title = "ARCX",
   subtitle = "Betöltés…",
   backgroundImage = "/boot/gym-bg.jpg",
 }: Props) {
@@ -52,9 +52,10 @@ export function BootScreen({
         <div />
 
         <div>
-          <div className="mx-auto grid h-16 w-16 place-items-center rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl">
-            <span className="text-xl font-semibold tracking-tight">
-              {title.slice(0, 1).toUpperCase()}
+          <div className="mx-auto grid h-16 w-16 place-items-center rounded-2xl border border-white/15 bg-white/5 backdrop-blur-xl"
+            style={{boxShadow:"0 0 24px rgba(34,211,238,0.15)"}}>
+            <span className="text-xs font-black tracking-widest" style={{color:"#22d3ee"}}>
+              ARCX
             </span>
           </div>
 
