@@ -49,13 +49,22 @@ export default function LoginPage() {
     router.replace("/workout");
   }, [setAuthMode, setProfiles, setActiveProfileId, router]);
 
-  // iOS redirect result
+  // Google redirect result kezelése — mindig lefut oldalbetöltéskor
   React.useEffect(() => {
-    getRedirectResult(auth).then(cred => {
-      if (cred?.user) activateFirebaseUser(cred.user);
-    }).catch(() => {});
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    getRedirectResult(auth)
+      .then(cred => {
+        if (cred?.user) {
+          activateFirebaseUser(cred.user);
+        }
+      })
+      .catch((e) => {
+        // auth/popup-closed vagy cancelled — nem kell hibaüzenet
+        if (e?.code && e.code !== "auth/cancelled-popup-request") {
+          setErr(e?.message ?? "Google belépési hiba.");
+        }
+      });
+  // activateFirebaseUser stabil useCallback, biztonságos dependency
+  }, [activateFirebaseUser]);
 
   const doEmail = React.useCallback(async () => {
     setErr(null); setBusy(true);

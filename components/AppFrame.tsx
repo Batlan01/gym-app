@@ -40,10 +40,10 @@ export function AppFrame({ children }: { children: React.ReactNode }) {
 
   // Firebase auth state — emelt timeout redirect után
   React.useEffect(() => {
-    // Adunk 5 másodpercet az auth-nak hogy beálljon (redirect után kell)
+    // 8 másodperc: Google redirect után a getRedirectResult is kell idő
     const timeout = window.setTimeout(() => {
-      setAuthReady(true); // ha 5mp alatt nem jött válasz, továbbenged
-    }, 5000);
+      setAuthReady(true);
+    }, 8000);
 
     const unsub = onAuthStateChanged(auth, (u) => {
       window.clearTimeout(timeout);
