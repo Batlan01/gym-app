@@ -6,7 +6,9 @@ import type { ExerciseDef } from "./exercises";
 export type CustomExercise = ExerciseDef & {
   custom: true;
   description?: string;
+  youtubeUrl?: string;
   createdAt: number;
+  updatedAt?: number;
 };
 
 function lsKey(profileId: string) {
@@ -36,13 +38,14 @@ export function deleteCustomExercise(profileId: string, exerciseId: string): voi
   localStorage.setItem(lsKey(profileId), JSON.stringify(list));
 }
 
-export function makeCustomExercise(name: string, description?: string): CustomExercise {
+export function makeCustomExercise(name: string, description?: string, youtubeUrl?: string): CustomExercise {
   return {
     id: `custom_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
     name: name.trim(),
     group: "Custom",
     custom: true,
     description: description?.trim(),
+    youtubeUrl: youtubeUrl?.trim(),
     createdAt: Date.now(),
   };
 }
