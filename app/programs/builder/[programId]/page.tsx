@@ -1,16 +1,22 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
+import { useEffect } from "react";
 
-export default function ProgramBuilderPage() {
+// A tényleges builder a /programs/[programId] útvonalon él
+// Ez az oldal csak átirányít oda
+export default function ProgramBuilderRedirect() {
   const params = useParams();
   const router = useRouter();
   const programId = params?.programId as string;
 
+  useEffect(() => {
+    if (programId) router.replace(`/programs/${programId}`);
+  }, [programId, router]);
+
   return (
-    <div className="p-6 text-white">
-      <h1 className="text-xl font-bold mb-4">Program Builder</h1>
-      <p className="text-white/60">Program ID: {programId}</p>
+    <div className="flex min-h-dvh items-center justify-center">
+      <div className="text-sm" style={{ color: 'var(--text-muted)' }}>Betöltés…</div>
     </div>
   );
 }
