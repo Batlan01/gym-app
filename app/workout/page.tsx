@@ -6,6 +6,7 @@ import { AddExerciseSheet } from "@/components/AddExerciseSheet";
 import { ExerciseCard } from "@/components/ExerciseCard";
 import { SetEditSheet } from "@/components/SetEditSheet";
 import { RestTimerOverlay } from "@/components/RestTimerOverlay";
+import { AchievementToast } from "@/components/AchievementToast";
 
 import { EXERCISES } from "@/lib/exercises";
 import { readCustomExercises, saveCustomExercise, deleteCustomExercise } from "@/lib/customExercises";
@@ -13,15 +14,19 @@ import type { CustomExercise } from "@/lib/customExercises";
 import { readPrograms } from "@/lib/programsStorage";
 import type { Workout, WorkoutExercise, SetEntry } from "@/lib/types";
 import { useLocalStorageState } from "@/lib/useLocalStorageState";
-import { lsSet, uid } from "@/lib/storage";
+import { lsSet, lsGet, uid } from "@/lib/storage";
 import {
-  formatLastSummary,
-  newExercise,
-  newSet,
-  newWorkout,
-  normalizeWorkoutForSave,
-  isSetFilled,
+  formatLastSummary, newExercise, newSet, newWorkout,
+  normalizeWorkoutForSave, isSetFilled,
 } from "@/lib/workoutHelpers";
+import {
+  ACHIEVEMENTS, calcXP, checkNewAchievements, type UnlockedAchievement,
+} from "@/lib/achievements";
+import {
+  LS_NOTIF_SETTINGS, DEFAULT_NOTIF_SETTINGS, type NotifSettings,
+  schedulePostWorkoutNotif, checkAndSendStreakBreakNotif,
+} from "@/lib/notifications";
+import { profileKey } from "@/lib/profiles";
 
 import { auth } from "@/lib/firebase";
 import { saveWorkoutToCloud } from "@/lib/workoutsCloud";
@@ -156,6 +161,18 @@ export default function WorkoutPage() {
     const t = window.setTimeout(() => setToast(null), 4500);
     return () => window.clearTimeout(t);
   }, [toast]);
+
+  // ===== Achievement toast =====
+  const [newAchievements, setNewAchievements] = React.useState<UnlockedAchievement[]>([]);
+
+  // Streak break check induláskor
+  React.useEffect(() => {
+    const notifSettings = lsGet<NotifSettings>(LS_NOTIF_SETTINGS, DEFAULT_NOTIF_SETTINGS);
+    if (history.length > 0) {
+      checkAndSendStreakBreakNotif(history[0].startedAt, notifSettings);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // ===== Pending badge (pro feeling) =====
   const [pendingN, setPendingN] = React.useState(0);
@@ -347,6 +364,26 @@ export default function WorkoutPage() {
         body: "Offline vagy / hiba volt. Csatlakozz netre — a szinkron automatikusan megpróbálja később.",
       });
     }
+
+    // 5) Achievement check
+    try {
+      const achKey = profileKey(profileId, "achievements");
+      const unlocked = lsGet<UnlockedAchievement[]>(achKey, []);
+      const updatedHistory = [finished, ...history];
+      const newOnes = checkNewAchievements(
+        { workouts: updatedHistory, weightHistory: [], streak: 0 },
+        unlocked
+      );
+      if (newOnes.length > 0) {
+        const merged = [...unlocked, ...newOnes];
+        lsSet(achKey, merged);
+        setNewAchievements(newOnes);
+      }
+    } catch {}
+
+    // 6) Post-workout notification
+    const notifSettings = lsGet<NotifSettings>(LS_NOTIF_SETTINGS, DEFAULT_NOTIF_SETTINGS);
+    schedulePostWorkoutNotif(notifSettings);
   }, [active, activeProfileId, setHistory, setActive, LS_ACTIVE]);
 
   const toggleFavorite = React.useCallback(
@@ -718,6 +755,11 @@ export default function WorkoutPage() {
       <RestTimerOverlay open={!!restEndAt} totalSec={restTotal} leftSec={restLeftSec}
         muted={settings.muted} onAdd={addRest} onSkip={skipRest}
         onToggleMute={() => setSettings(s => ({ ...s, muted: !s.muted }))} />
+
+      <AchievementToast
+        newAchievements={newAchievements}
+        onDismiss={() => setNewAchievements([])}
+      />
 
       <BottomNav />
     </>
