@@ -201,11 +201,24 @@ export default function Home() {
       <main className="mx-auto max-w-md px-4 pt-8 pb-32 animate-in">
 
         {/* Header */}
-        <header className="mb-5">
-          <div className="label-xs mb-1">GYM WEBAPP</div>
-          <h1 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>
-            {greeting}{name ? `, ${name}` : ""}
-          </h1>
+        <header className="mb-5 flex items-center justify-between">
+          <div>
+            <div className="label-xs mb-1">GYM WEBAPP</div>
+            <h1 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>
+              {greeting}{name ? `, ${name}` : ""}
+            </h1>
+          </div>
+          {/* Profil / Settings gomb */}
+          <Link href="/settings"
+            className="flex h-11 w-11 items-center justify-center rounded-full pressable shrink-0"
+            style={{
+              background: 'linear-gradient(135deg, rgba(34,211,238,0.18), rgba(34,211,238,0.06))',
+              border: '1px solid rgba(34,211,238,0.3)',
+            }}>
+            <span className="text-lg font-black" style={{ color: 'var(--accent-primary)' }}>
+              {name ? name[0].toUpperCase() : "⚙"}
+            </span>
+          </Link>
         </header>
 
         {/* Hero */}

@@ -8,7 +8,7 @@ import { useLocalStorageState } from "@/lib/useLocalStorageState";
 import { LS_ACTIVE_PROFILE } from "@/lib/profiles";
 import { PROGRAM_TEMPLATES, sportLabel, levelLabel } from "@/lib/programTemplates";
 import type { SportTag, UserProgram, ProgramTemplate } from "@/lib/programsTypes";
-import { createProgramFromTemplate, readPrograms, upsertProgram } from "@/lib/programsStorage";
+import { createProgramFromTemplate, deduplicatePrograms, readPrograms, upsertProgram } from "@/lib/programsStorage";
 
 // ── Gradient térkép ──────────────────────────────────────────
 const GRADIENTS: Record<string, { from: string; glow: string; border: string }> = {
@@ -142,7 +142,10 @@ export default function ProgramsPage() {
   const [tab, setTab] = React.useState<'browse' | 'mine'>('browse');
 
   React.useEffect(() => {
-    if (activeProfileId) setMine(readPrograms(activeProfileId));
+    if (activeProfileId) {
+      const cleaned = deduplicatePrograms(activeProfileId); // ← ez kitakarítja a régieket
+      setMine(cleaned);
+    }
   }, [activeProfileId]);
 
   function startFromTemplate(tplId: string) {
