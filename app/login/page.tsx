@@ -41,13 +41,20 @@ export default function LoginPage() {
 
   const activateFirebaseUser = React.useCallback((u: User) => {
     const id = fbProfileId(u.uid);
-    setAuthMode("firebase");
-    setProfiles(prev => ensureFirebaseProfile(prev, u));
+
+    // Direkten írjuk localStorage-ba — ne legyen race condition a hook setState-ek között
+    const existingProfiles: Profile[] = JSON.parse(localStorage.getItem(LS_PROFILES) ?? "[]");
+    const updatedProfiles = ensureFirebaseProfile(existingProfiles, u);
+    localStorage.setItem(LS_PROFILES, JSON.stringify(updatedProfiles));
+    localStorage.setItem(LS_AUTH_MODE, JSON.stringify("firebase"));
+    localStorage.setItem(LS_ACTIVE_PROFILE, JSON.stringify(id));
+
     const existing = lsGet<boolean | null>(onboardedKey(id), null);
     if (existing === null) lsSet(onboardedKey(id), false);
-    setActiveProfileId(id);
-    router.replace("/workout");
-  }, [setAuthMode, setProfiles, setActiveProfileId, router]);
+
+    // Kis delay hogy a localStorage írás propagáljon, aztán navigál
+    setTimeout(() => router.replace("/workout"), 50);
+  }, [router]);
 
   // Google redirect result kezelése — mindig lefut oldalbetöltéskor
   React.useEffect(() => {
