@@ -397,25 +397,7 @@ export default function CalendarPage() {
         })}
       </div>
 
-      {/* Programok összefoglaló */}
-      {programs.length > 0 && (
-        <div className="mx-4 mt-4 rounded-3xl p-4" style={{ background: "var(--bg-surface)", border: "1px solid var(--border-subtle)" }}>
-          <div className="label-xs mb-3">AKTÍV PROGRAMOK</div>
-          {programs.map(prog => {
-            const allEntries = Object.values(prog.schedule?.pinnedDays ?? {}).flat();
-            return (
-              <button key={prog.id} onClick={() => router.push(`/programs/${prog.id}`)}
-                className="w-full flex items-center justify-between py-2.5 pressable"
-                style={{ borderBottom: "1px solid var(--border-subtle)" }}>
-                <div className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>{prog.name}</div>
-                <div className="text-xs" style={{ color: "var(--text-muted)" }}>
-                  {allEntries.length > 0 ? `${allEntries.length} slot ütemezve` : "Nincs ütemezve"}
-                </div>
-              </button>
-            );
-          })}
-        </div>
-      )}
+      {/* Programok összefoglaló — eltávolítva */}
 
       {programs.length === 0 && (
         <div className="mx-4 mt-4 rounded-3xl p-8 flex flex-col items-center justify-center text-center" style={{ background: "var(--bg-surface)", border: "1px solid var(--border-subtle)", minHeight: 200 }}>

@@ -39,14 +39,14 @@ const items = [
     ),
   },
   {
-    label: "Programok",
-    href: "/programs",
+    label: "Gyakorlatok",
+    href: "/exercises",
     icon: (active: boolean) => (
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={active ? 2.2 : 1.8} strokeLinecap="round" strokeLinejoin="round">
-        <rect x="3" y="3" width="7" height="7" rx="1.5"/>
-        <rect x="14" y="3" width="7" height="7" rx="1.5"/>
-        <rect x="3" y="14" width="7" height="7" rx="1.5"/>
-        <rect x="14" y="14" width="7" height="7" rx="1.5"/>
+        <path d="M4 6h16M4 12h16M4 18h16"/>
+        <circle cx="20" cy="6" r="1.5" fill="currentColor" stroke="none"/>
+        <circle cx="20" cy="12" r="1.5" fill="currentColor" stroke="none"/>
+        <circle cx="20" cy="18" r="1.5" fill="currentColor" stroke="none"/>
       </svg>
     ),
   },
@@ -80,7 +80,7 @@ export function BottomNav() {
         >
           <div className="flex items-center justify-between px-2 py-2">
             {items.map((it) => {
-              const active = path === it.href || (it.href !== "/" && path.startsWith(it.href));
+              const active = path === it.href || (it.href !== "/" && it.href !== "/exercises" && path.startsWith(it.href)) || (it.href === "/exercises" && (path === "/exercises" || path.startsWith("/exercises?")));
               return (
                 <Link
                   key={it.href}
