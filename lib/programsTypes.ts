@@ -52,8 +52,8 @@ export type ProgramTemplate = {
 export type ProgramScheduleStub = {
   enabled?: boolean;
   preferredDaysPerWeek?: number;
-  // nap→session leképezés: kulcs "0"..„6" (0=Hétfő), érték sessionId
-  pinnedDays?: Record<string, string>; // { "0": sessionId, "2": sessionId, ... }
+  // nap→session leképezés: kulcs "0"..„6" (0=Hétfő), érték sessionId tömb
+  pinnedDays?: Record<string, string[]>; // { "0": [sessionId1, sessionId2], ... }
 };
 
 export type UserProgram = {
