@@ -76,12 +76,11 @@ export function AppFrame({ children }: { children: React.ReactNode }) {
     if (isCloudProfileId(activeProfileId)) {
       const expected = cloudUidFromProfileId(activeProfileId);
       if (!authUid || authUid !== expected) {
-        // CSAK töröljük ha az auth tényleg ready és nem egyezik
-        // (ne töröljük ha csak lassú volt a betöltés)
-        if (authReady) {
-          lsSet(LS_ACTIVE_PROFILE, null);
-          router.replace("/login");
-        }
+        // Ne tegyünk semmit amíg az auth nem ready — ne töröljük a profilt
+        if (!authReady) return;
+        // Auth ready de nem egyezik → valóban nem bejelentkezve
+        lsSet(LS_ACTIVE_PROFILE, null);
+        router.replace("/login");
         return;
       }
     }
