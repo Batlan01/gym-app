@@ -8,7 +8,7 @@ import { useLocalStorageState } from "@/lib/useLocalStorageState";
 import { LS_ACTIVE_PROFILE } from "@/lib/profiles";
 import { PROGRAM_TEMPLATES, sportLabel, levelLabel } from "@/lib/programTemplates";
 import type { SportTag, UserProgram, ProgramTemplate } from "@/lib/programsTypes";
-import { createProgramFromTemplate, readPrograms } from "@/lib/programsStorage";
+import { createProgramFromTemplate, readPrograms, upsertProgram } from "@/lib/programsStorage";
 
 // ── Gradient térkép ──────────────────────────────────────────
 const GRADIENTS: Record<string, { from: string; glow: string; border: string }> = {
@@ -34,10 +34,11 @@ const chips: { id: 'all' | SportTag; label: string }[] = [
 ];
 
 // ── Poster kártya ────────────────────────────────────────────
-function PosterCard({ tpl, onClick, size = 'md' }: {
+function PosterCard({ tpl, onClick, size = 'md', owned = false }: {
   tpl: ProgramTemplate;
   onClick: () => void;
   size?: 'sm' | 'md' | 'lg';
+  owned?: boolean;
 }) {
   const g = GRADIENTS[tpl.cover?.gradient ?? 'slate'];
   const w = size === 'lg' ? 200 : size === 'sm' ? 130 : 160;
@@ -68,6 +69,13 @@ function PosterCard({ tpl, onClick, size = 'md' }: {
           style={{ background: 'rgba(0,0,0,0.6)', color: 'rgba(255,255,255,0.7)', backdropFilter: 'blur(4px)' }}>
           {levelLabel(tpl.level)}
         </div>
+        {/* Megvan badge */}
+        {owned && (
+          <div className="absolute top-2 left-2 rounded-full px-2 py-0.5 text-[9px] font-bold"
+            style={{ background: 'rgba(74,222,128,0.2)', color: '#4ade80', backdropFilter: 'blur(4px)' }}>
+            ✓ Megvan
+          </div>
+        )}
         {/* Cím overlay */}
         <div className="absolute bottom-0 inset-x-0 px-3 pb-3">
           <div className="text-xs font-black leading-tight" style={{ color: '#fff', fontSize: 11 }}>
@@ -141,7 +149,16 @@ export default function ProgramsPage() {
     if (!activeProfileId) return;
     const tpl = PROGRAM_TEMPLATES.find(x => x.id === tplId);
     if (!tpl) return;
+
+    // Ha már van ilyen sablon alapú program → nyisd meg, ne hozz létre újat
+    const existing = mine.find(p => p.fromTemplateId === tplId);
+    if (existing) {
+      router.push(`/programs/builder/${existing.id}`);
+      return;
+    }
+
     const p = createProgramFromTemplate(activeProfileId, tpl);
+    setMine(prev => [p, ...prev]); // azonnal frissíti a Saját listát
     router.push(`/programs/builder/${p.id}`);
   }
 
@@ -158,6 +175,12 @@ export default function ProgramsPage() {
   const byGym = PROGRAM_TEMPLATES.filter(t => t.sport === 'gym');
   const byRunning = PROGRAM_TEMPLATES.filter(t => t.sport === 'running');
   const byBoxing = PROGRAM_TEMPLATES.filter(t => t.sport === 'boxing');
+
+  // Mely sablonok vannak már meg a felhasználónál
+  const ownedTemplateIds = React.useMemo(
+    () => new Set(mine.map(p => p.fromTemplateId).filter(Boolean)),
+    [mine]
+  );
 
   return (
     // min-h-dvh hogy a BottomNav sticky maradjon akkor is ha kevés tartalom van
@@ -219,7 +242,8 @@ export default function ProgramsPage() {
                 <div className="grid grid-cols-2 gap-3">
                   {filtered.map(t => (
                     <div key={t.id} onClick={() => startFromTemplate(t.id)} className="cursor-pointer">
-                      <PosterCard tpl={t} onClick={() => startFromTemplate(t.id)} size="lg" />
+                      <PosterCard tpl={t} onClick={() => startFromTemplate(t.id)} size="lg"
+                        owned={ownedTemplateIds.has(t.id)} />
                     </div>
                   ))}
                   {!filtered.length && (
@@ -235,33 +259,31 @@ export default function ProgramsPage() {
                 {/* Kiemelt — nagy poszterek */}
                 <HRow title="🔥 Kiemelt programok" accent="var(--accent-primary)">
                   {featured.map(t => (
-                    <PosterCard key={t.id} tpl={t} onClick={() => startFromTemplate(t.id)} size="lg" />
+                    <PosterCard key={t.id} tpl={t} onClick={() => startFromTemplate(t.id)} size="lg"
+                      owned={ownedTemplateIds.has(t.id)} />
                   ))}
                 </HRow>
-
-                {/* Edzőterem */}
                 {byGym.length > 0 && (
                   <HRow title="🏋️ Edzőterem" accent="var(--accent-green)">
                     {byGym.map(t => (
-                      <PosterCard key={t.id} tpl={t} onClick={() => startFromTemplate(t.id)} size="md" />
+                      <PosterCard key={t.id} tpl={t} onClick={() => startFromTemplate(t.id)} size="md"
+                        owned={ownedTemplateIds.has(t.id)} />
                     ))}
                   </HRow>
                 )}
-
-                {/* Futás */}
                 {byRunning.length > 0 && (
                   <HRow title="🏃 Futás" accent="var(--accent-primary)">
                     {byRunning.map(t => (
-                      <PosterCard key={t.id} tpl={t} onClick={() => startFromTemplate(t.id)} size="md" />
+                      <PosterCard key={t.id} tpl={t} onClick={() => startFromTemplate(t.id)} size="md"
+                        owned={ownedTemplateIds.has(t.id)} />
                     ))}
                   </HRow>
                 )}
-
-                {/* Box */}
                 {byBoxing.length > 0 && (
                   <HRow title="🥊 Box" accent="var(--accent-amber)">
                     {byBoxing.map(t => (
-                      <PosterCard key={t.id} tpl={t} onClick={() => startFromTemplate(t.id)} size="md" />
+                      <PosterCard key={t.id} tpl={t} onClick={() => startFromTemplate(t.id)} size="md"
+                        owned={ownedTemplateIds.has(t.id)} />
                     ))}
                   </HRow>
                 )}
