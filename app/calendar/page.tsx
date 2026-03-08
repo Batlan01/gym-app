@@ -46,58 +46,105 @@ function SessionPickerModal({ dayIdx, dayName, programs, current, onPick, onClea
   return (
     <div className="fixed inset-0 z-[80] flex items-end justify-center"
       style={{ paddingBottom: "env(safe-area-inset-bottom)" }}>
-      <button className="absolute inset-0" style={{ background: "rgba(0,0,0,0.75)", backdropFilter: "blur(8px)" }} onClick={onClose} />
+      <button className="absolute inset-0" style={{ background: "rgba(0,0,0,0.8)", backdropFilter: "blur(12px)" }} onClick={onClose} />
       <div className="relative w-full max-w-md rounded-t-[2rem] overflow-hidden"
-        style={{ background: "var(--bg-elevated)", border: "1px solid var(--border-mid)", maxHeight: "75vh" }}>
-        <div className="px-5 pt-5 pb-3 flex items-center justify-between sticky top-0"
+        style={{ background: "var(--bg-elevated)", border: "1px solid var(--border-mid)", maxHeight: "80vh" }}>
+
+        {/* Header */}
+        <div className="px-5 pt-5 pb-4 flex items-center justify-between sticky top-0"
           style={{ background: "var(--bg-elevated)", borderBottom: "1px solid var(--border-subtle)" }}>
           <div>
-            <div className="label-xs mb-0.5">NAP BEÁLLÍTÁSA</div>
-            <div className="text-base font-black" style={{ color: "var(--text-primary)" }}>{dayName}</div>
+            <div className="text-[10px] font-bold tracking-widest mb-0.5" style={{ color: "var(--text-muted)" }}>
+              NAP BEÁLLÍTÁSA
+            </div>
+            <div className="text-xl font-black" style={{ color: "var(--text-primary)" }}>{dayName}</div>
           </div>
-          <button onClick={onClose} className="text-xl pressable" style={{ color: "var(--text-muted)" }}>✕</button>
+          <button onClick={onClose}
+            className="h-8 w-8 rounded-full flex items-center justify-center pressable"
+            style={{ background: "var(--bg-card)", color: "var(--text-muted)", border: "1px solid var(--border-subtle)" }}>
+            ✕
+          </button>
         </div>
-        <div className="overflow-y-auto px-4 py-3 space-y-3" style={{ maxHeight: "55vh" }}>
-          {/* Törlés */}
-          {current && (
-            <button onClick={() => { onClear(); onClose(); }}
-              className="w-full rounded-2xl py-3 text-sm font-semibold pressable"
-              style={{ background: "rgba(239,68,68,0.08)", color: "rgba(239,68,68,0.7)", border: "1px solid rgba(239,68,68,0.2)" }}>
-              🗑 Edzés törlése ezen a napon
-            </button>
-          )}
+
+        <div className="overflow-y-auto px-4 pb-6 pt-3 space-y-4" style={{ maxHeight: "62vh" }}>
+
+          {/* Üres állapot */}
           {programs.length === 0 && (
-            <div className="rounded-2xl p-4 text-sm text-center" style={{ color: "var(--text-muted)" }}>
-              Még nincs programod. Hozz létre egyet a Programok oldalon!
+            <div className="rounded-2xl p-6 text-sm text-center" style={{ color: "var(--text-muted)", background: "var(--bg-card)" }}>
+              Még nincs programod.<br/>Hozz létre egyet a Programok oldalon!
             </div>
           )}
+
+          {/* Programok és sessionök */}
           {programs.map(prog => (
             <div key={prog.id}>
-              <div className="label-xs mb-2">{prog.name.toUpperCase()}</div>
-              <div className="space-y-2">
+              {/* Program fejléc — jól látható */}
+              <div className="rounded-2xl px-4 py-3 mb-2"
+                style={{ background: "var(--bg-surface)", border: "1px solid var(--border-mid)" }}>
+                <div className="text-sm font-black" style={{ color: "var(--text-primary)" }}>{prog.name}</div>
+                <div className="text-xs mt-0.5" style={{ color: "var(--text-muted)" }}>
+                  {prog.sessions.length} session · {prog.daysPerWeek ?? "?"} nap/hét
+                </div>
+              </div>
+
+              {/* Session kártyák */}
+              <div className="space-y-2 pl-2">
                 {prog.sessions.map(sess => {
                   const isActive = current?.programId === prog.id && current?.sessionId === sess.id;
                   return (
-                    <button key={sess.id} onClick={() => { onPick(prog.id, sess.id); onClose(); }}
-                      className="w-full rounded-2xl p-3 text-left pressable"
-                      style={isActive
-                        ? { background: "rgba(34,211,238,0.12)", border: "1px solid rgba(34,211,238,0.35)" }
-                        : { background: "var(--bg-card)", border: "1px solid var(--border-subtle)" }}>
-                      <div className="flex items-center justify-between">
-                        <div className="text-sm font-semibold" style={{ color: isActive ? "var(--accent-primary)" : "var(--text-primary)" }}>
-                          {sess.name}
+                    <button key={sess.id}
+                      onClick={() => { onPick(prog.id, sess.id); onClose(); }}
+                      className="w-full rounded-2xl text-left pressable transition-all"
+                      style={isActive ? {
+                        background: "rgba(34,211,238,0.14)",
+                        border: "2px solid rgba(34,211,238,0.5)",
+                        padding: "12px 14px",
+                      } : {
+                        background: "var(--bg-card)",
+                        border: "1px solid var(--border-subtle)",
+                        padding: "12px 14px",
+                      }}>
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2 min-w-0">
+                          {/* Aktív jelző pont */}
+                          <div className="shrink-0 h-2 w-2 rounded-full"
+                            style={{ background: isActive ? "var(--accent-primary)" : "var(--border-mid)" }} />
+                          <div className="text-sm font-bold truncate"
+                            style={{ color: isActive ? "var(--accent-primary)" : "var(--text-primary)" }}>
+                            {sess.name}
+                          </div>
                         </div>
-                        {isActive && <span className="text-xs" style={{ color: "var(--accent-primary)" }}>✓ aktív</span>}
+                        {isActive ? (
+                          <span className="shrink-0 rounded-lg px-2 py-0.5 text-[10px] font-black"
+                            style={{ background: "rgba(34,211,238,0.15)", color: "var(--accent-primary)" }}>
+                            KIVÁLASZTVA
+                          </span>
+                        ) : (
+                          <span className="shrink-0 text-xs" style={{ color: "var(--text-muted)" }}>
+                            {sess.blocks.length} gyak.
+                          </span>
+                        )}
                       </div>
-                      <div className="text-xs mt-0.5" style={{ color: "var(--text-muted)" }}>
-                        {sess.blocks.length} gyakorlat
-                      </div>
+                      {isActive && (
+                        <div className="text-xs mt-1.5" style={{ color: "var(--text-muted)" }}>
+                          {sess.blocks.length} gyakorlat · koppints a módosításhoz
+                        </div>
+                      )}
                     </button>
                   );
                 })}
               </div>
             </div>
           ))}
+
+          {/* Törlés gomb alul */}
+          {current && (
+            <button onClick={() => { onClear(); onClose(); }}
+              className="w-full rounded-2xl py-3 text-sm font-semibold pressable mt-2"
+              style={{ background: "rgba(239,68,68,0.07)", color: "rgba(239,68,68,0.75)", border: "1px solid rgba(239,68,68,0.2)" }}>
+              🗑 Edzés törlése ezen a napon
+            </button>
+          )}
         </div>
       </div>
     </div>
@@ -266,32 +313,51 @@ export default function CalendarPage() {
                 {/* Session info */}
                 <div className="flex-1 min-w-0">
                   {isDone ? (
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-bold" style={{ color: "var(--accent-green)" }}>✓ Edzés kész</span>
+                    <div>
+                      <div className="text-sm font-black" style={{ color: "var(--accent-green)" }}>✓ Teljesítve</div>
+                      {session && <div className="text-xs mt-0.5" style={{ color: "var(--text-muted)" }}>{session.name}</div>}
                     </div>
                   ) : session ? (
-                    <>
-                      <div className="text-sm font-bold truncate" style={{ color: "var(--text-primary)" }}>
+                    <div>
+                      {/* Program neve kis label */}
+                      <div className="text-[10px] font-bold tracking-wider mb-0.5 truncate"
+                        style={{ color: isToday ? "rgba(34,211,238,0.7)" : "var(--text-muted)" }}>
+                        {prog?.name?.toUpperCase()}
+                      </div>
+                      {/* Session neve nagy */}
+                      <div className="text-sm font-black truncate"
+                        style={{ color: isToday ? "var(--text-primary)" : "var(--text-primary)" }}>
                         {session.name}
                       </div>
-                      <div className="text-xs mt-0.5 truncate" style={{ color: "var(--text-muted)" }}>
-                        {prog?.name} · {session.blocks.length} gyakorlat
+                      {/* Gyakorlat szám chip */}
+                      <div className="mt-1.5 inline-flex items-center gap-1 rounded-lg px-2 py-0.5 text-[10px] font-bold"
+                        style={{ background: isToday ? "rgba(34,211,238,0.12)" : "var(--bg-card)",
+                          color: isToday ? "var(--accent-primary)" : "var(--text-muted)",
+                          border: `1px solid ${isToday ? "rgba(34,211,238,0.2)" : "var(--border-subtle)"}` }}>
+                        {session.blocks.length} gyakorlat
                       </div>
-                    </>
+                    </div>
                   ) : (
-                    <div className="text-sm" style={{ color: "var(--text-muted)" }}>
-                      {isToday ? "Ma nincs tervezett edzés" : "Pihenőnap"}
+                    <div>
+                      <div className="text-sm font-semibold" style={{ color: isToday ? "var(--text-secondary)" : "var(--text-muted)" }}>
+                        {isToday ? "Ma nincs edzés" : "Pihenőnap"}
+                      </div>
+                      {isToday && (
+                        <div className="text-xs mt-0.5" style={{ color: "var(--text-muted)" }}>
+                          Koppints a beállításhoz
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
 
                 {/* Jobb oldal gomb */}
                 {!isPast && (
-                  <div className="shrink-0 rounded-xl px-2 py-1 text-[10px] font-bold"
+                  <div className="shrink-0 h-8 w-8 rounded-xl flex items-center justify-center text-sm font-black"
                     style={session
-                      ? { background: "rgba(34,211,238,0.1)", color: "var(--accent-primary)" }
+                      ? { background: "rgba(34,211,238,0.1)", color: "var(--accent-primary)", border: "1px solid rgba(34,211,238,0.2)" }
                       : { background: "var(--bg-card)", color: "var(--text-muted)", border: "1px solid var(--border-subtle)" }}>
-                    {session ? "✏️" : "+"}
+                    {session ? "✎" : "+"}
                   </div>
                 )}
               </div>
@@ -299,9 +365,10 @@ export default function CalendarPage() {
               {/* Ma gomb: edzés indítása */}
               {isToday && session && !isDone && (
                 <button onClick={e => { e.stopPropagation(); router.push("/workout"); }}
-                  className="mt-3 w-full rounded-2xl py-2.5 text-sm font-black pressable"
+                  className="mt-3 w-full rounded-2xl py-3 text-sm font-black pressable flex items-center justify-center gap-2"
                   style={{ background: "var(--accent-primary)", color: "#000" }}>
-                  Edzés indítása →
+                  <span>Edzés indítása</span>
+                  <span>→</span>
                 </button>
               )}
             </button>
