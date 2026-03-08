@@ -24,7 +24,7 @@ import {
 } from "@/lib/achievements";
 import {
   LS_NOTIF_SETTINGS, DEFAULT_NOTIF_SETTINGS, type NotifSettings,
-  schedulePostWorkoutNotif, checkAndSendStreakBreakNotif,
+  schedulePostWorkoutNotif, checkAndSendStreakBreakNotif, scheduleCalendarReminder,
 } from "@/lib/notifications";
 import { profileKey } from "@/lib/profiles";
 
@@ -165,12 +165,14 @@ export default function WorkoutPage() {
   // ===== Achievement toast =====
   const [newAchievements, setNewAchievements] = React.useState<UnlockedAchievement[]>([]);
 
-  // Streak break check induláskor
+  // Streak break check + calendar reminder induláskor
   React.useEffect(() => {
     const notifSettings = lsGet<NotifSettings>(LS_NOTIF_SETTINGS, DEFAULT_NOTIF_SETTINGS);
     if (history.length > 0) {
       checkAndSendStreakBreakNotif(history[0].startedAt, notifSettings);
     }
+    // Calendar-alapú emlékeztető
+    scheduleCalendarReminder(todaySessions.length, notifSettings);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

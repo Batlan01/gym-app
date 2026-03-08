@@ -5,200 +5,154 @@ import { useRouter } from "next/navigation";
 import { useLocalStorageState } from "@/lib/useLocalStorageState";
 import { lsGet, lsSet } from "@/lib/storage";
 import {
-  LS_ACTIVE_PROFILE,
-  onboardedKey,
-  profileMetaKey,
-  type ProfileMeta,
-  type Goal,
-  type TrainingPlace,
-  type Level,
-  type TrainingSplit,
+  LS_ACTIVE_PROFILE, onboardedKey, profileMetaKey, type ProfileMeta,
+  type Goal, type TrainingPlace, type Level, type TrainingSplit,
 } from "@/lib/profiles";
 
-type StepId =
-  | "welcome"
-  | "basic"
-  | "body"
-  | "goals"
-  | "training"
-  | "experience"
-  | "finish";
+type StepId = "welcome" | "basic" | "body" | "goals" | "training" | "experience" | "finish";
 
-function clampInt(n: number, min: number, max: number) {
-  return Math.max(min, Math.min(max, n));
-}
+function clampInt(n: number, min: number, max: number) { return Math.max(min, Math.min(max, n)); }
 function parseOptionalInt(s: string) {
-  const t = s.trim();
-  if (!t) return null;
-  const n = Number(t);
-  if (!Number.isFinite(n)) return null;
-  return Math.trunc(n);
+  const n = Number(s.trim()); return Number.isFinite(n) && s.trim() ? Math.trunc(n) : null;
 }
 function parseOptionalFloat(s: string) {
-  const t = s.trim().replace(",", ".");
-  if (!t) return null;
-  const n = Number(t);
-  if (!Number.isFinite(n)) return null;
-  return n;
+  const n = Number(s.trim().replace(",", ".")); return Number.isFinite(n) && s.trim() ? n : null;
+}
+
+// Chip selector
+function Chips<T extends string>({ options, value, onChange, cols = 3 }: {
+  options: { v: T; label: string; icon?: string }[];
+  value: T; onChange: (v: T) => void; cols?: number;
+}) {
+  return (
+    <div className={`grid gap-2`} style={{ gridTemplateColumns: `repeat(${cols}, 1fr)` }}>
+      {options.map(o => (
+        <button key={o.v} type="button" onClick={() => onChange(o.v)}
+          className="rounded-2xl py-3 px-2 text-sm font-semibold pressable transition-all"
+          style={value === o.v ? {
+            background: "rgba(34,211,238,0.15)",
+            color: "var(--accent-primary)",
+            border: "1px solid rgba(34,211,238,0.4)",
+          } : {
+            background: "var(--bg-card)",
+            color: "var(--text-muted)",
+            border: "1px solid var(--border-subtle)",
+          }}>
+          {o.icon && <div className="text-xl mb-1">{o.icon}</div>}
+          {o.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+// Number input
+function NumberInput({ label, value, onChange, placeholder, unit }: {
+  label: string; value: string; onChange: (v: string) => void;
+  placeholder?: string; unit?: string;
+}) {
+  return (
+    <div>
+      <div className="label-xs mb-2">{label}</div>
+      <div className="flex items-center gap-2">
+        <input value={value} onChange={e => onChange(e.target.value)}
+          inputMode="decimal" placeholder={placeholder ?? "—"}
+          className="flex-1 rounded-2xl px-4 py-3 text-sm outline-none"
+          style={{
+            background: "var(--bg-card)",
+            border: "1px solid var(--border-subtle)",
+            color: "var(--text-primary)",
+          }} />
+        {unit && <span className="text-sm" style={{ color: "var(--text-muted)" }}>{unit}</span>}
+      </div>
+    </div>
+  );
 }
 
 export default function OnboardingPage() {
   const router = useRouter();
+  const [activeProfileId, , activeHydrated] = useLocalStorageState<string | null>(LS_ACTIVE_PROFILE, null);
 
-  const [activeProfileId, , activeHydrated] =
-    useLocalStorageState<string | null>(LS_ACTIVE_PROFILE, null);
-
-  // anim state
   const [stepIdx, setStepIdx] = React.useState(0);
   const [phase, setPhase] = React.useState<"in" | "out">("in");
   const [dir, setDir] = React.useState<1 | -1>(1);
   const animTimer = React.useRef<number | null>(null);
 
-  // draft (stringek: stabil input)
   const [fullName, setFullName] = React.useState("");
   const [draftAge, setDraftAge] = React.useState("");
   const [draftHeight, setDraftHeight] = React.useState("");
   const [draftWeight, setDraftWeight] = React.useState("");
-
   const [goal, setGoal] = React.useState<Goal>("maintain");
   const [place, setPlace] = React.useState<TrainingPlace>("gym");
   const [draftDays, setDraftDays] = React.useState("3");
-
   const [level, setLevel] = React.useState<Level>("beginner");
   const [split, setSplit] = React.useState<TrainingSplit>("fullbody");
-
   const [focus, setFocus] = React.useState<string[]>([]);
-  const [notes, setNotes] = React.useState("");
 
-  // steps (stabil tömb)
-  const steps = React.useMemo<{ id: StepId; title: string; subtitle: string }[]>(
-    () => [
-      { id: "welcome", title: "Üdv!", subtitle: "Gyorsan beállítjuk a profilodat." },
-      { id: "basic", title: "Alap adatok", subtitle: "Hogy megszólíthassunk + személyre szabás." },
-      { id: "body", title: "Test adatok", subtitle: "Nem kötelező, de hasznos a célokhoz." },
-      { id: "goals", title: "Cél", subtitle: "Mit szeretnél elérni?" },
-      { id: "training", title: "Edzés környezet", subtitle: "Hol és milyen gyakran?" },
-      { id: "experience", title: "Tapasztalat", subtitle: "Szint + edzésrendszer." },
-      { id: "finish", title: "Kész!", subtitle: "Ellenőrzés és mentés." },
-    ],
-    []
-  );
+  const steps: { id: StepId; title: string; subtitle: string; emoji: string }[] = [
+    { id: "welcome",    title: "Üdv az ARCX-ben!", subtitle: "1 perc és kész", emoji: "👋" },
+    { id: "basic",      title: "Mi a neved?",       subtitle: "Hogy megszólíthassunk", emoji: "✏️" },
+    { id: "body",       title: "Test adatok",        subtitle: "Opcionális, de hasznos", emoji: "📏" },
+    { id: "goals",      title: "Mi a célod?",        subtitle: "Személyre szabjuk az appot", emoji: "🎯" },
+    { id: "training",   title: "Edzés körülmény",    subtitle: "Hol és milyen sűrűn?", emoji: "🏋️" },
+    { id: "experience", title: "Tapasztalat",         subtitle: "Szint és edzésrendszer", emoji: "⭐" },
+    { id: "finish",     title: "Kész!",               subtitle: "Ellenőrzöd és mentesz", emoji: "🚀" },
+  ];
 
   const step = steps[stepIdx];
 
-  // betöltés (ha már volt meta)
   React.useEffect(() => {
     if (!activeHydrated) return;
-    if (!activeProfileId) {
-      router.replace("/login");
-      return;
-    }
-
+    if (!activeProfileId) { router.replace("/login"); return; }
     const meta = lsGet<ProfileMeta | null>(profileMetaKey(activeProfileId), null);
-
     if (meta) {
-      if (meta.fullName) setFullName(meta.fullName);
-      if (meta.age != null) setDraftAge(String(meta.age));
+      if (meta.fullName)         setFullName(meta.fullName);
+      if (meta.age != null)      setDraftAge(String(meta.age));
       if (meta.heightCm != null) setDraftHeight(String(meta.heightCm));
       if (meta.weightKg != null) setDraftWeight(String(meta.weightKg));
-      if (meta.goal) setGoal(meta.goal);
-      if (meta.trainingPlace) setPlace(meta.trainingPlace);
+      if (meta.goal)             setGoal(meta.goal);
+      if (meta.trainingPlace)    setPlace(meta.trainingPlace);
       if (meta.daysPerWeek != null) setDraftDays(String(meta.daysPerWeek));
-      if (meta.level) setLevel(meta.level);
-      if (meta.split) setSplit(meta.split);
+      if (meta.level)            setLevel(meta.level);
+      if (meta.split)            setSplit(meta.split);
       if (Array.isArray(meta.focus)) setFocus(meta.focus);
-      if (meta.notes) setNotes(meta.notes);
     }
   }, [activeHydrated, activeProfileId, router]);
 
-  React.useEffect(() => {
-    return () => {
-      if (animTimer.current) window.clearTimeout(animTimer.current);
-    };
-  }, []);
+  React.useEffect(() => () => { if (animTimer.current) window.clearTimeout(animTimer.current); }, []);
 
   const persist = React.useCallback(() => {
     if (!activeProfileId) return;
-
-    const age = parseOptionalInt(draftAge);
-    const heightCm = parseOptionalInt(draftHeight);
-    const weightKg = parseOptionalFloat(draftWeight);
-    const daysPerWeek = parseOptionalInt(draftDays);
-
     const meta: ProfileMeta = {
       fullName: fullName.trim() || undefined,
-      age: age == null ? null : clampInt(age, 8, 110),
-      heightCm: heightCm == null ? null : clampInt(heightCm, 80, 250),
-      weightKg: weightKg == null ? null : Math.max(20, Math.min(400, weightKg)),
-      goal,
-      trainingPlace: place,
-      daysPerWeek: daysPerWeek == null ? null : clampInt(daysPerWeek, 1, 7),
-      level,
-      split,
-      focus,
-      notes: notes.trim() || undefined,
+      age:       parseOptionalInt(draftAge)    != null ? clampInt(parseOptionalInt(draftAge)!, 8, 110)    : null,
+      heightCm:  parseOptionalInt(draftHeight) != null ? clampInt(parseOptionalInt(draftHeight)!, 80, 250) : null,
+      weightKg:  parseOptionalFloat(draftWeight) != null ? Math.max(20, Math.min(400, parseOptionalFloat(draftWeight)!)) : null,
+      goal, trainingPlace: place,
+      daysPerWeek: parseOptionalInt(draftDays) != null ? clampInt(parseOptionalInt(draftDays)!, 1, 7) : null,
+      level, split, focus,
     };
-
     lsSet(profileMetaKey(activeProfileId), meta);
-  }, [
-    activeProfileId,
-    fullName,
-    draftAge,
-    draftHeight,
-    draftWeight,
-    goal,
-    place,
-    draftDays,
-    level,
-    split,
-    focus,
-    notes,
-  ]);
+  }, [activeProfileId, fullName, draftAge, draftHeight, draftWeight, goal, place, draftDays, level, split, focus]);
 
-  const gotoStep = React.useCallback(
-    (next: number) => {
-      const n = clampInt(next, 0, steps.length - 1);
-      if (n === stepIdx) return;
-
-      // mindig mentsünk lépésváltáskor
-      persist();
-
-      setDir(n > stepIdx ? 1 : -1);
-      setPhase("out");
-
-      if (animTimer.current) window.clearTimeout(animTimer.current);
-      animTimer.current = window.setTimeout(() => {
-        setStepIdx(n);
-        setPhase("in");
-      }, 160);
-    },
-    [persist, stepIdx, steps.length]
-  );
+  const gotoStep = React.useCallback((next: number) => {
+    const n = clampInt(next, 0, steps.length - 1);
+    if (n === stepIdx) return;
+    persist();
+    setDir(n > stepIdx ? 1 : -1);
+    setPhase("out");
+    if (animTimer.current) window.clearTimeout(animTimer.current);
+    animTimer.current = window.setTimeout(() => { setStepIdx(n); setPhase("in"); }, 150);
+  }, [persist, stepIdx, steps.length]);
 
   const canNext = React.useMemo(() => {
-    if (step.id === "welcome") return true;
     if (step.id === "basic") return fullName.trim().length >= 2;
-    if (step.id === "body") return true; // opcionális
-    if (step.id === "goals") return !!goal;
     if (step.id === "training") {
       const d = parseOptionalInt(draftDays);
       return !!place && d != null && d >= 1 && d <= 7;
     }
-    if (step.id === "experience") return !!level && !!split;
-    if (step.id === "finish") return true;
     return true;
-  }, [step.id, fullName, goal, place, draftDays, level, split]);
-
-  const onNext = React.useCallback(() => {
-    if (!canNext) return;
-    if (step.id === "finish") return;
-    gotoStep(stepIdx + 1);
-  }, [canNext, step.id, gotoStep, stepIdx]);
-
-  const onBack = React.useCallback(() => {
-    if (stepIdx === 0) return;
-    gotoStep(stepIdx - 1);
-  }, [gotoStep, stepIdx]);
+  }, [step.id, fullName, place, draftDays]);
 
   const onFinish = React.useCallback(() => {
     if (!activeProfileId) return;
@@ -207,328 +161,233 @@ export default function OnboardingPage() {
     router.replace("/workout");
   }, [activeProfileId, persist, router]);
 
-  const toggleFocus = React.useCallback((label: string) => {
-    setFocus((prev) => {
-      const has = prev.includes(label);
-      if (has) return prev.filter((x) => x !== label);
-      return [...prev, label];
-    });
-  }, []);
+  const toggleFocus = (label: string) =>
+    setFocus(p => p.includes(label) ? p.filter(x => x !== label) : [...p, label]);
 
-  if (!activeHydrated) {
-    return (
-      <main className="mx-auto max-w-md px-4 pt-10 pb-24">
-        <div className="rounded-3xl border border-white/10 bg-white/5 p-4 text-white/70">Loading…</div>
-      </main>
-    );
-  }
+  if (!activeHydrated) return (
+    <div className="flex items-center justify-center min-h-dvh">
+      <div className="text-sm" style={{ color: "var(--text-muted)" }}>Betöltés…</div>
+    </div>
+  );
 
   return (
-    <main className="mx-auto max-w-md px-4 pt-8 pb-28">
-      <div className="mb-4">
-        <div className="text-[11px] tracking-[0.35em] text-white/50">ARCX</div>
-        <h1 className="mt-2 text-2xl font-semibold text-white">Profil beállítás</h1>
-        <div className="mt-1 text-sm text-white/55">
-          {stepIdx + 1}/{steps.length} — {step.title}
+    <main className="mx-auto max-w-md px-4 pt-8 pb-28 min-h-dvh flex flex-col">
+
+      {/* Top: logo + progress */}
+      <div className="mb-6">
+        <div className="label-xs mb-4">ARCX</div>
+
+        {/* Progress dots */}
+        <div className="flex gap-1.5 mb-4">
+          {steps.map((_, i) => (
+            <button key={i} onClick={() => i < stepIdx && gotoStep(i)}
+              className="flex-1 rounded-full transition-all duration-400"
+              style={{
+                height: 4,
+                background: i < stepIdx
+                  ? "var(--accent-primary)"
+                  : i === stepIdx
+                  ? "rgba(34,211,238,0.5)"
+                  : "var(--bg-card)",
+                cursor: i < stepIdx ? "pointer" : "default",
+              }} />
+          ))}
+        </div>
+
+        <div className="text-xs" style={{ color: "var(--text-muted)" }}>
+          {stepIdx + 1} / {steps.length}
         </div>
       </div>
 
-      {/* progress */}
-      <div className="mb-5 flex gap-2">
-        {steps.map((_, i) => (
-          <div
-            key={i}
-            className={`h-1.5 flex-1 rounded-full ${
-              i <= stepIdx ? "bg-white/25" : "bg-white/10"
-            }`}
-          />
-        ))}
-      </div>
+      {/* Animated step card */}
+      <div className="flex-1" style={{
+        opacity: phase === "in" ? 1 : 0,
+        transform: phase === "in" ? "translateX(0)" : `translateX(${dir * -16}px)`,
+        transition: "opacity 0.15s ease, transform 0.15s ease",
+      }}>
+        {/* Step emoji + title */}
+        <div className="mb-6">
+          <div className="text-4xl mb-3">{step.emoji}</div>
+          <h1 className="text-2xl font-black mb-1" style={{ color: "var(--text-primary)" }}>
+            {step.title}
+          </h1>
+          <p className="text-sm" style={{ color: "var(--text-muted)" }}>{step.subtitle}</p>
+        </div>
 
-      {/* animated card */}
-      <section
-        className={[
-          "rounded-3xl border border-white/10 bg-white/5 p-4 transition-all duration-200",
-          phase === "in"
-            ? "opacity-100 translate-x-0"
-            : dir === 1
-            ? "opacity-0 -translate-x-3"
-            : "opacity-0 translate-x-3",
-        ].join(" ")}
-      >
-        <div className="text-lg font-semibold text-white">{step.title}</div>
-        <div className="mt-1 text-sm text-white/55">{step.subtitle}</div>
+        {/* Step content */}
+        <div className="space-y-4">
 
-        <div className="mt-4">
-          {step.id === "welcome" ? (
-            <div className="text-sm text-white/70">
-              1 perc, és kész. Utána kezdheted az edzést.
-            </div>
-          ) : null}
-
-          {step.id === "basic" ? (
-            <div className="space-y-3">
-              <label className="block">
-                <div className="text-xs text-white/60">Név</div>
-                <input
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  placeholder="Pl. Nikolas"
-                  className="mt-1 w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white outline-none placeholder:text-white/25 focus:border-white/20"
-                />
-              </label>
-            </div>
-          ) : null}
-
-          {step.id === "body" ? (
-            <div className="grid grid-cols-3 gap-2">
-              <label className="block">
-                <div className="text-xs text-white/60">Kor</div>
-                <input
-                  value={draftAge}
-                  onChange={(e) => setDraftAge(e.target.value)}
-                  inputMode="numeric"
-                  placeholder="pl. 29"
-                  className="mt-1 w-full rounded-2xl border border-white/10 bg-black/30 px-3 py-3 text-sm text-white outline-none placeholder:text-white/25 focus:border-white/20"
-                />
-              </label>
-              <label className="block">
-                <div className="text-xs text-white/60">Magasság</div>
-                <input
-                  value={draftHeight}
-                  onChange={(e) => setDraftHeight(e.target.value)}
-                  inputMode="numeric"
-                  placeholder="cm"
-                  className="mt-1 w-full rounded-2xl border border-white/10 bg-black/30 px-3 py-3 text-sm text-white outline-none placeholder:text-white/25 focus:border-white/20"
-                />
-              </label>
-              <label className="block">
-                <div className="text-xs text-white/60">Súly</div>
-                <input
-                  value={draftWeight}
-                  onChange={(e) => setDraftWeight(e.target.value)}
-                  inputMode="decimal"
-                  placeholder="kg"
-                  className="mt-1 w-full rounded-2xl border border-white/10 bg-black/30 px-3 py-3 text-sm text-white outline-none placeholder:text-white/25 focus:border-white/20"
-                />
-              </label>
-
-              <div className="col-span-3 mt-2 text-xs text-white/45">
-                Tipp: ezek opcionálisak, később bármikor átírhatod.
+          {step.id === "welcome" && (
+            <div className="rounded-3xl p-5"
+              style={{ background: "linear-gradient(135deg, rgba(34,211,238,0.12), rgba(34,211,238,0.04))", border: "1px solid rgba(34,211,238,0.2)" }}>
+              <div className="text-sm leading-relaxed" style={{ color: "var(--text-secondary)" }}>
+                Az ARCX-szel <strong style={{ color: "var(--text-primary)" }}>programokat tervezhetsz</strong>,
+                edzéseket naplózhatsz, és nyomon követheted a fejlődésedet.<br /><br />
+                Pár gyors kérdéssel személyre szabjuk az élményt.
               </div>
             </div>
-          ) : null}
+          )}
 
-          {step.id === "goals" ? (
-            <div className="grid grid-cols-3 gap-2">
+          {step.id === "basic" && (
+            <div>
+              <div className="label-xs mb-2">NÉVLEL SZERETNÉNK MEGSZÓLÍTANI</div>
+              <input
+                value={fullName}
+                onChange={e => setFullName(e.target.value)}
+                placeholder="Pl. Nikolas"
+                autoFocus
+                className="w-full rounded-2xl px-4 py-4 text-lg font-bold outline-none"
+                style={{
+                  background: "var(--bg-card)",
+                  border: `1px solid ${fullName.trim().length >= 2 ? "rgba(34,211,238,0.4)" : "var(--border-subtle)"}`,
+                  color: "var(--text-primary)",
+                  transition: "border-color 0.2s",
+                }}
+              />
+              {fullName.trim().length >= 2 && (
+                <div className="mt-2 text-sm" style={{ color: "var(--accent-primary)" }}>
+                  Szia, {fullName.trim().split(" ")[0]}! 👋
+                </div>
+              )}
+            </div>
+          )}
+
+          {step.id === "body" && (
+            <div className="grid grid-cols-3 gap-3">
+              <NumberInput label="KOR" value={draftAge} onChange={setDraftAge} placeholder="29" unit="év" />
+              <NumberInput label="MAGASSÁG" value={draftHeight} onChange={setDraftHeight} placeholder="175" unit="cm" />
+              <NumberInput label="TESTSÚLY" value={draftWeight} onChange={setDraftWeight} placeholder="80" unit="kg" />
+              <div className="col-span-3 text-xs mt-1" style={{ color: "var(--text-muted)" }}>
+                💡 Opcionális — testsúly grafikonhoz és célokhoz hasznos
+              </div>
+            </div>
+          )}
+
+          {step.id === "goals" && (
+            <Chips<Goal>
+              value={goal} onChange={setGoal}
+              options={[
+                { v: "lose", label: "Fogyás", icon: "🔥" },
+                { v: "maintain", label: "Szinten tartás", icon: "⚖️" },
+                { v: "gain", label: "Tömegelés", icon: "💪" },
+              ]}
+            />
+          )}
+
+          {step.id === "training" && (
+            <div className="space-y-4">
+              <div>
+                <div className="label-xs mb-2">HOL EDZESZ?</div>
+                <Chips<TrainingPlace>
+                  value={place} onChange={setPlace}
+                  options={[
+                    { v: "gym", label: "Terem", icon: "🏋️" },
+                    { v: "home", label: "Otthon", icon: "🏠" },
+                    { v: "mixed", label: "Vegyes", icon: "🔀" },
+                  ]}
+                />
+              </div>
+              <NumberInput
+                label="HÁNYSZOR EGY HÉTEN?"
+                value={draftDays} onChange={setDraftDays}
+                placeholder="3" unit="nap/hét"
+              />
+              <div>
+                <div className="label-xs mb-2">FÓKUSZ TERÜLETEK (opcionális)</div>
+                <div className="flex flex-wrap gap-2">
+                  {["Mell", "Hát", "Láb", "Váll", "Kar", "Has"].map(x => (
+                    <button key={x} type="button" onClick={() => toggleFocus(x)}
+                      className="rounded-2xl px-3 py-2 text-xs font-semibold pressable"
+                      style={focus.includes(x) ? {
+                        background: "rgba(34,211,238,0.12)", color: "var(--accent-primary)",
+                        border: "1px solid rgba(34,211,238,0.35)",
+                      } : {
+                        background: "var(--bg-card)", color: "var(--text-muted)",
+                        border: "1px solid var(--border-subtle)",
+                      }}>
+                      {x}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {step.id === "experience" && (
+            <div className="space-y-4">
+              <div>
+                <div className="label-xs mb-2">EDZÉSI SZINT</div>
+                <Chips<Level>
+                  value={level} onChange={setLevel}
+                  options={[
+                    { v: "beginner", label: "Kezdő", icon: "🌱" },
+                    { v: "intermediate", label: "Közép", icon: "⚡" },
+                    { v: "advanced", label: "Haladó", icon: "🔥" },
+                  ]}
+                />
+              </div>
+              <div>
+                <div className="label-xs mb-2">EDZÉSRENDSZER</div>
+                <Chips<TrainingSplit>
+                  value={split} onChange={setSplit} cols={2}
+                  options={[
+                    { v: "fullbody", label: "Full body" },
+                    { v: "upperlower", label: "Upper/Lower" },
+                    { v: "ppl", label: "Push/Pull/Leg" },
+                    { v: "custom", label: "Saját" },
+                  ]}
+                />
+              </div>
+            </div>
+          )}
+
+          {step.id === "finish" && (
+            <div className="rounded-3xl overflow-hidden"
+              style={{ background: "var(--bg-card)", border: "1px solid var(--border-subtle)" }}>
               {[
-                { v: "lose" as Goal, label: "Fogyás" },
-                { v: "maintain" as Goal, label: "Szintentartás" },
-                { v: "gain" as Goal, label: "Tömegelés" },
-              ].map((x) => (
-                <button
-                  key={x.v}
-                  type="button"
-                  onClick={() => setGoal(x.v)}
-                  className={`rounded-2xl border px-3 py-3 text-sm transition ${
-                    goal === x.v
-                      ? "border-white/20 bg-white/15 text-white"
-                      : "border-white/10 bg-white/5 text-white/70 hover:bg-white/10"
-                  }`}
-                >
-                  {x.label}
-                </button>
+                { label: "Név", value: fullName || "—" },
+                { label: "Cél", value: { lose: "🔥 Fogyás", maintain: "⚖️ Szinten tartás", gain: "💪 Tömegelés" }[goal] },
+                { label: "Hely", value: { gym: "🏋️ Terem", home: "🏠 Otthon", mixed: "🔀 Vegyes" }[place] },
+                { label: "Szint", value: { beginner: "🌱 Kezdő", intermediate: "⚡ Közép", advanced: "🔥 Haladó" }[level] },
+                { label: "Heti nap", value: draftDays || "—" },
+              ].map((r, i, arr) => (
+                <div key={r.label} className="flex items-center justify-between px-4 py-3"
+                  style={{ borderBottom: i < arr.length - 1 ? "1px solid var(--border-subtle)" : "none" }}>
+                  <span className="text-xs" style={{ color: "var(--text-muted)" }}>{r.label}</span>
+                  <span className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>{r.value}</span>
+                </div>
               ))}
             </div>
-          ) : null}
+          )}
 
-          {step.id === "training" ? (
-            <div className="space-y-4">
-              <div className="grid grid-cols-3 gap-2">
-                {[
-                  { v: "gym" as TrainingPlace, label: "Terem" },
-                  { v: "home" as TrainingPlace, label: "Otthon" },
-                  { v: "mixed" as TrainingPlace, label: "Vegyes" },
-                ].map((x) => (
-                  <button
-                    key={x.v}
-                    type="button"
-                    onClick={() => setPlace(x.v)}
-                    className={`rounded-2xl border px-3 py-3 text-sm transition ${
-                      place === x.v
-                        ? "border-white/20 bg-white/15 text-white"
-                        : "border-white/10 bg-white/5 text-white/70 hover:bg-white/10"
-                    }`}
-                  >
-                    {x.label}
-                  </button>
-                ))}
-              </div>
-
-              <label className="block">
-                <div className="text-xs text-white/60">Hányszor edzenél egy héten?</div>
-                <input
-                  value={draftDays}
-                  onChange={(e) => setDraftDays(e.target.value)}
-                  inputMode="numeric"
-                  placeholder="1–7"
-                  className="mt-1 w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white outline-none placeholder:text-white/25 focus:border-white/20"
-                />
-              </label>
-
-              <div className="rounded-2xl border border-white/10 bg-black/20 p-3">
-                <div className="text-xs text-white/55 mb-2">Fókusz (opcionális)</div>
-                <div className="flex flex-wrap gap-2">
-                  {["Mell", "Hát", "Láb", "Váll", "Kar", "Has"].map((x) => {
-                    const active = focus.includes(x);
-                    return (
-                      <button
-                        key={x}
-                        type="button"
-                        onClick={() => toggleFocus(x)}
-                        className={`rounded-full border px-3 py-1.5 text-xs ${
-                          active
-                            ? "border-white/20 bg-white/15 text-white"
-                            : "border-white/10 bg-white/5 text-white/70 hover:bg-white/10"
-                        }`}
-                      >
-                        {x}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-          ) : null}
-
-          {step.id === "experience" ? (
-            <div className="space-y-4">
-              <div>
-                <div className="text-xs text-white/60 mb-2">Szint</div>
-                <div className="grid grid-cols-3 gap-2">
-                  {[
-                    { v: "beginner" as Level, label: "Kezdő" },
-                    { v: "intermediate" as Level, label: "Közép" },
-                    { v: "advanced" as Level, label: "Haladó" },
-                  ].map((x) => (
-                    <button
-                      key={x.v}
-                      type="button"
-                      onClick={() => setLevel(x.v)}
-                      className={`rounded-2xl border px-3 py-3 text-sm transition ${
-                        level === x.v
-                          ? "border-white/20 bg-white/15 text-white"
-                          : "border-white/10 bg-white/5 text-white/70 hover:bg-white/10"
-                      }`}
-                    >
-                      {x.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div>
-                <div className="text-xs text-white/60 mb-2">Edzés rendszer</div>
-                <div className="grid grid-cols-2 gap-2">
-                  {[
-                    { v: "fullbody" as TrainingSplit, label: "Full body" },
-                    { v: "upperlower" as TrainingSplit, label: "Upper/Lower" },
-                    { v: "ppl" as TrainingSplit, label: "PPL" },
-                    { v: "custom" as TrainingSplit, label: "Saját" },
-                  ].map((x) => (
-                    <button
-                      key={x.v}
-                      type="button"
-                      onClick={() => setSplit(x.v)}
-                      className={`rounded-2xl border px-3 py-3 text-sm transition ${
-                        split === x.v
-                          ? "border-white/20 bg-white/15 text-white"
-                          : "border-white/10 bg-white/5 text-white/70 hover:bg-white/10"
-                      }`}
-                    >
-                      {x.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <label className="block">
-                <div className="text-xs text-white/60">Megjegyzés (opcionális)</div>
-                <textarea
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  rows={3}
-                  placeholder="Pl. sérülés, preferencia, időkorlát…"
-                  className="mt-1 w-full resize-none rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white outline-none placeholder:text-white/25 focus:border-white/20"
-                />
-              </label>
-            </div>
-          ) : null}
-
-          {step.id === "finish" ? (
-            <div className="space-y-3">
-              <div className="rounded-2xl border border-white/10 bg-black/20 p-3 text-sm text-white/75">
-                <div className="font-semibold text-white">Összefoglaló</div>
-                <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
-                  <div className="text-white/60">Név</div>
-                  <div className="text-white">{fullName.trim() || "—"}</div>
-
-                  <div className="text-white/60">Cél</div>
-                  <div className="text-white">{goal}</div>
-
-                  <div className="text-white/60">Hely</div>
-                  <div className="text-white">{place}</div>
-
-                  <div className="text-white/60">Heti nap</div>
-                  <div className="text-white">{draftDays || "—"}</div>
-
-                  <div className="text-white/60">Szint</div>
-                  <div className="text-white">{level}</div>
-
-                  <div className="text-white/60">Split</div>
-                  <div className="text-white">{split}</div>
-                </div>
-              </div>
-
-              <button
-                type="button"
-                onClick={onFinish}
-                className="w-full rounded-2xl border border-emerald-500/30 bg-emerald-500/10 py-3 text-sm text-emerald-100 hover:bg-emerald-500/15 active:scale-[0.99]"
-              >
-                Mentés és tovább
-              </button>
-            </div>
-          ) : null}
         </div>
-      </section>
+      </div>
 
-      {/* bottom nav */}
-      <div className="mt-5 flex items-center gap-2">
-        <button
-          type="button"
-          onClick={onBack}
-          disabled={stepIdx === 0}
-          className="flex-1 rounded-2xl border border-white/10 bg-white/5 py-3 text-sm text-white/75 hover:bg-white/10 disabled:opacity-40"
-        >
-          Vissza
-        </button>
+      {/* Bottom nav */}
+      <div className="mt-6 flex gap-3">
+        {stepIdx > 0 && (
+          <button onClick={() => gotoStep(stepIdx - 1)}
+            className="rounded-2xl px-5 py-4 text-sm font-semibold pressable"
+            style={{ background: "var(--bg-card)", color: "var(--text-muted)", border: "1px solid var(--border-subtle)" }}>
+            ← Vissza
+          </button>
+        )}
 
         {step.id !== "finish" ? (
-          <button
-            type="button"
-            onClick={onNext}
-            disabled={!canNext}
-            className="flex-1 rounded-2xl border border-white/10 bg-white/10 py-3 text-sm text-white hover:bg-white/15 disabled:opacity-40"
-          >
-            Tovább
+          <button onClick={() => gotoStep(stepIdx + 1)} disabled={!canNext}
+            className="flex-1 rounded-2xl py-4 text-sm font-black pressable"
+            style={{
+              background: canNext ? "var(--accent-primary)" : "var(--bg-card)",
+              color: canNext ? "#000" : "var(--text-muted)",
+              opacity: canNext ? 1 : 0.5,
+            }}>
+            Tovább →
           </button>
         ) : (
-          <button
-            type="button"
-            onClick={onFinish}
-            className="flex-1 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 py-3 text-sm text-emerald-100 hover:bg-emerald-500/15 active:scale-[0.99]"
-          >
-            Kezdjük!
+          <button onClick={onFinish}
+            className="flex-1 rounded-2xl py-4 text-sm font-black pressable"
+            style={{ background: "var(--accent-primary)", color: "#000" }}>
+            🚀 Kezdjük!
           </button>
         )}
       </div>

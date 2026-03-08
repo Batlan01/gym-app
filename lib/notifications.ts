@@ -148,3 +148,33 @@ export function schedulePostWorkoutNotif(settings: NotifSettings): void {
     );
   }, 30 * 60 * 1000); // 30 perc
 }
+
+// Calendar-aware notification: ha ma van edzés a naptárban, értesít előtte
+export async function scheduleCalendarReminder(
+  todaySessionCount: number,
+  settings: NotifSettings,
+  minutesBefore = 30
+): Promise<void> {
+  if (!settings.enabled || !settings.dailyReminderEnabled) return;
+  if (typeof window === "undefined") return;
+  if (Notification.permission !== "granted") return;
+  if (todaySessionCount === 0) return;
+
+  // Az emlékeztetőt a beállított időpont - minutesBefore perccel küldjük
+  const [h, m] = settings.dailyReminderTime.split(":").map(Number);
+  const now = new Date();
+  const reminderTime = new Date(now);
+  reminderTime.setHours(h, m - minutesBefore, 0, 0);
+  if (reminderTime.setMinutes(reminderTime.getMinutes() - minutesBefore) < now.getTime()) return; // már elmúlt
+
+  const msUntil = reminderTime.getTime() - now.getTime();
+  if (msUntil <= 0) return;
+
+  setTimeout(async () => {
+    await showLocalNotification(
+      "ARCX — Edzés hamarosan! 🏋️",
+      `${todaySessionCount} edzés vár ma. ${minutesBefore} perc és kezdheted!`,
+      "/workout"
+    );
+  }, msUntil);
+}
