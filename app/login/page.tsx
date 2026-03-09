@@ -8,7 +8,7 @@ import { LS_ACTIVE_PROFILE, LS_PROFILES, type Profile, fbProfileId, onboardedKey
 import { auth } from "@/lib/firebase";
 import {
   onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword,
-  GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult,
+  GoogleAuthProvider, signInWithRedirect,
   signOut, type User,
 } from "firebase/auth";
 
@@ -64,22 +64,7 @@ export default function LoginPage() {
     window.location.href = "/workout";
   }, []);
 
-  // Google redirect result kezelése — mindig lefut oldalbetöltéskor
-  React.useEffect(() => {
-    getRedirectResult(auth)
-      .then(cred => {
-        if (cred?.user) {
-          activateFirebaseUser(cred.user);
-        }
-      })
-      .catch((e) => {
-        // auth/popup-closed vagy cancelled — nem kell hibaüzenet
-        if (e?.code && e.code !== "auth/cancelled-popup-request") {
-          setErr(e?.message ?? "Google belépési hiba.");
-        }
-      });
-  // activateFirebaseUser stabil useCallback, biztonságos dependency
-  }, [activateFirebaseUser]);
+  // A Google redirect result-ot az AppFrame kezeli — itt nem kell
 
   const doEmail = React.useCallback(async () => {
     setErr(null); setBusy(true);
