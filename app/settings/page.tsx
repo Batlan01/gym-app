@@ -156,7 +156,7 @@ export default function SettingsPage() {
 
   const isGoogleLinked = fbUser?.providerData?.some(p => p.providerId === "google.com") ?? false;
 
-
+  async function handleTestNotification() {
     if (permission !== "granted") return;
     setTestSent(true);
     setTimeout(() => setTestSent(false), 3000);
