@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { AppFrame } from "@/components/AppFrame";
 import { PendingSyncRunner } from "@/components/PendingSyncRunner";
+import { PushSWRegistrar } from "@/components/PushSWRegistrar";
 
 export const metadata: Metadata = {
   title: "ARCX — Train Smarter",
@@ -43,6 +44,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             }
           } catch(e) {}
         `}} />
+        <PushSWRegistrar />
         <AppFrame>
           {children}
           <PendingSyncRunner />
