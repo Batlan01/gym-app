@@ -8,7 +8,7 @@ import { LS_ACTIVE_PROFILE, LS_PROFILES, type Profile, fbProfileId, onboardedKey
 import { auth } from "@/lib/firebase";
 import {
   onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword,
-  GoogleAuthProvider, signInWithRedirect,
+  GoogleAuthProvider, signInWithPopup, signInWithRedirect,
   signOut, type User,
 } from "firebase/auth";
 
@@ -85,11 +85,21 @@ export default function LoginPage() {
     setErr(null); setBusy(true);
     try {
       const provider = new GoogleAuthProvider();
-      // Mindig redirect — popup megbízhatatlan Vercel production-on
-      await signInWithRedirect(auth, provider);
-      return;
+      // Popup — megbízhatóbb mint redirect PWA + Vercel környezetben
+      const cred = await signInWithPopup(auth, provider);
+      if (cred?.user) activateFirebaseUser(cred.user);
     } catch (e: any) {
-      if (e?.code !== "auth/popup-closed-by-user") setErr(e?.message ?? "Google hiba.");
+      if (e?.code !== "auth/popup-closed-by-user" && e?.code !== "auth/cancelled-popup-request") {
+        // Popup blokkolt (pl. Safari) → fallback redirect
+        if (e?.code === "auth/popup-blocked") {
+          try {
+            const provider = new GoogleAuthProvider();
+            await signInWithRedirect(auth, provider);
+            return; // redirect kezeli a továbbit
+          } catch {}
+        }
+        setErr(e?.message ?? "Google hiba.");
+      }
     } finally { setBusy(false); }
   }, [activateFirebaseUser]);
 
