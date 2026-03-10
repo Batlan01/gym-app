@@ -28,6 +28,7 @@ import {
 } from "@/lib/notifications";
 import { profileKey } from "@/lib/profiles";
 import { updatePRsFromWorkout } from "@/lib/prStorage";
+import { useTranslation } from "@/lib/i18n";
 
 import { auth } from "@/lib/firebase";
 import { saveWorkoutToCloud } from "@/lib/workoutsCloud";
@@ -97,6 +98,7 @@ function cloudUidFromProfileId(profileId: string | null | undefined): string | n
 type Toast = null | { tone: "ok" | "warn"; title: string; body?: string; };
 
 export default function WorkoutPage() {
+  const { t, lang } = useTranslation();
   const [activeProfileId] = useLocalStorageState<string | null>(LS_ACTIVE_PROFILE, null);
   const profileId = activeProfileId ?? "guest";
 
@@ -181,7 +183,7 @@ export default function WorkoutPage() {
 
   const discardWorkout = React.useCallback(() => {
     if (!active) return;
-    const ok = window.confirm("Eldobod az aktuális edzést?");
+    const ok = window.confirm(t.workout.confirm_discard);
     if (!ok) return;
     lsSet(LS_ACTIVE, null);
     setActive(null);
@@ -227,13 +229,13 @@ export default function WorkoutPage() {
   const finishWorkout = React.useCallback(async () => {
     if (!active) return;
     if (active.exercises.length === 0) {
-      const okEmpty = window.confirm("Üres edzés. Mented így is?");
+      const okEmpty = window.confirm(t.workout.confirm_empty);
       if (!okEmpty) return;
     }
     let finished: Workout = { ...active, finishedAt: nowISO() };
     finished = normalizeWorkoutForSave(finished);
     if (finished.exercises.length === 0) {
-      const ok = window.confirm("Nincs kitöltött set. Mented így is?");
+      const ok = window.confirm(t.workout.confirm_no_sets);
       if (!ok) return;
     }
     setHistory((h) => clampHistory([finished, ...h]));
@@ -248,9 +250,9 @@ export default function WorkoutPage() {
         else { try { await saveWorkoutToCloud(user.uid, finished); cloudState = "ok"; } catch (e) { enqueueWorkout(user.uid, finished, e); cloudState = "queued"; } }
       }
     } finally { lsSet(LS_ACTIVE, null); setActive(null); }
-    if (!shouldCloud) setToast({ tone: "ok", title: "Elmentve lokálisan", body: "Vendég / lokális profil." });
-    else if (cloudState === "ok") setToast({ tone: "ok", title: "Elmentve", body: "Lokálisan és a felhőbe is." });
-    else setToast({ tone: "warn", title: "Elmentve lokálisan", body: "Offline vagy hiba. Szinkron később automatikusan." });
+    if (!shouldCloud) setToast({ tone: "ok", title: t.workout.saved_local, body: t.workout.saved_local_body });
+    else if (cloudState === "ok") setToast({ tone: "ok", title: t.workout.saved_cloud, body: t.workout.saved_cloud_body });
+    else setToast({ tone: "warn", title: t.workout.saved_local, body: t.workout.saved_offline });
     try {
       const achKey = profileKey(profileId, "achievements");
       const unlocked = lsGet<UnlockedAchievement[]>(achKey, []);
@@ -410,7 +412,7 @@ export default function WorkoutPage() {
             <div className="text-[10px] font-black tracking-widest mb-1" style={{ color: 'rgba(255,255,255,0.25)' }}>
               EDZÉS
             </div>
-            <h1 className="text-2xl font-black mb-4" style={{ color: 'var(--text-primary)' }}>Mai edzés</h1>
+            <h1 className="text-2xl font-black mb-4" style={{ color: 'var(--text-primary)' }}>{t.workout.today}</h1>
 
             {/* Tervezett program */}
             {todaySessions.length > 0 && (
@@ -441,13 +443,13 @@ export default function WorkoutPage() {
               onClick={() => { startWorkout(); if (todaySessions.length === 0) setAddOpen(true); }}
               className="w-full rounded-2xl py-5 text-base font-black pressable"
               style={{ background: 'var(--accent-primary)', color: '#000' }}>
-              Edzés indítása →
+              {t.workout.start}
             </button>
 
             {history.length > 0 && (
               <div className="mt-2 px-1 text-xs" style={{ color: 'rgba(255,255,255,0.3)' }}>
                 Utolsó:{" "}
-                {new Date(history[0]?.startedAt).toLocaleDateString("hu", { weekday: "long", month: "short", day: "numeric" })}
+                {new Date(history[0]?.startedAt).toLocaleDateString(lang, { weekday: "long", month: "short", day: "numeric" })}
                 {" · "}{history[0]?.exercises?.length ?? 0} gyakorlat
               </div>
             )}
@@ -500,7 +502,7 @@ export default function WorkoutPage() {
       {newPRNames.length > 0 && (
         <div className="fixed left-0 right-0 bottom-36 z-[95] mx-auto max-w-md px-4">
           <div className="relative rounded-2xl px-4 py-3" style={{background:"var(--accent-primary)",color:"#000"}}>
-            <div className="font-black text-sm">Uj szemelyes rekord!</div>
+            <div className="font-black text-sm">{t.workout.pr_new}</div>
             <div className="text-xs mt-1 opacity-60">{newPRNames.slice(0,3).join(", ")}{newPRNames.length > 3 ? " +" + (newPRNames.length-3) + " mas" : ""}</div>
             <button onClick={() => setNewPRNames([])} className="absolute top-2 right-3 text-base opacity-50">x</button>
           </div>

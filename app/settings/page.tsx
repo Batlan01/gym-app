@@ -9,6 +9,7 @@ import { SignOutCard } from "@/components/SignOutCard";
 import { useLocalStorageState } from "@/lib/useLocalStorageState";
 import { auth } from "@/lib/firebase";
 import { onAuthStateChanged, linkWithPopup, GoogleAuthProvider, unlink, type User } from "firebase/auth";
+import { useTranslation } from "@/lib/i18n";
 import {
   LS_NOTIF_SETTINGS,
   DEFAULT_NOTIF_SETTINGS,
@@ -84,6 +85,7 @@ function SettingRow({ icon, title, subtitle, right, onPress }: {
 }
 
 export default function SettingsPage() {
+  const { t } = useTranslation();
   const router = useRouter();
   const [notifSettings, setNotifSettings] = useLocalStorageState<NotifSettings>(
     LS_NOTIF_SETTINGS, DEFAULT_NOTIF_SETTINGS
@@ -117,7 +119,7 @@ export default function SettingsPage() {
       const perm = await requestNotificationPermission();
       setPermission(perm);
       if (perm !== "granted") {
-        alert("Az értesítések blokkolva vannak. Engedélyezd a böngészőben.");
+        alert(t.settings.notif_blocked_alert);
         return;
       }
     }
@@ -177,14 +179,14 @@ export default function SettingsPage() {
     <main className="mx-auto max-w-md px-4 pt-8 pb-28 animate-in">
       <header className="mb-6">
         <div className="label-xs mb-1">ARCX</div>
-        <h1 className="text-2xl font-black" style={{ color: "var(--text-primary)" }}>Beállítások</h1>
-        <p className="text-sm mt-1" style={{ color: "var(--text-muted)" }}>Értesítések, szinkron, fiók</p>
+        <h1 className="text-2xl font-black" style={{ color: "var(--text-primary)" }}>{t.settings.title}</h1>
+        <p className="text-sm mt-1" style={{ color: "var(--text-muted)" }}>{t.settings.subtitle}</p>
       </header>
 
       <div className="space-y-4">
 
         {/* ÉRTESÍTÉSEK */}
-        <Section title="🔔 ÉRTESÍTÉSEK">
+        <Section title={t.settings.notif_section}>
           {!supported && (
             <div className="rounded-2xl p-3 text-xs"
               style={{ background: "rgba(251,191,36,0.1)", color: "#fde68a", border: "1px solid rgba(251,191,36,0.2)" }}>
@@ -197,7 +199,7 @@ export default function SettingsPage() {
               {/* Főkapcsoló */}
               <SettingRow
                 icon="🔔"
-                title="Értesítések bekapcsolása"
+                title={t.settings.notif_enable}
                 subtitle={`Állapot: ${permBadge.label}`}
                 right={
                   <Toggle
@@ -210,8 +212,8 @@ export default function SettingsPage() {
               {/* Napi emlékeztető */}
               <SettingRow
                 icon="⏰"
-                title="Napi emlékeztető"
-                subtitle="Minden nap figyelmeztet az edzésre"
+                title={t.settings.notif_daily}
+                subtitle={t.settings.notif_daily_sub}
                 right={
                   <Toggle
                     value={notifSettings.dailyReminderEnabled}
@@ -269,7 +271,7 @@ export default function SettingsPage() {
               {/* Streak break */}
               <SettingRow
                 icon="🔥"
-                title="Streak veszély értesítés"
+                title={t.settings.notif_streak}
                 subtitle={`Ha ${notifSettings.streakBreakAfterDays} napja nem edzettél`}
                 right={
                   <Toggle
@@ -283,8 +285,8 @@ export default function SettingsPage() {
               {/* Post-workout */}
               <SettingRow
                 icon="🏆"
-                title="Edzés utáni motiváció"
-                subtitle="30 perccel az edzés után küld egy üzenetet"
+                title={t.settings.notif_post}
+                subtitle={t.settings.notif_post_sub}
                 right={
                   <Toggle
                     value={notifSettings.postWorkoutEnabled}
@@ -307,7 +309,7 @@ export default function SettingsPage() {
                     border: `1px solid ${testSent ? "rgba(74,222,128,0.3)" : "rgba(34,211,238,0.2)"}`,
                   }}
                 >
-                  {testSent ? "✓ Elküldve!" : "🔔 Teszt értesítés küldése"}
+                  {testSent ? t.settings.notif_sent : t.settings.notif_test}
                 </button>
               )}
 
@@ -322,26 +324,26 @@ export default function SettingsPage() {
         </Section>
 
         {/* SZINKRON */}
-        <Section title="☁️ FELHŐ SZINKRON">
+        <Section title={t.settings.sync_section}>
           <SyncStatusCard />
           <MigrateLocalWorkoutsCard />
         </Section>
 
         {/* APP INFO */}
-        <Section title="ℹ️ APP">
-          <SettingRow icon="📱" title="ARCX" subtitle="Edzésnapló PWA · v1.0" />
-          <SettingRow icon="🔒" title="Offline-first" subtitle="Minden adat lokálban tárolódik" />
+        <Section title={t.settings.app_section}>
+          <SettingRow icon="📱" title={t.settings.app_name} subtitle={t.settings.app_sub} />
+          <SettingRow icon="🔒" title={t.settings.app_offline} subtitle={t.settings.app_offline_sub} />
           <SettingRow
             icon="⭐"
-            title="Profil & Achievements"
-            subtitle="XP, szintek, achievementek"
+            title={t.settings.app_profile}
+            subtitle={t.settings.app_profile_sub}
             right={<span style={{ color: "var(--text-muted)" }}>→</span>}
             onPress={() => router.push("/profile")}
           />
         </Section>
 
         {/* FIÓK */}
-        <Section title="👤 FIÓK">
+        <Section title={t.settings.account_section}>
           {/* Google összekapcsolás */}
           {fbUser && (
             <div className="space-y-3">

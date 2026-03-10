@@ -1,4 +1,6 @@
 "use client";
+import { useTranslation } from "@/lib/i18n";
+import { LanguagePicker } from "@/components/LanguagePicker";
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
@@ -135,6 +137,7 @@ function WeightModal({ current, onSave, onClose }: {
 
 // ── Main Page ─────────────────────────────────────────────────
 export default function ProfilePage() {
+  const { t, lang } = useTranslation();
   const router = useRouter();
   const [activeProfileId] = useLocalStorageState<string | null>(LS_ACTIVE_PROFILE, null);
   const pid = activeProfileId ?? "guest";
@@ -219,9 +222,9 @@ export default function ProfilePage() {
   const initials = name ? name.split(" ").map((w:string) => w[0]).join("").slice(0,2).toUpperCase() : "?";
 
   const TABS = [
-    { id: "stats", label: "Statisztika" },
-    { id: "achievements", label: "Achievementek" },
-    { id: "settings", label: "Megjelenés" },
+    { id: "stats", label: t.profile.tab_stats },
+    { id: "achievements", label: t.profile.tab_achievements },
+    { id: "settings", label: t.profile.tab_appearance },
   ] as const;
 
   return (
@@ -428,7 +431,7 @@ export default function ProfilePage() {
             className="w-full rounded-2xl p-4 text-left pressable flex items-center justify-between"
             style={{background:"rgba(255,255,255,0.04)"}}>
             <div>
-              <div className="text-sm font-black" style={{color:"var(--text-primary)"}}>Technikai beállítások</div>
+              <div className="text-sm font-black" style={{color:"var(--text-primary)"}}>{t.profile.tech_settings}</div>
               <div className="text-xs mt-0.5" style={{color:"rgba(255,255,255,0.3)"}}>Sync, fiók, onboarding</div>
             </div>
             <span style={{color:"rgba(255,255,255,0.3)"}}>→</span>

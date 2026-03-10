@@ -8,6 +8,7 @@ import { useLocalStorageState } from "@/lib/useLocalStorageState";
 import { LS_ACTIVE_PROFILE, profileKey, profileMetaKey, type ProfileMeta } from "@/lib/profiles";
 import { PROGRAM_TEMPLATES } from "@/lib/programTemplates";
 import type { Workout } from "@/lib/types";
+import { useTranslation } from "@/lib/i18n";
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 function startOfDay(d: Date) {
@@ -55,12 +56,21 @@ function workoutsThisWeek(workouts: Workout[]): Set<number> {
   return result;
 }
 
+// ─── Day labels per language ──────────────────────────────────────────────────
+const WEEK_DAYS: Record<string, string[]> = {
+  hu: ["H","K","Sz","Cs","P","Sz","V"],
+  en: ["M","T","W","T","F","S","S"],
+  de: ["Mo","Di","Mi","Do","Fr","Sa","So"],
+  es: ["L","M","X","J","V","S","D"],
+  sk: ["Po","Ut","St","Št","Pi","So","Ne"],
+  cs: ["Po","Út","St","Čt","Pá","So","Ne"],
+};
+
 // ─── WeekStrip ───────────────────────────────────────────────────────────────
-const DAYS = ["H", "K", "Sz", "Cs", "P", "Sz", "V"];
-function WeekStrip({ activeDays }: { activeDays: Set<number> }) {
+function WeekStrip({ activeDays, days }: { activeDays: Set<number>; days: string[] }) {
   return (
     <div className="flex gap-1.5">
-      {DAYS.map((label, i) => {
+      {days.map((label, i) => {
         const done = activeDays.has(i);
         const isToday = i === (new Date().getDay() + 6) % 7;
         return (
@@ -81,55 +91,8 @@ function WeekStrip({ activeDays }: { activeDays: Set<number> }) {
   );
 }
 
-// ─── HeroCard ─────────────────────────────────────────────────────────────────
-function HeroCard({ lastWorkout, hasActiveToday, streak }: {
-  lastWorkout: Workout | null; hasActiveToday: boolean; streak: number;
-}) {
-  const router = useRouter();
-  return (
-    <button onClick={() => router.push("/workout")} className="w-full text-left pressable">
-      <div className="relative overflow-hidden rounded-3xl"
-        style={{ background: "var(--accent-primary)" }}>
-        {/* Diagonal texture stripe */}
-        <div className="absolute inset-0 pointer-events-none opacity-10"
-          style={{
-            backgroundImage: "repeating-linear-gradient(-45deg, #000 0px, #000 1px, transparent 1px, transparent 8px)",
-          }} />
-        <div className="relative p-5">
-          <div className="flex items-start justify-between mb-4">
-            <div className="text-[10px] font-black tracking-widest" style={{ color: "rgba(0,0,0,0.5)" }}>
-              {hasActiveToday ? "AKTÍV EDZÉS" : "MAI EDZÉS"}
-            </div>
-            {streak > 0 && (
-              <div className="flex items-center gap-1 rounded-full px-2.5 py-1"
-                style={{ background: "rgba(0,0,0,0.15)" }}>
-                <span className="text-xs">🔥</span>
-                <span className="text-xs font-black" style={{ color: "#000" }}>{streak}</span>
-              </div>
-            )}
-          </div>
-          <div className="text-3xl font-black leading-none mb-1" style={{ color: "#000" }}>
-            {hasActiveToday ? "Folytatás" : "Kezdés"}
-          </div>
-          <div className="text-sm font-medium mt-1" style={{ color: "rgba(0,0,0,0.5)" }}>
-            {lastWorkout
-              ? `Utolsó: ${new Date(lastWorkout.startedAt).toLocaleDateString("hu", { weekday: "long" })}`
-              : "Még nincs edzésed — ideje elkezdeni"}
-          </div>
-          <div className="mt-4 inline-flex items-center gap-1.5 rounded-2xl px-4 py-2 text-sm font-black"
-            style={{ background: "rgba(0,0,0,0.15)", color: "#000" }}>
-            {hasActiveToday ? "Folytatás →" : "Edzés indítása →"}
-          </div>
-        </div>
-      </div>
-    </button>
-  );
-}
-
 // ─── StatBlock ────────────────────────────────────────────────────────────────
-function StatBlock({ value, label, accent = false }: {
-  value: string; label: string; accent?: boolean;
-}) {
+function StatBlock({ value, label, accent = false }: { value: string; label: string; accent?: boolean }) {
   return (
     <div className="flex-1 rounded-2xl p-4"
       style={{
@@ -148,10 +111,8 @@ function StatBlock({ value, label, accent = false }: {
   );
 }
 
-// ─── ProgramsRow ──────────────────────────────────────────────────────────────
-const SPORT_EMOJI: Record<string, string> = {
-  gym: "🏋️", home: "🏠", running: "🏃", boxing: "🥊", yoga: "🧘",
-};
+// ─── ProgramsRow ─────────────────────────────────────────────────────────────
+const SPORT_EMOJI: Record<string, string> = { gym:"🏋️", home:"🏠", running:"🏃", boxing:"🥊", yoga:"🧘" };
 const SPORT_BG: Record<string, string> = {
   gym:     "linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)",
   home:    "linear-gradient(135deg, #1a2e1a 0%, #162116 100%)",
@@ -160,82 +121,47 @@ const SPORT_BG: Record<string, string> = {
   yoga:    "linear-gradient(135deg, #1a2a2e 0%, #162021 100%)",
 };
 
-function ProgramsRow() {
+function ProgramsRow({ label, allLabel, perWeek }: { label: string; allLabel: string; perWeek: string }) {
   const router = useRouter();
   const shown = PROGRAM_TEMPLATES.slice(0, 4);
   return (
     <div>
       <div className="flex items-center justify-between mb-3">
-        <div className="text-[10px] font-black tracking-widest" style={{ color: "rgba(255,255,255,0.3)" }}>
-          PROGRAMOK
-        </div>
-        <button onClick={() => router.push("/programs")}
-          className="text-[10px] font-bold pressable"
-          style={{ color: "var(--accent-primary)" }}>
-          Összes →
-        </button>
+        <div className="text-[10px] font-black tracking-widest" style={{ color: "rgba(255,255,255,0.3)" }}>{label}</div>
+        <button onClick={() => router.push("/programs")} className="text-[10px] font-bold pressable"
+          style={{ color: "var(--accent-primary)" }}>{allLabel}</button>
       </div>
       <div className="flex gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: "none" }}>
-        {shown.map((t) => (
-          <button key={t.id} onClick={() => router.push("/programs")}
+        {shown.map((p) => (
+          <button key={p.id} onClick={() => router.push("/programs")}
             className="shrink-0 rounded-2xl p-3 pressable text-left"
-            style={{
-              width: 110,
-              background: SPORT_BG[t.sport ?? "gym"] ?? SPORT_BG.gym,
-              border: "1px solid rgba(255,255,255,0.06)",
-            }}>
-            <div className="text-2xl mb-2">{SPORT_EMOJI[t.sport ?? "gym"] ?? "🏋️"}</div>
-            <div className="text-[11px] font-black leading-tight" style={{ color: "var(--text-primary)" }}>
-              {t.title}
-            </div>
-            <div className="text-[9px] mt-1" style={{ color: "rgba(255,255,255,0.3)" }}>
-              {t.sessions?.length ?? 0} edzés/hét
-            </div>
+            style={{ width: 110, background: SPORT_BG[p.sport ?? "gym"] ?? SPORT_BG.gym, border: "1px solid rgba(255,255,255,0.06)" }}>
+            <div className="text-2xl mb-2">{SPORT_EMOJI[p.sport ?? "gym"] ?? "🏋️"}</div>
+            <div className="text-[11px] font-black leading-tight" style={{ color: "var(--text-primary)" }}>{p.title}</div>
+            <div className="text-[9px] mt-1" style={{ color: "rgba(255,255,255,0.3)" }}>{p.sessions?.length ?? 0} {perWeek}</div>
           </button>
         ))}
-        {/* "Összes" kártya */}
         <button onClick={() => router.push("/programs")}
           className="shrink-0 rounded-2xl p-3 pressable flex flex-col items-center justify-center"
           style={{ width: 80, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
           <div className="text-xl mb-1">＋</div>
-          <div className="text-[9px] font-bold" style={{ color: "rgba(255,255,255,0.3)" }}>Összes</div>
+          <div className="text-[9px] font-bold" style={{ color: "rgba(255,255,255,0.3)" }}>{allLabel}</div>
         </button>
       </div>
-    </div>
-  );
-}
-
-// ─── QuickActions ─────────────────────────────────────────────────────────────
-function QuickActions() {
-  return (
-    <div className="grid grid-cols-3 gap-2">
-      {[
-        { label: "Naptár", icon: "📅", href: "/calendar" },
-        { label: "Statisztika", icon: "📈", href: "/progress" },
-        { label: "Profil", icon: "👤", href: "/profile" },
-      ].map(({ label, icon, href }) => (
-        <Link key={href} href={href}
-          className="flex flex-col items-center justify-center gap-2 rounded-2xl py-4 pressable"
-          style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)" }}>
-          <span className="text-xl">{icon}</span>
-          <span className="text-[10px] font-bold" style={{ color: "rgba(255,255,255,0.45)" }}>{label}</span>
-        </Link>
-      ))}
     </div>
   );
 }
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 export default function Home() {
+  const { t, lang } = useTranslation();
   const [activeProfileId] = useLocalStorageState<string | null>(LS_ACTIVE_PROFILE, null);
   const profileId = activeProfileId ?? "guest";
-
   const lsKey = React.useMemo(() => profileKey(profileId, "workouts"), [profileId]);
   const [workouts] = useLocalStorageState<Workout[]>(lsKey, []);
   const [meta] = useLocalStorageState<ProfileMeta | null>(
     React.useMemo(() => profileMetaKey(profileId), [profileId]), null
   );
-
   const streak    = React.useMemo(() => calcStreak(workouts), [workouts]);
   const monthVol  = React.useMemo(() => totalVolumeMonth(workouts), [workouts]);
   const monthCount = React.useMemo(() => {
@@ -245,14 +171,14 @@ export default function Home() {
   const lastWorkout = React.useMemo(() => getLastWorkout(workouts), [workouts]);
   const activeDays  = React.useMemo(() => workoutsThisWeek(workouts), [workouts]);
   const hasActiveToday = activeDays.has((new Date().getDay() + 6) % 7);
-
   const greeting = React.useMemo(() => {
     const h = new Date().getHours();
-    if (h < 12) return "Jó reggelt";
-    if (h < 18) return "Jó napot";
-    return "Jó estét";
-  }, []);
+    if (h < 12) return t.home.greeting_morning;
+    if (h < 18) return t.home.greeting_afternoon;
+    return t.home.greeting_evening;
+  }, [t]);
   const name = meta?.fullName?.split(" ")[0] ?? null;
+  const weekDays = WEEK_DAYS[lang] ?? WEEK_DAYS.hu;
 
   return (
     <>
@@ -261,15 +187,13 @@ export default function Home() {
         {/* ── HEADER ── */}
         <header className="flex items-center justify-between mb-6">
           <div>
-            <div className="text-[10px] font-black tracking-widest mb-0.5"
-              style={{ color: "rgba(255,255,255,0.25)" }}>ARCX</div>
+            <div className="text-[10px] font-black tracking-widest mb-0.5" style={{ color: "rgba(255,255,255,0.25)" }}>ARCX</div>
             <h1 className="text-2xl font-black leading-tight" style={{ color: "var(--text-primary)" }}>
-              {greeting}{name ? `,` : ""}<br />
+              {greeting}{name ? "," : ""}<br />
               {name ? <span style={{ color: "var(--accent-primary)" }}>{name}</span> : ""}
             </h1>
           </div>
-          <Link href="/profile"
-            className="h-11 w-11 rounded-2xl flex items-center justify-center shrink-0 pressable"
+          <Link href="/profile" className="h-11 w-11 rounded-2xl flex items-center justify-center shrink-0 pressable"
             style={{ background: "var(--accent-primary)" }}>
             <span className="text-base font-black" style={{ color: "#000" }}>
               {name ? name[0].toUpperCase() : "👤"}
@@ -278,37 +202,80 @@ export default function Home() {
         </header>
 
         {/* ── HERO ── */}
-        <HeroCard lastWorkout={lastWorkout} hasActiveToday={hasActiveToday} streak={streak} />
+        <button onClick={() => {}} className="w-full text-left pressable">
+          <Link href="/workout" className="block">
+            <div className="relative overflow-hidden rounded-3xl" style={{ background: "var(--accent-primary)" }}>
+              <div className="absolute inset-0 pointer-events-none opacity-10"
+                style={{ backgroundImage: "repeating-linear-gradient(-45deg, #000 0px, #000 1px, transparent 1px, transparent 8px)" }} />
+              <div className="relative p-5">
+                <div className="flex items-start justify-between mb-4">
+                  <div className="text-[10px] font-black tracking-widest" style={{ color: "rgba(0,0,0,0.5)" }}>
+                    {hasActiveToday ? t.home.hero_active : t.home.hero_today}
+                  </div>
+                  {streak > 0 && (
+                    <div className="flex items-center gap-1 rounded-full px-2.5 py-1" style={{ background: "rgba(0,0,0,0.15)" }}>
+                      <span className="text-xs">🔥</span>
+                      <span className="text-xs font-black" style={{ color: "#000" }}>{streak}</span>
+                    </div>
+                  )}
+                </div>
+                <div className="text-3xl font-black leading-none mb-1" style={{ color: "#000" }}>
+                  {hasActiveToday ? t.home.hero_continue : t.home.hero_start}
+                </div>
+                <div className="text-sm font-medium mt-1" style={{ color: "rgba(0,0,0,0.5)" }}>
+                  {lastWorkout
+                    ? `${t.home.hero_last}: ${new Date(lastWorkout.startedAt).toLocaleDateString(lang, { weekday: "long" })}`
+                    : t.home.hero_no_workout}
+                </div>
+                <div className="mt-4 inline-flex items-center gap-1.5 rounded-2xl px-4 py-2 text-sm font-black"
+                  style={{ background: "rgba(0,0,0,0.15)", color: "#000" }}>
+                  {hasActiveToday ? t.home.hero_cta_continue : t.home.hero_cta_start}
+                </div>
+              </div>
+            </div>
+          </Link>
+        </button>
 
         {/* ── STATS ── */}
         <div className="flex gap-2 mt-3">
-          <StatBlock value={streak ? `${streak}` : "—"} label="nap streak" accent />
-          <StatBlock value={`${monthCount}`} label="edzés / 30n" />
-          <StatBlock value={monthVol > 0 ? formatK(monthVol) : "—"} label="kg volume" />
+          <StatBlock value={streak ? `${streak}` : "—"} label={t.home.stats_streak} accent />
+          <StatBlock value={`${monthCount}`} label={t.home.stats_workouts} />
+          <StatBlock value={monthVol > 0 ? formatK(monthVol) : "—"} label={t.home.stats_volume} />
         </div>
 
         {/* ── HETI CSÍK ── */}
         <div className="mt-3 rounded-2xl px-4 py-3"
           style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.05)" }}>
-          <div className="text-[9px] font-black tracking-widest mb-2.5"
-            style={{ color: "rgba(255,255,255,0.25)" }}>
-            EZEN A HÉTEN
+          <div className="text-[9px] font-black tracking-widest mb-2.5" style={{ color: "rgba(255,255,255,0.25)" }}>
+            {t.home.this_week}
           </div>
-          <WeekStrip activeDays={activeDays} />
+          <WeekStrip activeDays={activeDays} days={weekDays} />
         </div>
 
         {/* ── PROGRAMOK ── */}
         <div className="mt-5">
-          <ProgramsRow />
+          <ProgramsRow label={t.home.programs} allLabel={t.home.programs_all} perWeek={t.home.programs_per_week} />
         </div>
 
         {/* ── GYORS AKCIÓK ── */}
         <div className="mt-5">
-          <div className="text-[10px] font-black tracking-widest mb-3"
-            style={{ color: "rgba(255,255,255,0.25)" }}>
-            GYORS ELÉRÉS
+          <div className="text-[10px] font-black tracking-widest mb-3" style={{ color: "rgba(255,255,255,0.25)" }}>
+            {t.home.quick_access}
           </div>
-          <QuickActions />
+          <div className="grid grid-cols-3 gap-2">
+            {[
+              { label: t.home.quick_calendar, icon: "📅", href: "/calendar" },
+              { label: t.home.quick_stats, icon: "📈", href: "/progress" },
+              { label: t.home.quick_profile, icon: "👤", href: "/profile" },
+            ].map(({ label, icon, href }) => (
+              <Link key={href} href={href}
+                className="flex flex-col items-center justify-center gap-2 rounded-2xl py-4 pressable"
+                style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                <span className="text-xl">{icon}</span>
+                <span className="text-[10px] font-bold" style={{ color: "rgba(255,255,255,0.45)" }}>{label}</span>
+              </Link>
+            ))}
+          </div>
         </div>
 
       </main>
