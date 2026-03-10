@@ -9,6 +9,7 @@ export type NotifSettings = {
   streakBreakEnabled: boolean;
   streakBreakAfterDays: number;
   postWorkoutEnabled: boolean;
+  reminderDays: number[]; // 0=Mon..6=Sun
 };
 
 export const DEFAULT_NOTIF_SETTINGS: NotifSettings = {
@@ -18,6 +19,7 @@ export const DEFAULT_NOTIF_SETTINGS: NotifSettings = {
   streakBreakEnabled: true,
   streakBreakAfterDays: 2,
   postWorkoutEnabled: false,
+  reminderDays: [0,1,2,3,4], // H-P alapból
 };
 
 export const LS_NOTIF_SETTINGS = "gym.notifSettings";

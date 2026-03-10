@@ -27,6 +27,7 @@ import {
   schedulePostWorkoutNotif, checkAndSendStreakBreakNotif, scheduleCalendarReminder,
 } from "@/lib/notifications";
 import { profileKey } from "@/lib/profiles";
+import { updatePRsFromWorkout } from "@/lib/prStorage";
 
 import { auth } from "@/lib/firebase";
 import { saveWorkoutToCloud } from "@/lib/workoutsCloud";
@@ -125,6 +126,7 @@ export default function WorkoutPage() {
     return () => window.clearTimeout(t);
   }, [toast]);
   const [newAchievements, setNewAchievements] = React.useState<UnlockedAchievement[]>([]);
+  const [newPRNames, setNewPRNames] = React.useState<string[]>([]);
 
   React.useEffect(() => {
     const notifSettings = lsGet<NotifSettings>(LS_NOTIF_SETTINGS, DEFAULT_NOTIF_SETTINGS);
@@ -255,6 +257,10 @@ export default function WorkoutPage() {
       const updatedHistory = [finished, ...history];
       const newOnes = checkNewAchievements({ workouts: updatedHistory, weightHistory: [], streak: 0 }, unlocked);
       if (newOnes.length > 0) { lsSet(achKey, [...unlocked, ...newOnes]); setNewAchievements(newOnes); }
+    } catch {}
+    try {
+      const { newPRs } = updatePRsFromWorkout(profileId, finished);
+      if (newPRs.length > 0) setNewPRNames(newPRs);
     } catch {}
     const notifSettings = lsGet<NotifSettings>(LS_NOTIF_SETTINGS, DEFAULT_NOTIF_SETTINGS);
     schedulePostWorkoutNotif(notifSettings);
@@ -491,6 +497,15 @@ export default function WorkoutPage() {
         muted={settings.muted} onAdd={addRest} onSkip={skipRest}
         onToggleMute={() => setSettings(s => ({ ...s, muted: !s.muted }))} />
 
+      {newPRNames.length > 0 && (
+        <div className="fixed left-0 right-0 bottom-36 z-[95] mx-auto max-w-md px-4">
+          <div className="relative rounded-2xl px-4 py-3" style={{background:"var(--accent-primary)",color:"#000"}}>
+            <div className="font-black text-sm">Uj szemelyes rekord!</div>
+            <div className="text-xs mt-1 opacity-60">{newPRNames.slice(0,3).join(", ")}{newPRNames.length > 3 ? " +" + (newPRNames.length-3) + " mas" : ""}</div>
+            <button onClick={() => setNewPRNames([])} className="absolute top-2 right-3 text-base opacity-50">x</button>
+          </div>
+        </div>
+      )}
       <AchievementToast newAchievements={newAchievements} onDismiss={() => setNewAchievements([])} />
       <BottomNav />
     </>

@@ -239,6 +239,33 @@ export default function SettingsPage() {
                 </div>
               )}
 
+
+              {/* Napválasztó */}
+              {notifSettings.enabled && notifSettings.dailyReminderEnabled && (
+                <div className="pl-12">
+                  <div className="text-xs mb-2" style={{color:"var(--text-muted)"}}>Melyik napokon:</div>
+                  <div className="flex gap-1.5">
+                    {["H","K","Sz","Cs","P","Szo","V"].map((d,i) => {
+                      const active = (notifSettings.reminderDays ?? [0,1,2,3,4]).includes(i);
+                      return (
+                        <button key={i}
+                          onClick={() => {
+                            const cur = notifSettings.reminderDays ?? [0,1,2,3,4];
+                            const next = active ? cur.filter(x=>x!==i) : [...cur,i].sort();
+                            setNotifSettings(s => ({...s, reminderDays: next}));
+                          }}
+                          className="w-8 h-8 rounded-xl text-xs font-black pressable"
+                          style={active
+                            ? {background:"var(--accent-primary)",color:"#000"}
+                            : {background:"var(--bg-card)",color:"var(--text-muted)"}}>
+                          {d}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
               {/* Streak break */}
               <SettingRow
                 icon="🔥"

@@ -52,6 +52,25 @@ function fmtDuration(w: Workout) {
   const mins = Math.round((new Date(w.finishedAt).getTime() - new Date(w.startedAt).getTime()) / 60000);
   return mins >= 60 ? `${Math.floor(mins/60)}ó ${mins%60}p` : `${mins}p`;
 }
+
+function exportWorkoutsCSV(workouts: Workout[]) {
+  const rows: string[] = ["Datum,Cim,Gyakorlat,Setek,Volume(kg),Idotartam(perc)"];
+  for (const w of workouts) {
+    const date = new Date(w.startedAt).toLocaleDateString("hu");
+    const title = (w.title || date).replace(/,/g,"");
+    const exCount = w.exercises.length;
+    const sets = w.exercises.reduce((a,e)=>a+e.sets.filter(s=>s.done).length,0);
+    const vol = Math.round(workoutVolume(w));
+    const dur = w.finishedAt ? Math.round((new Date(w.finishedAt).getTime()-new Date(w.startedAt).getTime())/60000) : "";
+    rows.push([date,title,exCount,sets,vol,dur].join(","));
+  }
+  const blob = new Blob([rows.join("\n")], {type:"text/csv;charset=utf-8;"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = "arcx_workouts.csv"; a.click();
+  URL.revokeObjectURL(url);
+}
+
 function fmtDateShort(iso: string) {
   return new Date(iso).toLocaleDateString("hu", {month:"short", day:"2-digit"});
 }
@@ -398,10 +417,17 @@ export default function ProgressPage() {
             );
           })}
           {history.length > 0 && (
-            <button onClick={clearAll} className="w-full rounded-2xl py-3 text-xs pressable mt-1"
-              style={{background:"rgba(239,68,68,0.06)",color:"rgba(239,68,68,0.5)"}}>
-              Összes edzés törlése
-            </button>
+            <div className="flex gap-2 mt-1">
+              <button onClick={() => exportWorkoutsCSV(sorted)}
+                className="flex-1 rounded-2xl py-3 text-xs font-black pressable"
+                style={{background:"rgba(255,255,255,0.05)",color:"rgba(255,255,255,0.4)"}}>
+                CSV export
+              </button>
+              <button onClick={clearAll} className="flex-1 rounded-2xl py-3 text-xs pressable"
+                style={{background:"rgba(239,68,68,0.06)",color:"rgba(239,68,68,0.5)"}}>
+                Összes törlése
+              </button>
+            </div>
           )}
         </div>
       )}
