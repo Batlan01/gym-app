@@ -22,94 +22,90 @@ export function ExerciseCard({
 
   return (
     <div className="overflow-hidden rounded-3xl"
-      style={{
-        background: 'var(--bg-surface)',
-        border: `1px solid ${allDone ? 'rgba(74,222,128,0.25)' : 'var(--border-subtle)'}`,
-        transition: 'border-color 0.3s ease',
-      }}>
+      style={{ background: 'rgba(255,255,255,0.04)' }}>
+
+      {/* Zöld top accent csík ha kész */}
+      {allDone && (
+        <div className="h-0.5 w-full" style={{ background: '#4ade80' }} />
+      )}
 
       {/* ── Fejléc ── */}
       <div className="flex items-center justify-between px-4 pt-4 pb-3">
         <div className="min-w-0 flex-1">
-          <h3 className="text-base font-bold truncate" style={{ color: 'var(--text-primary)' }}>
+          <h3 className="text-base font-black truncate" style={{ color: allDone ? '#4ade80' : 'var(--text-primary)' }}>
             {ex.name}
           </h3>
-          <div className="mt-0.5 text-xs" style={{ color: 'var(--text-muted)' }}>
+          <div className="mt-0.5 text-xs" style={{ color: 'rgba(255,255,255,0.3)' }}>
             Előző: {lastSummary}
           </div>
         </div>
-        <div className="flex items-center gap-2 ml-3 shrink-0">
-          {/* Progress pills */}
-          <div className="flex gap-1">
-            {ex.sets.map((s, i) => (
-              <div key={s.id} className="h-1.5 w-4 rounded-full transition-all"
-                style={{ background: s.done ? '#4ade80' : 'rgba(255,255,255,0.12)' }} />
+        <div className="flex items-center gap-3 ml-3 shrink-0">
+          {/* Progress dots */}
+          <div className="flex gap-1 items-center">
+            {ex.sets.map((s) => (
+              <div key={s.id} className="h-1.5 w-1.5 rounded-full transition-all"
+                style={{ background: s.done ? '#4ade80' : 'rgba(255,255,255,0.15)' }} />
             ))}
           </div>
           <button onClick={onRemoveExercise}
-            className="grid h-7 w-7 place-items-center rounded-full text-xs transition-colors"
-            style={{ color: 'var(--text-muted)', background: 'rgba(255,255,255,0.05)' }}>✕</button>
+            className="grid h-7 w-7 place-items-center rounded-xl text-xs pressable"
+            style={{ background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.3)' }}>
+            ✕
+          </button>
         </div>
       </div>
 
       {/* ── Set sorok ── */}
       <div className="px-3 pb-2">
-        {/* Fejléc sor */}
-        <div className="mb-2 grid grid-cols-[28px_1fr_1fr_52px] gap-2 px-2">
+        {/* Fejléc */}
+        <div className="mb-2 grid grid-cols-[24px_1fr_1fr_52px] gap-2 px-1">
           {['#', 'KG', 'REPS', ''].map((h, i) => (
-            <div key={i} className="text-[10px] font-bold tracking-widest text-center"
-              style={{ color: 'var(--text-muted)' }}>{h}</div>
+            <div key={i} className="text-[9px] font-black tracking-widest text-center"
+              style={{ color: 'rgba(255,255,255,0.2)' }}>{h}</div>
           ))}
         </div>
 
-        <div className="space-y-2">
+        <div className="space-y-1.5">
           {ex.sets.map((s, idx) => {
             const filled = isSetFilled(s);
             return (
               <div key={s.id}
-                className="grid grid-cols-[28px_1fr_1fr_52px] gap-2 items-center rounded-2xl px-2 py-1 transition-all"
-                style={{
-                  background: s.done ? 'rgba(74,222,128,0.07)' : 'rgba(255,255,255,0.03)',
-                  opacity: s.done ? 0.75 : 1,
-                }}>
-                {/* # */}
-                <div className="text-center text-xs font-bold"
-                  style={{ color: 'var(--text-muted)' }}>{idx + 1}</div>
+                className="grid grid-cols-[24px_1fr_1fr_52px] gap-2 items-center rounded-2xl px-1 py-0.5"
+                style={{ background: s.done ? 'rgba(74,222,128,0.06)' : 'transparent' }}>
 
-                {/* KG — kattintható cella */}
+                {/* # */}
+                <div className="text-center text-[11px] font-bold"
+                  style={{ color: 'rgba(255,255,255,0.25)' }}>{idx + 1}</div>
+
+                {/* KG */}
                 <button onClick={() => onEditSet(s.id)}
-                  className="rounded-xl py-2.5 text-center text-base font-bold tabular-nums transition-all active:scale-95"
+                  className="rounded-xl py-3 text-center text-base font-black tabular-nums pressable"
                   style={{
-                    background: s.weight ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.03)',
-                    color: s.weight ? 'var(--text-primary)' : 'var(--text-muted)',
-                    border: '1px solid transparent',
+                    background: s.weight ? 'rgba(255,255,255,0.07)' : 'rgba(255,255,255,0.03)',
+                    color: s.weight ? 'var(--text-primary)' : 'rgba(255,255,255,0.2)',
                   }}>
                   {s.weight ?? '—'}
                 </button>
 
-                {/* REPS — kattintható cella */}
+                {/* REPS */}
                 <button onClick={() => onEditSet(s.id)}
-                  className="rounded-xl py-2.5 text-center text-base font-bold tabular-nums transition-all active:scale-95"
+                  className="rounded-xl py-3 text-center text-base font-black tabular-nums pressable"
                   style={{
-                    background: s.reps ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.03)',
-                    color: s.reps ? 'var(--text-primary)' : 'var(--text-muted)',
-                    border: '1px solid transparent',
+                    background: s.reps ? 'rgba(255,255,255,0.07)' : 'rgba(255,255,255,0.03)',
+                    color: s.reps ? 'var(--text-primary)' : 'rgba(255,255,255,0.2)',
                   }}>
                   {s.reps ?? '—'}
                 </button>
 
-                {/* DONE — nagy checkmark */}
+                {/* DONE */}
                 <button onClick={() => filled ? onToggleDone(s.id) : onEditSet(s.id)}
-                  className="h-11 w-full rounded-2xl text-lg font-bold transition-all active:scale-90 pressable"
+                  className="h-11 w-full rounded-2xl text-base font-black pressable"
                   style={s.done ? {
-                    background: 'rgba(74,222,128,0.2)',
-                    color: '#4ade80',
-                    border: '1.5px solid rgba(74,222,128,0.4)',
-                    boxShadow: '0 0 12px rgba(74,222,128,0.2)',
+                    background: '#4ade80',
+                    color: '#000',
                   } : {
-                    background: 'rgba(255,255,255,0.05)',
-                    color: 'rgba(255,255,255,0.3)',
-                    border: '1.5px solid rgba(255,255,255,0.1)',
+                    background: 'rgba(255,255,255,0.06)',
+                    color: 'rgba(255,255,255,0.25)',
                   }}>
                   ✓
                 </button>
@@ -120,23 +116,15 @@ export function ExerciseCard({
       </div>
 
       {/* ── Footer ── */}
-      <div className="flex gap-2 px-3 pb-4 pt-1">
+      <div className="flex gap-2 px-3 pb-4 pt-2">
         <button onClick={onAddSet}
-          className="flex-1 rounded-2xl py-3 text-sm font-bold pressable"
-          style={{
-            background: 'rgba(34,211,238,0.08)',
-            color: 'var(--accent-primary)',
-            border: '1px solid rgba(34,211,238,0.18)',
-          }}>
+          className="flex-1 rounded-2xl py-3 text-sm font-black pressable"
+          style={{ background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.6)' }}>
           + Set
         </button>
         <button onClick={onStartRest}
-          className="w-20 rounded-2xl py-3 text-sm font-medium pressable"
-          style={{
-            background: 'rgba(255,255,255,0.04)',
-            color: 'var(--text-muted)',
-            border: '1px solid var(--border-subtle)',
-          }}>
+          className="w-20 rounded-2xl py-3 text-sm font-bold pressable"
+          style={{ background: 'rgba(255,255,255,0.04)', color: 'rgba(255,255,255,0.3)' }}>
           ⏱ Rest
         </button>
       </div>
