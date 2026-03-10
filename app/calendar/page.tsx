@@ -13,16 +13,13 @@ const DAY_NAMES = ["Hétfő","Kedd","Szerda","Csütörtök","Péntek","Szombat",
 const DAY_SHORT = ["H","K","Sz","Cs","P","Sz","V"];
 
 const SLOT_TYPES = [
-  { id: "warmup",   label: "Bemelegítés", emoji: "🔥", color: "rgba(251,191,36,0.12)",  border: "rgba(251,191,36,0.3)",  text: "#fbbf24" },
-  { id: "main",     label: "Fő edzés",    emoji: "💪", color: "rgba(34,211,238,0.12)",  border: "rgba(34,211,238,0.3)",  text: "var(--accent-primary)" },
-  { id: "cardio",   label: "Kardio",      emoji: "🏃", color: "rgba(74,222,128,0.12)",  border: "rgba(74,222,128,0.3)",  text: "#4ade80" },
-  { id: "cooldown", label: "Levezetés",   emoji: "🧘", color: "rgba(167,139,250,0.12)", border: "rgba(167,139,250,0.3)", text: "#a78bfa" },
+  { id: "warmup",   label: "Bemelegítés", emoji: "🔥", accent: "#fbbf24" },
+  { id: "main",     label: "Fő edzés",    emoji: "💪", accent: "var(--accent-primary)" },
+  { id: "cardio",   label: "Kardio",      emoji: "🏃", accent: "#4ade80" },
+  { id: "cooldown", label: "Levezetés",   emoji: "🧘", accent: "#a78bfa" },
 ] as const;
 type SlotTypeId = typeof SLOT_TYPES[number]["id"];
 
-// DaySchedule: napIdx → slotId → sessionId
-// We store: pinnedDays = { "0": ["main:sessId1", "warmup:sessId2"] }
-// Format: "slotType:sessionId:programId"
 function encodePinnedEntry(slotId: SlotTypeId, sessionId: string, programId: string) {
   return `${slotId}:${sessionId}:${programId}`;
 }
@@ -34,7 +31,6 @@ function decodePinnedEntry(entry: string): { slotId: SlotTypeId; sessionId: stri
 }
 
 function todayIdx() { return (new Date().getDay() + 6) % 7; }
-
 function getWeekDates(offsetWeeks = 0): Date[] {
   const now = new Date();
   const day = (now.getDay() + 6) % 7;
@@ -49,7 +45,7 @@ function getWeekDates(offsetWeeks = 0): Date[] {
 function SessionPickerModal({ dayName, programs, currentEntries, onAdd, onRemove, onClose }: {
   dayName: string;
   programs: UserProgram[];
-  currentEntries: string[]; // encoded entries
+  currentEntries: string[];
   onAdd: (entry: string) => void;
   onRemove: (entry: string) => void;
   onClose: () => void;
@@ -57,7 +53,6 @@ function SessionPickerModal({ dayName, programs, currentEntries, onAdd, onRemove
   const [selectedSlot, setSelectedSlot] = React.useState<SlotTypeId>("main");
   const slotInfo = SLOT_TYPES.find(s => s.id === selectedSlot)!;
 
-  // Jelenlegi naphoz tartozó decoded entries
   const decoded = currentEntries.map(e => decodePinnedEntry(e)).filter(Boolean) as
     { slotId: SlotTypeId; sessionId: string; programId: string }[];
 
@@ -67,41 +62,49 @@ function SessionPickerModal({ dayName, programs, currentEntries, onAdd, onRemove
   return (
     <div className="fixed inset-0 z-[80] flex items-end justify-center"
       style={{ paddingBottom: "env(safe-area-inset-bottom)" }}>
-      <button className="absolute inset-0" style={{ background: "rgba(0,0,0,0.85)", backdropFilter: "blur(12px)" }} onClick={onClose} />
-      <div className="relative w-full max-w-md rounded-t-[2rem] overflow-hidden"
-        style={{ background: "var(--bg-elevated)", border: "1px solid var(--border-mid)", maxHeight: "85vh" }}>
+      <button className="absolute inset-0" style={{ background: "rgba(0,0,0,0.7)" }} onClick={onClose} />
+      <div className="relative w-full max-w-md rounded-t-3xl overflow-hidden"
+        style={{ background: "#0d0d0f", maxHeight: "88vh" }}>
+
+        {/* Handle */}
+        <div className="flex justify-center pt-3 pb-1">
+          <div className="h-1 w-10 rounded-full" style={{ background: "rgba(255,255,255,0.15)" }} />
+        </div>
 
         {/* Header */}
-        <div className="px-5 pt-5 pb-4 sticky top-0 z-10"
-          style={{ background: "var(--bg-elevated)", borderBottom: "1px solid var(--border-subtle)" }}>
-          <div className="flex items-center justify-between mb-3">
+        <div className="px-5 pt-2 pb-4 sticky top-0 z-10" style={{ background: "#0d0d0f" }}>
+          <div className="flex items-center justify-between mb-4">
             <div>
-              <div className="text-[10px] font-bold tracking-widest" style={{ color: "var(--text-muted)" }}>NAP BEÁLLÍTÁSA</div>
+              <div className="text-[9px] font-black tracking-widest mb-0.5" style={{ color: "rgba(255,255,255,0.25)" }}>
+                NAP BEÁLLÍTÁSA
+              </div>
               <div className="text-xl font-black" style={{ color: "var(--text-primary)" }}>{dayName}</div>
             </div>
             <button onClick={onClose}
-              className="h-8 w-8 rounded-full flex items-center justify-center pressable"
-              style={{ background: "var(--bg-card)", color: "var(--text-muted)", border: "1px solid var(--border-subtle)" }}>✕</button>
+              className="h-9 w-9 rounded-2xl flex items-center justify-center pressable"
+              style={{ background: "rgba(255,255,255,0.07)", color: "rgba(255,255,255,0.5)" }}>✕</button>
           </div>
 
-          {/* Slot type választó */}
+          {/* Slot type tab-ok — flat solid fill */}
           <div className="grid grid-cols-4 gap-1.5">
             {SLOT_TYPES.map(slot => {
               const count = decoded.filter(d => d.slotId === slot.id).length;
               const isSelected = selectedSlot === slot.id;
               return (
                 <button key={slot.id} onClick={() => setSelectedSlot(slot.id)}
-                  className="rounded-xl py-2 flex flex-col items-center gap-0.5 pressable"
+                  className="rounded-2xl py-2.5 flex flex-col items-center gap-0.5 pressable relative"
                   style={isSelected
-                    ? { background: slot.color, border: `1px solid ${slot.border}` }
-                    : { background: "var(--bg-card)", border: "1px solid var(--border-subtle)" }}>
-                  <span className="text-base">{slot.emoji}</span>
-                  <span className="text-[9px] font-bold" style={{ color: isSelected ? slot.text : "var(--text-muted)" }}>
+                    ? { background: slot.accent === "var(--accent-primary)" ? "var(--accent-primary)" : slot.accent, color: "#000" }
+                    : { background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.4)" }}>
+                  <span className="text-lg leading-none">{slot.emoji}</span>
+                  <span className="text-[9px] font-black mt-0.5" style={{ color: isSelected ? "#000" : "rgba(255,255,255,0.4)" }}>
                     {slot.label}
                   </span>
                   {count > 0 && (
-                    <span className="text-[9px] font-black rounded-full px-1.5"
-                      style={{ background: slot.color, color: slot.text }}>+{count}</span>
+                    <div className="absolute -top-1 -right-1 h-4 w-4 rounded-full flex items-center justify-center text-[9px] font-black"
+                      style={{ background: slot.accent === "var(--accent-primary)" ? "var(--accent-primary)" : slot.accent, color: "#000" }}>
+                      {count}
+                    </div>
                   )}
                 </button>
               );
@@ -109,14 +112,17 @@ function SessionPickerModal({ dayName, programs, currentEntries, onAdd, onRemove
           </div>
         </div>
 
-        <div className="overflow-y-auto px-4 pb-6 pt-3 space-y-3" style={{ maxHeight: "55vh" }}>
+        <div className="overflow-y-auto px-4 pb-8 space-y-3" style={{ maxHeight: "55vh" }}>
 
-          {/* Már hozzáadott sessionök ebben a slotban */}
+          {/* Már hozzáadott sessionök */}
           {decoded.filter(d => d.slotId === selectedSlot).length > 0 && (
-            <div className="rounded-2xl p-3 space-y-2"
-              style={{ background: slotInfo.color, border: `1px solid ${slotInfo.border}` }}>
-              <div className="text-[10px] font-bold tracking-wider" style={{ color: slotInfo.text }}>
-                {slotInfo.emoji} HOZZÁADVA
+            <div className="rounded-2xl overflow-hidden" style={{ background: "rgba(255,255,255,0.04)" }}>
+              <div className="px-4 py-3 flex items-center gap-2"
+                style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+                <span>{slotInfo.emoji}</span>
+                <span className="text-[10px] font-black tracking-widest" style={{ color: "rgba(255,255,255,0.3)" }}>
+                  HOZZÁADVA
+                </span>
               </div>
               {decoded.filter(d => d.slotId === selectedSlot).map((d, i) => {
                 const prog = programs.find(p => p.id === d.programId);
@@ -124,15 +130,15 @@ function SessionPickerModal({ dayName, programs, currentEntries, onAdd, onRemove
                 if (!sess) return null;
                 const entry = encodePinnedEntry(d.slotId, d.sessionId, d.programId);
                 return (
-                  <div key={i} className="flex items-center justify-between gap-2 rounded-xl px-3 py-2"
-                    style={{ background: "rgba(0,0,0,0.2)" }}>
+                  <div key={i} className="flex items-center justify-between gap-3 px-4 py-3"
+                    style={{ borderBottom: i < decoded.filter(d => d.slotId === selectedSlot).length - 1 ? "1px solid rgba(255,255,255,0.04)" : "none" }}>
                     <div>
                       <div className="text-sm font-bold" style={{ color: "var(--text-primary)" }}>{sess.name}</div>
-                      <div className="text-xs" style={{ color: "var(--text-muted)" }}>{prog?.name}</div>
+                      <div className="text-xs" style={{ color: "rgba(255,255,255,0.3)" }}>{prog?.name}</div>
                     </div>
                     <button onClick={() => onRemove(entry)}
-                      className="text-xs px-2 py-1 rounded-lg pressable"
-                      style={{ background: "rgba(239,68,68,0.15)", color: "#f87171" }}>
+                      className="text-xs px-3 py-1.5 rounded-xl font-bold pressable"
+                      style={{ background: "rgba(239,68,68,0.1)", color: "#f87171" }}>
                       Törlés
                     </button>
                   </div>
@@ -141,41 +147,43 @@ function SessionPickerModal({ dayName, programs, currentEntries, onAdd, onRemove
             </div>
           )}
 
-          {/* Programok és sessionök */}
+          {/* Üres állapot */}
           {programs.length === 0 && (
-            <div className="rounded-2xl p-6 text-sm text-center" style={{ color: "var(--text-muted)", background: "var(--bg-card)" }}>
+            <div className="rounded-2xl p-6 text-sm text-center" style={{ color: "rgba(255,255,255,0.3)", background: "rgba(255,255,255,0.03)" }}>
               Még nincs programod.<br/>Hozz létre egyet a Programok oldalon!
             </div>
           )}
 
+          {/* Programok listája */}
           {programs.map(prog => (
             <div key={prog.id}>
-              <div className="text-[10px] font-bold tracking-widest mb-2 px-1" style={{ color: "var(--text-muted)" }}>
+              <div className="text-[9px] font-black tracking-widest mb-2 px-1" style={{ color: "rgba(255,255,255,0.25)" }}>
                 {prog.name.toUpperCase()}
               </div>
-              <div className="space-y-1.5">
+              <div className="space-y-1">
                 {prog.sessions.map(sess => {
                   const added = isAdded(prog.id, sess.id);
                   const entry = encodePinnedEntry(selectedSlot, sess.id, prog.id);
+                  const accentColor = slotInfo.accent === "var(--accent-primary)" ? "var(--accent-primary)" : slotInfo.accent;
                   return (
                     <button key={sess.id}
                       onClick={() => added ? onRemove(entry) : onAdd(entry)}
-                      className="w-full rounded-2xl px-4 py-3 text-left pressable flex items-center justify-between gap-3"
+                      className="w-full rounded-2xl px-4 py-3.5 text-left pressable flex items-center justify-between gap-3"
                       style={added
-                        ? { background: slotInfo.color, border: `1px solid ${slotInfo.border}` }
-                        : { background: "var(--bg-card)", border: "1px solid var(--border-subtle)" }}>
+                        ? { background: accentColor, color: "#000" }
+                        : { background: "rgba(255,255,255,0.05)" }}>
                       <div>
-                        <div className="text-sm font-bold" style={{ color: added ? slotInfo.text : "var(--text-primary)" }}>
+                        <div className="text-sm font-black" style={{ color: added ? "#000" : "var(--text-primary)" }}>
                           {sess.name}
                         </div>
-                        <div className="text-xs mt-0.5" style={{ color: "var(--text-muted)" }}>
+                        <div className="text-xs mt-0.5" style={{ color: added ? "rgba(0,0,0,0.5)" : "rgba(255,255,255,0.3)" }}>
                           {sess.blocks.length} gyakorlat
                         </div>
                       </div>
-                      <div className="shrink-0 h-7 w-7 rounded-full flex items-center justify-center text-sm font-black"
+                      <div className="shrink-0 h-7 w-7 rounded-xl flex items-center justify-center text-sm font-black"
                         style={added
-                          ? { background: slotInfo.border, color: slotInfo.text }
-                          : { background: "var(--bg-elevated)", color: "var(--text-muted)", border: "1px solid var(--border-subtle)" }}>
+                          ? { background: "rgba(0,0,0,0.15)", color: "#000" }
+                          : { background: "rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.4)" }}>
                         {added ? "✓" : "+"}
                       </div>
                     </button>
@@ -204,12 +212,10 @@ export default function CalendarPage() {
   );
 
   React.useEffect(() => { setPrograms(readPrograms(pid)); }, [pid]);
-
   const weekDates = React.useMemo(() => getWeekDates(weekOffset), [weekOffset]);
   const today = todayIdx();
   const isCurrentWeek = weekOffset === 0;
 
-  // Összes pinned entry napra: dayIdx → string[]
   const schedule = React.useMemo(() => {
     const map: Record<number, string[]> = {};
     for (const prog of programs) {
@@ -217,14 +223,11 @@ export default function CalendarPage() {
       for (const [dayKey, entries] of Object.entries(pinned)) {
         const dayIdx = parseInt(dayKey);
         if (!map[dayIdx]) map[dayIdx] = [];
-        // Support both old format (string) and new format (string[])
         if (Array.isArray(entries)) {
-          // new format: migrate old string entries if needed
           map[dayIdx].push(...(entries as string[]).map(e =>
             e.includes(":") ? e : encodePinnedEntry("main", e, prog.id)
           ));
         } else {
-          // old format: single string
           map[dayIdx].push(encodePinnedEntry("main", entries as string, prog.id));
         }
       }
@@ -279,32 +282,37 @@ export default function CalendarPage() {
   return (
     <div className="flex flex-col" style={{ minHeight: "100dvh" }}>
     <div className="flex-1 pb-32 animate-in">
-      {/* Header */}
-      <div className="px-4 pt-12 pb-2">
-        <div className="label-xs mb-1">ARCX</div>
+
+      {/* ── HEADER ── */}
+      <div className="px-4 pt-10 pb-3">
+        <div className="text-[10px] font-black tracking-widest mb-1" style={{ color: "rgba(255,255,255,0.25)" }}>ARCX</div>
         <h1 className="text-2xl font-black" style={{ color: "var(--text-primary)" }}>Naptár</h1>
-        <p className="text-xs mt-1" style={{ color: "var(--text-muted)" }}>Koppints egy napra az edzés beállításához</p>
       </div>
 
-      {/* Hét navigátor */}
-      <div className="flex items-center justify-between px-4 py-3">
-        <button onClick={() => setWeekOffset(w => w - 1)} className="rounded-xl px-3 py-2 text-sm pressable"
-          style={{ background: "var(--bg-card)", color: "var(--text-muted)", border: "1px solid var(--border-subtle)" }}>
-          ← Előző
+      {/* ── HÉT NAVIGÁTOR ── */}
+      <div className="flex items-center gap-2 px-4 pb-4">
+        <button onClick={() => setWeekOffset(w => w - 1)}
+          className="h-10 w-10 rounded-2xl flex items-center justify-center font-black pressable"
+          style={{ background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.5)" }}>
+          ←
         </button>
-        <button onClick={() => setWeekOffset(0)} className="rounded-xl px-3 py-2 text-xs font-bold pressable"
+        <button onClick={() => setWeekOffset(0)}
+          className="flex-1 h-10 rounded-2xl text-xs font-black pressable"
           style={isCurrentWeek
-            ? { background: "rgba(34,211,238,0.12)", color: "var(--accent-primary)", border: "1px solid rgba(34,211,238,0.3)" }
-            : { background: "var(--bg-card)", color: "var(--text-muted)", border: "1px solid var(--border-subtle)" }}>
-          {isCurrentWeek ? "Ez a hét" : `${weekDates[0].getMonth()+1}/${weekDates[0].getDate()} – ${weekDates[6].getMonth()+1}/${weekDates[6].getDate()}`}
+            ? { background: "var(--accent-primary)", color: "#000" }
+            : { background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.5)" }}>
+          {isCurrentWeek
+            ? "Ez a hét"
+            : `${weekDates[0].getMonth()+1}/${weekDates[0].getDate()} – ${weekDates[6].getMonth()+1}/${weekDates[6].getDate()}`}
         </button>
-        <button onClick={() => setWeekOffset(w => w + 1)} className="rounded-xl px-3 py-2 text-sm pressable"
-          style={{ background: "var(--bg-card)", color: "var(--text-muted)", border: "1px solid var(--border-subtle)" }}>
-          Következő →
+        <button onClick={() => setWeekOffset(w => w + 1)}
+          className="h-10 w-10 rounded-2xl flex items-center justify-center font-black pressable"
+          style={{ background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.5)" }}>
+          →
         </button>
       </div>
 
-      {/* Heti nézet */}
+      {/* ── HETI NAPKÁRTYÁK ── */}
       <div className="px-4 space-y-2">
         {weekDates.map((date, dayIdx) => {
           const entries = schedule[dayIdx] ?? [];
@@ -314,7 +322,6 @@ export default function CalendarPage() {
           const isDone = doneDays.has(dayIdx);
           const isPast = isCurrentWeek && dayIdx < today;
 
-          // Slot-ok összegyűjtve megjelenítéshez
           const slotGroups = SLOT_TYPES.map(slot => ({
             slot,
             items: decoded.filter(d => d.slotId === slot.id).map(d => {
@@ -324,39 +331,50 @@ export default function CalendarPage() {
             }).filter(x => x.sess),
           })).filter(g => g.items.length > 0);
 
+          // Kártya háttér: ma = solid accent (halvány), teljesítve = zöld, egyéb = sötét flat
+          const cardBg = isToday
+            ? "rgba(34,211,238,0.07)"
+            : isDone
+              ? "rgba(74,222,128,0.05)"
+              : "rgba(255,255,255,0.03)";
+
           return (
             <button key={dayIdx}
               onClick={() => isPast && !isToday ? null : setPicker({ dayIdx })}
-              className="w-full rounded-3xl p-4 text-left pressable"
-              style={{
-                background: isToday ? "rgba(34,211,238,0.07)" : isDone ? "rgba(74,222,128,0.05)" : "var(--bg-surface)",
-                border: isToday ? "1px solid rgba(34,211,238,0.3)" : isDone ? "1px solid rgba(74,222,128,0.2)" : "1px solid var(--border-subtle)",
-                opacity: isPast && !isToday ? 0.45 : 1,
-              }}>
+              className="w-full rounded-2xl p-4 text-left pressable"
+              style={{ background: cardBg, opacity: isPast && !isToday ? 0.4 : 1 }}>
+
               <div className="flex items-start gap-3">
-                {/* Dátum */}
-                <div className="shrink-0 text-center w-10 pt-0.5">
-                  <div className="text-[10px] font-bold uppercase"
-                    style={{ color: isToday ? "var(--accent-primary)" : "var(--text-muted)" }}>{DAY_SHORT[dayIdx]}</div>
-                  <div className="text-xl font-black"
-                    style={{ color: isToday ? "var(--accent-primary)" : isDone ? "var(--accent-green)" : "var(--text-secondary)" }}>
+                {/* Dátum blokk */}
+                <div className="shrink-0 w-9 text-center">
+                  <div className="text-[9px] font-black tracking-widest uppercase"
+                    style={{ color: isToday ? "var(--accent-primary)" : "rgba(255,255,255,0.25)" }}>
+                    {DAY_SHORT[dayIdx]}
+                  </div>
+                  <div className="text-xl font-black leading-tight"
+                    style={{ color: isToday ? "var(--accent-primary)" : isDone ? "#4ade80" : "var(--text-secondary)" }}>
                     {date.getDate()}
                   </div>
                 </div>
-                <div className="w-px self-stretch shrink-0" style={{ background: "var(--border-subtle)" }} />
 
-                {/* Session tartalom */}
+                {/* Elválasztó */}
+                <div className="w-px self-stretch shrink-0" style={{ background: "rgba(255,255,255,0.07)" }} />
+
+                {/* Tartalom */}
                 <div className="flex-1 min-w-0">
                   {isDone ? (
-                    <div className="text-sm font-black" style={{ color: "var(--accent-green)" }}>✓ Teljesítve</div>
+                    <div className="text-sm font-black" style={{ color: "#4ade80" }}>✓ Teljesítve</div>
                   ) : slotGroups.length > 0 ? (
                     <div className="space-y-1.5">
                       {slotGroups.map(({ slot, items }) => (
                         <div key={slot.id} className="flex flex-wrap items-center gap-1.5">
                           <span className="text-xs">{slot.emoji}</span>
                           {items.map((item, i) => (
-                            <span key={i} className="rounded-lg px-2 py-0.5 text-xs font-semibold"
-                              style={{ background: slot.color, color: slot.text, border: `1px solid ${slot.border}` }}>
+                            <span key={i} className="rounded-lg px-2 py-0.5 text-xs font-black"
+                              style={{
+                                background: "rgba(255,255,255,0.08)",
+                                color: slot.accent === "var(--accent-primary)" ? "var(--accent-primary)" : slot.accent,
+                              }}>
                               {item.sess!.name}
                             </span>
                           ))}
@@ -364,30 +382,26 @@ export default function CalendarPage() {
                       ))}
                     </div>
                   ) : (
-                    <div>
-                      <div className="text-sm font-semibold" style={{ color: isToday ? "var(--text-secondary)" : "var(--text-muted)" }}>
-                        {isToday ? "Ma nincs edzés" : "Pihenőnap"}
-                      </div>
-                      {isToday && <div className="text-xs mt-0.5" style={{ color: "var(--text-muted)" }}>Koppints a beállításhoz</div>}
+                    <div className="text-sm font-semibold"
+                      style={{ color: isToday ? "rgba(255,255,255,0.5)" : "rgba(255,255,255,0.2)" }}>
+                      {isToday ? "Koppints a beállításhoz" : "Pihenőnap"}
                     </div>
                   )}
                 </div>
 
-                {/* Edit gomb */}
+                {/* + / ✎ gomb */}
                 {!isPast && (
-                  <div className="shrink-0 h-8 w-8 rounded-xl flex items-center justify-center text-sm font-black mt-0.5"
-                    style={slotGroups.length > 0
-                      ? { background: "rgba(34,211,238,0.1)", color: "var(--accent-primary)", border: "1px solid rgba(34,211,238,0.2)" }
-                      : { background: "var(--bg-card)", color: "var(--text-muted)", border: "1px solid var(--border-subtle)" }}>
+                  <div className="shrink-0 h-7 w-7 rounded-xl flex items-center justify-center text-sm font-black"
+                    style={{ background: "rgba(255,255,255,0.07)", color: "rgba(255,255,255,0.35)" }}>
                     {slotGroups.length > 0 ? "✎" : "+"}
                   </div>
                 )}
               </div>
 
-              {/* Edzés indítása */}
+              {/* Edzés indítása — ma + van terv + nincs teljesítve */}
               {isToday && slotGroups.length > 0 && !isDone && (
                 <button onClick={e => { e.stopPropagation(); router.push("/workout"); }}
-                  className="mt-3 w-full rounded-2xl py-3 text-sm font-black pressable flex items-center justify-center gap-2"
+                  className="mt-3 w-full rounded-xl py-3 text-sm font-black pressable"
                   style={{ background: "var(--accent-primary)", color: "#000" }}>
                   Edzés indítása →
                 </button>
@@ -397,15 +411,16 @@ export default function CalendarPage() {
         })}
       </div>
 
-      {/* Programok összefoglaló — eltávolítva */}
-
+      {/* Üres állapot — nincs program */}
       {programs.length === 0 && (
-        <div className="mx-4 mt-4 rounded-3xl p-8 flex flex-col items-center justify-center text-center" style={{ background: "var(--bg-surface)", border: "1px solid var(--border-subtle)", minHeight: 200 }}>
+        <div className="mx-4 mt-4 rounded-2xl p-8 flex flex-col items-center justify-center text-center"
+          style={{ background: "rgba(255,255,255,0.03)" }}>
           <div className="text-4xl mb-3">📅</div>
-          <div className="text-base font-bold mb-1" style={{ color: "var(--text-primary)" }}>Nincs program</div>
-          <div className="text-sm mb-5" style={{ color: "var(--text-muted)" }}>Hozz létre programot az ütemezéshez</div>
-          <button onClick={() => router.push("/programs")} className="rounded-2xl px-5 py-3 text-sm font-bold pressable"
-            style={{ background: "rgba(34,211,238,0.12)", color: "var(--accent-primary)", border: "1px solid rgba(34,211,238,0.3)" }}>
+          <div className="text-base font-black mb-1" style={{ color: "var(--text-primary)" }}>Nincs program</div>
+          <div className="text-sm mb-5" style={{ color: "rgba(255,255,255,0.3)" }}>Hozz létre programot az ütemezéshez</div>
+          <button onClick={() => router.push("/programs")}
+            className="rounded-xl px-5 py-3 text-sm font-black pressable"
+            style={{ background: "var(--accent-primary)", color: "#000" }}>
             Programok →
           </button>
         </div>
