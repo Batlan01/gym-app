@@ -14,7 +14,8 @@ import { auth, db } from "@/lib/firebase";
 import { subscribeWorkouts } from "@/lib/workoutsCloud";
 import { collection, deleteDoc, doc, getDocs, writeBatch, query, orderBy } from "firebase/firestore";
 import { BarChart, Bar, XAxis, Tooltip, ResponsiveContainer } from "recharts";
-import { rebuildPRs, type PRMap, type PREntry } from "@/lib/prStorage";
+import { rebuildPRs, buildExerciseHistory, type PRMap, type PREntry, type ExerciseHistoryPoint } from "@/lib/prStorage";
+import { PRChartSheet } from "@/components/PRChartSheet";
 
 function isCloudPid(p: string) { return p.startsWith("fb:"); }
 function cloudUid(p: string) { return p.startsWith("fb:") ? p.slice(3).trim() : null; }
@@ -76,7 +77,7 @@ function fmtDateShort(iso: string) {
 }
 
 // ── PR Tab komponens ──────────────────────────────────────────
-function PRTab({ prs, onSearch }: { prs: PRMap; onSearch: (q: string) => void }) {
+function PRTab({ prs, onSearch, onOpenChart }: { prs: PRMap; onSearch: (q: string) => void; onOpenChart: (e: PREntry) => void }) {
   const [q, setQ] = React.useState("");
   const entries = React.useMemo(() => {
     const all = Object.values(prs).sort((a, b) => b.bestWeight - a.bestWeight);
@@ -111,12 +112,12 @@ function PRTab({ prs, onSearch }: { prs: PRMap; onSearch: (q: string) => void })
       <div className="text-[9px] font-black tracking-widest" style={{color:"rgba(255,255,255,0.25)"}}>
         {entries.length} GYAKORLAT
       </div>
-      {entries.map((e, i) => <PRCard key={e.exerciseId} entry={e} rank={i + 1} />)}
+      {entries.map((e, i) => <PRCard key={e.exerciseId} entry={e} rank={i + 1} onOpen={() => onOpenChart(e)} />)}
     </div>
   );
 }
 
-function PRCard({ entry, rank }: { entry: PREntry; rank: number }) {
+function PRCard({ entry, rank, onOpen }: { entry: PREntry; rank: number; onOpen: () => void }) {
   const [expanded, setExpanded] = React.useState(false);
   return (
     <button onClick={() => setExpanded(x => !x)}
@@ -144,7 +145,14 @@ function PRCard({ entry, rank }: { entry: PREntry; rank: number }) {
             × {entry.bestWeightReps} rep
           </div>
         </div>
-        <div className="ml-1 text-xs" style={{color:"rgba(255,255,255,0.2)"}}>{expanded ? "▲" : "▼"}</div>
+        <div className="flex items-center gap-2">
+          <button onClick={(e) => { e.stopPropagation(); onOpen(); }}
+            className="rounded-xl px-2 py-1 text-[10px] font-black"
+            style={{background:"var(--accent-primary)",color:"#000"}}>
+            Grafikon →
+          </button>
+          <div className="text-xs" style={{color:"rgba(255,255,255,0.2)"}}>{expanded ? "▲" : "▼"}</div>
+        </div>
       </div>
 
       {/* Kibontva — részletek */}
@@ -183,6 +191,8 @@ export default function ProgressPage() {
   const [selectedId, setSelectedId] = React.useState<string | null>(null);
   const [chartMode, setChartMode] = React.useState<"volume"|"frequency">("volume");
   const [prs, setPrs] = React.useState<PRMap>({});
+  const [prChartEntry, setPrChartEntry] = React.useState<PREntry | null>(null);
+  const [prChartHistory, setPrChartHistory] = React.useState<ExerciseHistoryPoint[]>([]);
 
   React.useEffect(() => {
     if (!isCloudPid(profileId)) { setCloudHistory(null); setCloudStatus("idle"); return; }
@@ -363,7 +373,16 @@ export default function ProgressPage() {
       )}
 
       {/* ── PR TAB ── */}
-      {tab==="prs" && <PRTab prs={prs} onSearch={() => {}} />}
+      {tab==="prs" && (
+        <PRTab
+          prs={prs}
+          onSearch={() => {}}
+          onOpenChart={(entry) => {
+            setPrChartEntry(entry);
+            setPrChartHistory(buildExerciseHistory(history, entry.exerciseId));
+          }}
+        />
+      )}
 
       {/* ── HISTORY TAB ── */}
       {tab==="history" && (
@@ -433,6 +452,12 @@ export default function ProgressPage() {
       )}
     </div>
 
+    <PRChartSheet
+      open={!!prChartEntry}
+      entry={prChartEntry}
+      history={prChartHistory}
+      onClose={() => setPrChartEntry(null)}
+    />
     <WorkoutDetailSheet open={detailOpen} onClose={() => setDetailOpen(false)}
       workout={selected} onDelete={deleteWorkout} />
     <BottomNav />
