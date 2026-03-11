@@ -192,7 +192,7 @@ export default function ProgramsPage() {
 
         {/* ── Sticky header ── */}
         <div className="sticky top-0 z-40 px-4 pt-4 pb-3"
-          style={{ background: 'rgba(8,11,15,0.92)', backdropFilter: 'blur(16px)', borderBottom: '1px solid var(--border-subtle)' }}>
+          style={{ background:"var(--sticky-bg)", backdropFilter: 'blur(16px)', borderBottom: '1px solid var(--border-subtle)' }}>
           <div className="label-xs mb-1">PROGRAMOK</div>
           <div className="flex items-center justify-between">
             <h1 className="text-xl font-black" style={{ color: 'var(--text-primary)' }}>Katalógus</h1>

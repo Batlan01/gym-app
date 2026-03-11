@@ -240,7 +240,7 @@ export default function ExercisesClient() {
 
         {/* ── Sticky header ── */}
         <div className="sticky top-0 z-40 px-4 pt-5 pb-3"
-          style={{ background: "rgba(8,11,15,0.94)", backdropFilter: "blur(16px)", borderBottom: "1px solid var(--border-subtle)" }}>
+          style={{ background:"var(--sticky-bg)", backdropFilter: "blur(16px)", borderBottom: "1px solid var(--border-subtle)" }}>
           <div className="label-xs mb-1">ARCX</div>
           <div className="flex items-center justify-between gap-3">
             <h1 className="text-xl font-black" style={{ color: "var(--text-primary)" }}>

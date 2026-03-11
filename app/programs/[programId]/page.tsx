@@ -290,7 +290,7 @@ export default function ProgramBuilderPage() {
 
         {/* ── Tab bar ── */}
         <div className="sticky top-0 z-40 flex gap-1 px-4 py-2"
-          style={{ background: 'rgba(8,11,15,0.92)', backdropFilter: 'blur(16px)', borderBottom: '1px solid var(--border-subtle)' }}>
+          style={{ background:"var(--sticky-bg)", backdropFilter: 'blur(16px)', borderBottom: '1px solid var(--border-subtle)' }}>
           {(['sessions', 'settings'] as const).map(t => (
             <button key={t} onClick={() => setTab(t)}
               className="flex-1 rounded-xl py-2.5 text-xs font-bold transition-all pressable"

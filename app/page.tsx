@@ -114,11 +114,11 @@ function StatBlock({ value, label, accent = false }: { value: string; label: str
 // ─── ProgramsRow ─────────────────────────────────────────────────────────────
 const SPORT_EMOJI: Record<string, string> = { gym:"🏋️", home:"🏠", running:"🏃", boxing:"🥊", yoga:"🧘" };
 const SPORT_BG: Record<string, string> = {
-  gym:     "linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)",
-  home:    "linear-gradient(135deg, #1a2e1a 0%, #162116 100%)",
-  running: "linear-gradient(135deg, #2e1a1a 0%, #211616 100%)",
-  boxing:  "linear-gradient(135deg, #2e1a2e 0%, #211621 100%)",
-  yoga:    "linear-gradient(135deg, #1a2a2e 0%, #162021 100%)",
+  gym:     "var(--grad-gym)",
+  home:    "var(--grad-home)",
+  running: "var(--grad-running)",
+  boxing:  "var(--grad-boxing)",
+  yoga:    "var(--grad-yoga)",
 };
 
 function ProgramsRow({ label, allLabel, perWeek }: { label: string; allLabel: string; perWeek: string }) {
