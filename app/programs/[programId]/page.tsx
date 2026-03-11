@@ -44,7 +44,7 @@ function BlockCard({ b, index, onEdit, onRemove }: {
 
   return (
     <div className="flex items-center gap-3 rounded-2xl px-3 py-3"
-      style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}>
+      style={{ background:"var(--surface-1)", border:"1px solid var(--border-subtle)" }}>
       {/* Bal: szám + szín */}
       <div className="grid h-8 w-8 shrink-0 place-items-center rounded-xl text-xs font-black"
         style={{ background: `${kindColor}20`, color: kindColor }}>
@@ -264,7 +264,7 @@ export default function ProgramBuilderPage() {
               {LEVEL_LABEL[program.level]}
             </span>
             <span className="rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide"
-              style={{ background: 'rgba(255,255,255,0.07)', color: 'var(--text-muted)' }}>
+              style={{ background:"var(--surface-2)", color: 'var(--text-muted)' }}>
               {sportLabel(program.sport)}
             </span>
           </div>
@@ -368,7 +368,7 @@ export default function ProgramBuilderPage() {
                   {(['exercise', 'drill', 'interval'] as const).map(k => (
                     <button key={k} onClick={() => addBlock(activeSession.id, k)}
                       className="rounded-2xl py-3 text-xs font-bold pressable"
-                      style={{ background: 'rgba(255,255,255,0.04)', color: 'var(--text-muted)', border: '1px solid var(--border-subtle)' }}>
+                      style={{ background:"var(--surface-1)", color: 'var(--text-muted)', border: '1px solid var(--border-subtle)' }}>
                       {k === 'exercise' ? '+ Gyakorlat' : k === 'drill' ? '+ Drill' : '+ Intervall'}
                     </button>
                   ))}

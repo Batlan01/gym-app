@@ -93,7 +93,7 @@ function PRTab({ prs, onSearch, onOpenChart }: { prs: PRMap; onSearch: (q: strin
       <div className="flex flex-col items-center justify-center py-20 text-center px-8">
         <div className="text-4xl mb-3">🏆</div>
         <div className="text-base font-black mb-2" style={{color:"var(--text-primary)"}}>{pt.progress.pr_none}</div>
-        <div className="text-sm" style={{color:"rgba(255,255,255,0.3)"}}>
+        <div className="text-sm" style={{color:"var(--text-muted)"}}>
           {pt.progress.pr_none_sub}
         </div>
       </div>
@@ -104,14 +104,14 @@ function PRTab({ prs, onSearch, onOpenChart }: { prs: PRMap; onSearch: (q: strin
     <div className="px-4 space-y-3">
       {/* Kereső */}
       <div className="relative">
-        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm" style={{color:"rgba(255,255,255,0.25)"}}>🔍</span>
+        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm" style={{color:"var(--text-muted)"}}>🔍</span>
         <input value={q} onChange={e => setQ(e.target.value)} placeholder={pt.common.search}
           className="w-full rounded-2xl py-2.5 pl-9 pr-4 text-sm outline-none"
-          style={{background:"rgba(255,255,255,0.05)", color:"var(--text-primary)"}} />
+          style={{background:"var(--surface-1)", color:"var(--text-primary)"}} />
       </div>
 
       {/* PR lista */}
-      <div className="text-[9px] font-black tracking-widest" style={{color:"rgba(255,255,255,0.25)"}}>
+      <div className="text-[9px] font-black tracking-widest" style={{color:"var(--text-muted)"}}>
         {entries.length} GYAKORLAT
       </div>
       {entries.map((e, i) => <PRCard key={e.exerciseId} entry={e} rank={i + 1} onOpen={() => onOpenChart(e)} />)}
@@ -125,7 +125,7 @@ function PRCard({ entry, rank, onOpen }: { entry: PREntry; rank: number; onOpen:
   return (
     <button onClick={() => setExpanded(x => !x)}
       className="w-full rounded-2xl text-left pressable overflow-hidden"
-      style={{background:"rgba(255,255,255,0.04)"}}>
+      style={{background:"var(--surface-1)"}}>
       {/* Fő sor */}
       <div className="flex items-center gap-3 px-4 py-3">
         <div className="text-xs font-black w-5 text-center shrink-0"
@@ -134,7 +134,7 @@ function PRCard({ entry, rank, onOpen }: { entry: PREntry; rank: number; onOpen:
         </div>
         <div className="flex-1 min-w-0">
           <div className="text-sm font-black truncate" style={{color:"var(--text-primary)"}}>{entry.name}</div>
-          <div className="text-[10px] mt-0.5" style={{color:"rgba(255,255,255,0.3)"}}>
+          <div className="text-[10px] mt-0.5" style={{color:"var(--text-muted)"}}>
             {fmtDateShort(entry.achievedAt)}
           </div>
         </div>
@@ -142,9 +142,9 @@ function PRCard({ entry, rank, onOpen }: { entry: PREntry; rank: number; onOpen:
         <div className="text-right shrink-0">
           <div className="text-lg font-black leading-none" style={{color:"var(--accent-primary)"}}>
             {entry.bestWeight}
-            <span className="text-xs font-normal ml-0.5" style={{color:"rgba(255,255,255,0.3)"}}>kg</span>
+            <span className="text-xs font-normal ml-0.5" style={{color:"var(--text-muted)"}}>kg</span>
           </div>
-          <div className="text-[10px]" style={{color:"rgba(255,255,255,0.3)"}}>
+          <div className="text-[10px]" style={{color:"var(--text-muted)"}}>
             × {entry.bestWeightReps} rep
           </div>
         </div>
@@ -160,7 +160,7 @@ function PRCard({ entry, rank, onOpen }: { entry: PREntry; rank: number; onOpen:
 
       {/* Kibontva — részletek */}
       {expanded && (
-        <div className="px-4 pb-3" style={{borderTop:"1px solid rgba(255,255,255,0.05)"}}>
+        <div className="px-4 pb-3" style={{borderTop:"1px solid var(--border-subtle)"}}>
           <div className="grid grid-cols-3 gap-2 pt-3">
             {[
               {label:ct.progress.pr_best_weight, value:`${entry.bestWeight} kg`, sub:`${entry.bestWeightReps} rep`},
@@ -168,9 +168,9 @@ function PRCard({ entry, rank, onOpen }: { entry: PREntry; rank: number; onOpen:
               {label:ct.progress.pr_total_sets, value:String(entry.totalSets), sub:`${formatK(entry.totalVolume)} kg vol`},
             ].map(stat => (
               <div key={stat.label} className="rounded-xl p-2.5 text-center"
-                style={{background:"rgba(255,255,255,0.05)"}}>
+                style={{background:"var(--surface-1)"}}>
                 <div className="text-sm font-black" style={{color:"var(--accent-primary)"}}>{stat.value}</div>
-                <div className="text-[9px] mt-0.5" style={{color:"rgba(255,255,255,0.3)"}}>{stat.sub}</div>
+                <div className="text-[9px] mt-0.5" style={{color:"var(--text-muted)"}}>{stat.sub}</div>
                 <div className="text-[8px] mt-1" style={{color:"rgba(255,255,255,0.2)"}}>{stat.label}</div>
               </div>
             ))}
@@ -268,7 +268,7 @@ export default function ProgressPage() {
 
       {/* ── HEADER ── */}
       <div className="px-4 pt-10 pb-4">
-        <div className="text-[10px] font-black tracking-widest mb-1" style={{color:"rgba(255,255,255,0.25)"}}>ARCX</div>
+        <div className="text-[10px] font-black tracking-widest mb-1" style={{color:"var(--text-muted)"}}>ARCX</div>
         <h1 className="text-2xl font-black" style={{color:"var(--text-primary)"}}>{t.progress.title}</h1>
       </div>
 
@@ -280,10 +280,10 @@ export default function ProgressPage() {
           {label:t.progress.total_volume, value:formatK(totalVol), sub:t.progress.kg_total},
           {label:t.progress.avg_per_week, value:history.length ? `${(last30count/4).toFixed(1)}` : "—", sub:t.progress.per_week_30},
         ].map(s => (
-          <div key={s.label} className="rounded-2xl p-4" style={{background:"rgba(255,255,255,0.04)"}}>
+          <div key={s.label} className="rounded-2xl p-4" style={{background:"var(--surface-1)"}}>
             <div className="text-xl font-black leading-none" style={{color:"var(--accent-primary)"}}>{s.value}</div>
             <div className="text-[10px] font-black mt-1.5" style={{color:"var(--text-primary)"}}>{s.label}</div>
-            <div className="text-[9px] mt-0.5" style={{color:"rgba(255,255,255,0.25)"}}>{s.sub}</div>
+            <div className="text-[9px] mt-0.5" style={{color:"var(--text-muted)"}}>{s.sub}</div>
           </div>
         ))}
       </div>
@@ -295,7 +295,7 @@ export default function ProgressPage() {
             className="flex-1 rounded-2xl py-2.5 text-[11px] font-black pressable"
             style={tab===t.id
               ? { background: "var(--accent-primary)", color: "#000" }
-              : { background: "rgba(255,255,255,0.04)", color: "rgba(255,255,255,0.4)" }}>
+              : { background:"var(--surface-1)", color:"var(--text-secondary)" }}>
             {t.label}
           </button>
         ))}
@@ -306,17 +306,17 @@ export default function ProgressPage() {
         <div className="px-4 space-y-3">
           {/* Chart */}
           {history.length > 1 && (
-            <div className="rounded-2xl overflow-hidden" style={{background:"rgba(255,255,255,0.04)"}}>
+            <div className="rounded-2xl overflow-hidden" style={{background:"var(--surface-1)"}}>
               <div className="flex items-center justify-between px-4 py-3"
-                style={{borderBottom:"1px solid rgba(255,255,255,0.05)"}}>
-                <div className="text-[9px] font-black tracking-widest" style={{color:"rgba(255,255,255,0.25)"}}>{t.progress.chart}</div>
+                style={{borderBottom:"1px solid var(--border-subtle)"}}>
+                <div className="text-[9px] font-black tracking-widest" style={{color:"var(--text-muted)"}}>{t.progress.chart}</div>
                 <div className="flex gap-1">
                   {(["volume","frequency"] as const).map(m => (
                     <button key={m} onClick={() => setChartMode(m)}
                       className="rounded-xl px-2.5 py-1 text-[10px] font-black pressable"
                       style={chartMode===m
                         ? {background:"var(--accent-primary)",color:"#000"}
-                        : {background:"rgba(255,255,255,0.06)",color:"rgba(255,255,255,0.35)"}}>
+                        : {background:"var(--surface-2)",color:"var(--text-muted)"}}>
                       {m==="volume" ? t.progress.chart_volume : t.progress.chart_freq}
                     </button>
                   ))}
@@ -327,8 +327,8 @@ export default function ProgressPage() {
                   <ResponsiveContainer width="100%" height={90}>
                     <BarChart data={volChart} margin={{top:4,right:0,left:-28,bottom:0}}>
                       <XAxis dataKey="date" tick={{fontSize:8,fill:"rgba(255,255,255,0.2)"}} tickLine={false} axisLine={false} interval={6} />
-                      <Tooltip contentStyle={{background:"#0d0d0f",border:"none",borderRadius:10,fontSize:11}}
-                        itemStyle={{color:"var(--accent-primary)"}} labelStyle={{color:"rgba(255,255,255,0.4)"}}
+                      <Tooltip contentStyle={{background:"var(--bg-elevated)",border:"none",borderRadius:10,fontSize:11}}
+                        itemStyle={{color:"var(--accent-primary)"}} labelStyle={{color:"var(--text-secondary)"}}
                         formatter={(v:any) => [`${formatK(Number(v))} kg`]} />
                       <Bar dataKey="vol" fill="var(--accent-primary)" radius={[3,3,0,0]} opacity={0.85} />
                     </BarChart>
@@ -337,8 +337,8 @@ export default function ProgressPage() {
                   <ResponsiveContainer width="100%" height={90}>
                     <BarChart data={weekChart} margin={{top:4,right:0,left:-28,bottom:0}}>
                       <XAxis dataKey="week" tick={{fontSize:8,fill:"rgba(255,255,255,0.2)"}} tickLine={false} axisLine={false} />
-                      <Tooltip contentStyle={{background:"#0d0d0f",border:"none",borderRadius:10,fontSize:11}}
-                        itemStyle={{color:"#4ade80"}} labelStyle={{color:"rgba(255,255,255,0.4)"}}
+                      <Tooltip contentStyle={{background:"var(--bg-elevated)",border:"none",borderRadius:10,fontSize:11}}
+                        itemStyle={{color:"#4ade80"}} labelStyle={{color:"var(--text-secondary)"}}
                         formatter={(v:any) => [`${v} edzés`]} />
                       <Bar dataKey="count" fill="#4ade80" radius={[3,3,0,0]} opacity={0.85} />
                     </BarChart>
@@ -350,9 +350,9 @@ export default function ProgressPage() {
 
           {/* Top gyakorlatok */}
           {top.length > 0 && (
-            <div className="rounded-2xl overflow-hidden" style={{background:"rgba(255,255,255,0.04)"}}>
-              <div className="px-4 py-3" style={{borderBottom:"1px solid rgba(255,255,255,0.05)"}}>
-                <div className="text-[9px] font-black tracking-widest" style={{color:"rgba(255,255,255,0.25)"}}>{t.progress.top_exercises}</div>
+            <div className="rounded-2xl overflow-hidden" style={{background:"var(--surface-1)"}}>
+              <div className="px-4 py-3" style={{borderBottom:"1px solid var(--border-subtle)"}}>
+                <div className="text-[9px] font-black tracking-widest" style={{color:"var(--text-muted)"}}>{t.progress.top_exercises}</div>
               </div>
               <div className="px-4 py-2">
                 {top.map((t,i) => {
@@ -361,9 +361,9 @@ export default function ProgressPage() {
                     <div key={t.name} className="py-2" style={{borderBottom: i<top.length-1 ? "1px solid rgba(255,255,255,0.04)" : "none"}}>
                       <div className="flex justify-between text-xs mb-1.5">
                         <span style={{color:"var(--text-primary)"}}>{i+1}. {t.name}</span>
-                        <span style={{color:"rgba(255,255,255,0.3)"}}>{formatK(t.volume)} kg</span>
+                        <span style={{color:"var(--text-muted)"}}>{formatK(t.volume)} kg</span>
                       </div>
-                      <div className="h-1 rounded-full overflow-hidden" style={{background:"rgba(255,255,255,0.06)"}}>
+                      <div className="h-1 rounded-full overflow-hidden" style={{background:"var(--surface-2)"}}>
                         <div className="h-full rounded-full"
                           style={{width:`${Math.round((t.volume/maxVol)*100)}%`,background:"var(--accent-primary)",opacity:1-i*0.15}} />
                       </div>
@@ -398,12 +398,12 @@ export default function ProgressPage() {
             </div>
           )}
           {cloudStatus==="loading" && (
-            <div className="text-sm px-2" style={{color:"rgba(255,255,255,0.3)"}}>{t.progress.cloud_loading}</div>
+            <div className="text-sm px-2" style={{color:"var(--text-muted)"}}>{t.progress.cloud_loading}</div>
           )}
           {history.length===0 && cloudStatus!=="loading" && (
-            <div className="rounded-2xl p-10 text-center" style={{background:"rgba(255,255,255,0.03)"}}>
+            <div className="rounded-2xl p-10 text-center" style={{background:"var(--surface-0)"}}>
               <div className="text-3xl mb-2">🏋️</div>
-              <div className="text-sm" style={{color:"rgba(255,255,255,0.3)"}}>{t.progress.no_workouts}</div>
+              <div className="text-sm" style={{color:"var(--text-muted)"}}>{t.progress.no_workouts}</div>
             </div>
           )}
           {sorted.map(w => {
@@ -414,12 +414,12 @@ export default function ProgressPage() {
             return (
               <button key={w.id} onClick={() => { setSelectedId(w.id); setDetailOpen(true); }}
                 className="w-full rounded-2xl p-4 text-left pressable"
-                style={{background:"rgba(255,255,255,0.04)"}}>
+                style={{background:"var(--surface-1)"}}>
                 <div className="flex items-start justify-between gap-2 mb-2">
                   <div className="text-sm font-black" style={{color:"var(--text-primary)"}}>
                     {w.title || fmtDate(w.startedAt)}
                   </div>
-                  <div className="text-[10px] shrink-0" style={{color:"rgba(255,255,255,0.3)"}}>
+                  <div className="text-[10px] shrink-0" style={{color:"var(--text-muted)"}}>
                     {new Date(w.startedAt).toLocaleDateString("hu",{month:"short",day:"2-digit"})}
                   </div>
                 </div>
@@ -431,7 +431,7 @@ export default function ProgressPage() {
                     ...(dur ? [{icon:"⏱", val:dur}] : []),
                   ].map(chip => (
                     <span key={chip.val} className="rounded-xl px-2 py-1 text-[10px] font-semibold"
-                      style={{background:"rgba(255,255,255,0.06)",color:"rgba(255,255,255,0.4)"}}>
+                      style={{background:"var(--surface-2)",color:"var(--text-secondary)"}}>
                       {chip.icon} {chip.val}
                     </span>
                   ))}
@@ -443,7 +443,7 @@ export default function ProgressPage() {
             <div className="flex gap-2 mt-1">
               <button onClick={() => exportWorkoutsCSV(sorted)}
                 className="flex-1 rounded-2xl py-3 text-xs font-black pressable"
-                style={{background:"rgba(255,255,255,0.05)",color:"rgba(255,255,255,0.4)"}}>
+                style={{background:"var(--surface-1)",color:"var(--text-secondary)"}}>
                 CSV export
               </button>
               <button onClick={clearAll} className="flex-1 rounded-2xl py-3 text-xs pressable"

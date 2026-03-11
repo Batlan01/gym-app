@@ -39,7 +39,7 @@ function NumericWheel({ label, value, onChange, step = 1, decimals = 0 }: {
       <div className="flex w-full gap-2">
         <button onClick={() => onChange(Math.max(0, Number((value - step).toFixed(2))))}
           className="flex-1 rounded-2xl py-4 text-xl font-black pressable"
-          style={{ background: "rgba(255,255,255,0.06)", color: "var(--text-secondary)", border: "1px solid var(--border-subtle)" }}>−</button>
+          style={{ background:"var(--surface-2)", color: "var(--text-secondary)", border: "1px solid var(--border-subtle)" }}>−</button>
         <button onClick={() => onChange(Number((value + step).toFixed(2)))}
           className="flex-1 rounded-2xl py-4 text-xl font-black pressable"
           style={{ background: "rgba(34,211,238,0.1)", color: "var(--accent-primary)", border: "1px solid rgba(34,211,238,0.2)" }}>+</button>
@@ -65,16 +65,16 @@ function InfoPanel({ weight, reps }: { weight: number; reps: number }) {
   const actualTotal = barKg + plates.reduce((s, p) => s + p.plate * p.count * 2, 0);
 
   return (
-    <div className="rounded-2xl overflow-hidden mb-4" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)" }}>
+    <div className="rounded-2xl overflow-hidden mb-4" style={{ background:"var(--surface-1)", border:"1px solid var(--border-subtle)" }}>
       {/* Row: 1RM + plate visual side by side */}
       <div className="flex items-stretch">
         {/* 1RM */}
         <div className="flex-1 px-4 py-3" style={{ borderRight: "1px solid rgba(255,255,255,0.06)" }}>
-          <div className="text-[9px] font-black tracking-widest mb-1" style={{ color: "rgba(255,255,255,0.25)" }}>BECSÜLT 1RM</div>
+          <div className="text-[9px] font-black tracking-widest mb-1" style={{ color:"var(--text-muted)" }}>BECSÜLT 1RM</div>
           {orm !== null ? (
             <div className="flex items-baseline gap-1">
               <span className="text-2xl font-black" style={{ color: "var(--accent-primary)" }}>{orm}</span>
-              <span className="text-xs" style={{ color: "rgba(255,255,255,0.35)" }}>kg</span>
+              <span className="text-xs" style={{ color:"var(--text-muted)" }}>kg</span>
             </div>
           ) : (
             <div className="text-sm font-black" style={{ color: "rgba(255,255,255,0.2)" }}>—</div>
@@ -85,7 +85,7 @@ function InfoPanel({ weight, reps }: { weight: number; reps: number }) {
         {/* Plate summary */}
         <div className="flex-1 px-4 py-3">
           <div className="flex items-center justify-between mb-1">
-            <div className="text-[9px] font-black tracking-widest" style={{ color: "rgba(255,255,255,0.25)" }}>LEMEZEK / OLDAL</div>
+            <div className="text-[9px] font-black tracking-widest" style={{ color:"var(--text-muted)" }}>LEMEZEK / OLDAL</div>
             {/* Bar selector */}
             <div className="flex gap-1">
               {[15, 20].map(b => (
@@ -93,7 +93,7 @@ function InfoPanel({ weight, reps }: { weight: number; reps: number }) {
                   className="rounded-lg px-1.5 py-0.5 text-[9px] font-black pressable"
                   style={barKg === b
                     ? { background: "var(--accent-primary)", color: "#000" }
-                    : { background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.35)" }}>
+                    : { background:"var(--surface-2)", color:"var(--text-muted)" }}>
                   {b}kg
                 </button>
               ))}
@@ -102,7 +102,7 @@ function InfoPanel({ weight, reps }: { weight: number; reps: number }) {
           {weight === 0 ? (
             <div className="text-sm font-black" style={{ color: "rgba(255,255,255,0.2)" }}>—</div>
           ) : plates.length === 0 ? (
-            <div className="text-xs" style={{ color: "rgba(255,255,255,0.3)" }}>Csak rúd ({barKg} kg)</div>
+            <div className="text-xs" style={{ color:"var(--text-muted)" }}>Csak rúd ({barKg} kg)</div>
           ) : (
             <>
               {/* Color dot list */}
@@ -117,7 +117,7 @@ function InfoPanel({ weight, reps }: { weight: number; reps: number }) {
                   ))
                 )}
               </div>
-              <div className="text-[9px]" style={{ color: "rgba(255,255,255,0.3)" }}>
+              <div className="text-[9px]" style={{ color:"var(--text-muted)" }}>
                 = {actualTotal} kg total
               </div>
             </>
@@ -161,7 +161,7 @@ export function SetEditSheet({ open, onClose, title, set, onSave, onDelete, onCo
               <div className="text-lg font-bold leading-tight" style={{ color: "var(--text-primary)" }}>{title}</div>
             </div>
             <button onClick={onClose} className="grid h-9 w-9 place-items-center rounded-full text-sm"
-              style={{ background: "rgba(255,255,255,0.07)", color: "var(--text-muted)" }}>✕</button>
+              style={{ background:"var(--surface-2)", color: "var(--text-muted)" }}>✕</button>
           </div>
 
           {/* KG + REPS */}
@@ -180,7 +180,7 @@ export function SetEditSheet({ open, onClose, title, set, onSave, onDelete, onCo
               background: "rgba(74,222,128,0.18)", color: "#4ade80",
               border: "1.5px solid rgba(74,222,128,0.35)", boxShadow: "0 0 24px rgba(74,222,128,0.15)",
             } : {
-              background: "rgba(255,255,255,0.06)", color: "var(--text-secondary)",
+              background:"var(--surface-2)", color: "var(--text-secondary)",
               border: "1.5px solid var(--border-subtle)",
             }}>
             {set.done ? "✓  Done" : "Mark as Done"}
@@ -188,7 +188,7 @@ export function SetEditSheet({ open, onClose, title, set, onSave, onDelete, onCo
 
           <div className="flex gap-2">
             <button onClick={onCopyPrev} className="flex-1 rounded-2xl py-3 text-sm font-semibold pressable"
-              style={{ background: "rgba(255,255,255,0.05)", color: "var(--text-muted)", border: "1px solid var(--border-subtle)" }}>
+              style={{ background:"var(--surface-1)", color: "var(--text-muted)", border: "1px solid var(--border-subtle)" }}>
               ↑ Copy prev
             </button>
             <button onClick={onDelete} className="rounded-2xl px-5 py-3 text-sm font-semibold pressable"

@@ -68,7 +68,7 @@ export function AchievementToast({ newAchievements, onDismiss }: Props) {
             🏆 ACHIEVEMENT FELOLDVA
           </div>
           <div className="text-sm font-bold" style={{ color: "#fff" }}>{ach.title}</div>
-          <div className="text-xs" style={{ color: "rgba(255,255,255,0.6)" }}>
+          <div className="text-xs" style={{ color:"var(--text-secondary)" }}>
             {ach.description} · +{ach.xp} XP
           </div>
         </div>

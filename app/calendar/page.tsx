@@ -64,25 +64,25 @@ function SessionPickerModal({ dayName, programs, currentEntries, onAdd, onRemove
       style={{ paddingBottom: "env(safe-area-inset-bottom)" }}>
       <button className="absolute inset-0" style={{ background: "rgba(0,0,0,0.7)" }} onClick={onClose} />
       <div className="relative w-full max-w-md rounded-t-3xl overflow-hidden"
-        style={{ background: "#0d0d0f", maxHeight: "88vh" }}>
+        style={{ background:"var(--bg-elevated)", maxHeight: "88vh" }}>
 
         {/* Handle */}
         <div className="flex justify-center pt-3 pb-1">
-          <div className="h-1 w-10 rounded-full" style={{ background: "rgba(255,255,255,0.15)" }} />
+          <div className="h-1 w-10 rounded-full" style={{ background:"var(--surface-3)" }} />
         </div>
 
         {/* Header */}
-        <div className="px-5 pt-2 pb-4 sticky top-0 z-10" style={{ background: "#0d0d0f" }}>
+        <div className="px-5 pt-2 pb-4 sticky top-0 z-10" style={{ background:"var(--bg-elevated)" }}>
           <div className="flex items-center justify-between mb-4">
             <div>
-              <div className="text-[9px] font-black tracking-widest mb-0.5" style={{ color: "rgba(255,255,255,0.25)" }}>
+              <div className="text-[9px] font-black tracking-widest mb-0.5" style={{ color:"var(--text-muted)" }}>
                 NAP BEÁLLÍTÁSA
               </div>
               <div className="text-xl font-black" style={{ color: "var(--text-primary)" }}>{dayName}</div>
             </div>
             <button onClick={onClose}
               className="h-9 w-9 rounded-2xl flex items-center justify-center pressable"
-              style={{ background: "rgba(255,255,255,0.07)", color: "rgba(255,255,255,0.5)" }}>✕</button>
+              style={{ background:"var(--surface-2)", color:"var(--text-secondary)" }}>✕</button>
           </div>
 
           {/* Slot type tab-ok — flat solid fill */}
@@ -95,7 +95,7 @@ function SessionPickerModal({ dayName, programs, currentEntries, onAdd, onRemove
                   className="rounded-2xl py-2.5 flex flex-col items-center gap-0.5 pressable relative"
                   style={isSelected
                     ? { background: slot.accent === "var(--accent-primary)" ? "var(--accent-primary)" : slot.accent, color: "#000" }
-                    : { background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.4)" }}>
+                    : { background:"var(--surface-1)", color:"var(--text-secondary)" }}>
                   <span className="text-lg leading-none">{slot.emoji}</span>
                   <span className="text-[9px] font-black mt-0.5" style={{ color: isSelected ? "#000" : "rgba(255,255,255,0.4)" }}>
                     {slot.label}
@@ -116,11 +116,11 @@ function SessionPickerModal({ dayName, programs, currentEntries, onAdd, onRemove
 
           {/* Már hozzáadott sessionök */}
           {decoded.filter(d => d.slotId === selectedSlot).length > 0 && (
-            <div className="rounded-2xl overflow-hidden" style={{ background: "rgba(255,255,255,0.04)" }}>
+            <div className="rounded-2xl overflow-hidden" style={{ background:"var(--surface-1)" }}>
               <div className="px-4 py-3 flex items-center gap-2"
                 style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
                 <span>{slotInfo.emoji}</span>
-                <span className="text-[10px] font-black tracking-widest" style={{ color: "rgba(255,255,255,0.3)" }}>
+                <span className="text-[10px] font-black tracking-widest" style={{ color:"var(--text-muted)" }}>
                   HOZZÁADVA
                 </span>
               </div>
@@ -134,7 +134,7 @@ function SessionPickerModal({ dayName, programs, currentEntries, onAdd, onRemove
                     style={{ borderBottom: i < decoded.filter(d => d.slotId === selectedSlot).length - 1 ? "1px solid rgba(255,255,255,0.04)" : "none" }}>
                     <div>
                       <div className="text-sm font-bold" style={{ color: "var(--text-primary)" }}>{sess.name}</div>
-                      <div className="text-xs" style={{ color: "rgba(255,255,255,0.3)" }}>{prog?.name}</div>
+                      <div className="text-xs" style={{ color:"var(--text-muted)" }}>{prog?.name}</div>
                     </div>
                     <button onClick={() => onRemove(entry)}
                       className="text-xs px-3 py-1.5 rounded-xl font-bold pressable"
@@ -149,7 +149,7 @@ function SessionPickerModal({ dayName, programs, currentEntries, onAdd, onRemove
 
           {/* Üres állapot */}
           {programs.length === 0 && (
-            <div className="rounded-2xl p-6 text-sm text-center" style={{ color: "rgba(255,255,255,0.3)", background: "rgba(255,255,255,0.03)" }}>
+            <div className="rounded-2xl p-6 text-sm text-center" style={{ color:"var(--text-muted)", background:"var(--surface-0)" }}>
               Még nincs programod.<br/>Hozz létre egyet a Programok oldalon!
             </div>
           )}
@@ -157,7 +157,7 @@ function SessionPickerModal({ dayName, programs, currentEntries, onAdd, onRemove
           {/* Programok listája */}
           {programs.map(prog => (
             <div key={prog.id}>
-              <div className="text-[9px] font-black tracking-widest mb-2 px-1" style={{ color: "rgba(255,255,255,0.25)" }}>
+              <div className="text-[9px] font-black tracking-widest mb-2 px-1" style={{ color:"var(--text-muted)" }}>
                 {prog.name.toUpperCase()}
               </div>
               <div className="space-y-1">
@@ -171,7 +171,7 @@ function SessionPickerModal({ dayName, programs, currentEntries, onAdd, onRemove
                       className="w-full rounded-2xl px-4 py-3.5 text-left pressable flex items-center justify-between gap-3"
                       style={added
                         ? { background: accentColor, color: "#000" }
-                        : { background: "rgba(255,255,255,0.05)" }}>
+                        : { background:"var(--surface-1)" }}>
                       <div>
                         <div className="text-sm font-black" style={{ color: added ? "#000" : "var(--text-primary)" }}>
                           {sess.name}
@@ -183,7 +183,7 @@ function SessionPickerModal({ dayName, programs, currentEntries, onAdd, onRemove
                       <div className="shrink-0 h-7 w-7 rounded-xl flex items-center justify-center text-sm font-black"
                         style={added
                           ? { background: "rgba(0,0,0,0.15)", color: "#000" }
-                          : { background: "rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.4)" }}>
+                          : { background:"var(--surface-2)", color:"var(--text-secondary)" }}>
                         {added ? "✓" : "+"}
                       </div>
                     </button>
@@ -285,7 +285,7 @@ export default function CalendarPage() {
 
       {/* ── HEADER ── */}
       <div className="px-4 pt-10 pb-3">
-        <div className="text-[10px] font-black tracking-widest mb-1" style={{ color: "rgba(255,255,255,0.25)" }}>ARCX</div>
+        <div className="text-[10px] font-black tracking-widest mb-1" style={{ color:"var(--text-muted)" }}>ARCX</div>
         <h1 className="text-2xl font-black" style={{ color: "var(--text-primary)" }}>Naptár</h1>
       </div>
 
@@ -293,21 +293,21 @@ export default function CalendarPage() {
       <div className="flex items-center gap-2 px-4 pb-4">
         <button onClick={() => setWeekOffset(w => w - 1)}
           className="h-10 w-10 rounded-2xl flex items-center justify-center font-black pressable"
-          style={{ background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.5)" }}>
+          style={{ background:"var(--surface-1)", color:"var(--text-secondary)" }}>
           ←
         </button>
         <button onClick={() => setWeekOffset(0)}
           className="flex-1 h-10 rounded-2xl text-xs font-black pressable"
           style={isCurrentWeek
             ? { background: "var(--accent-primary)", color: "#000" }
-            : { background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.5)" }}>
+            : { background:"var(--surface-1)", color:"var(--text-secondary)" }}>
           {isCurrentWeek
             ? "Ez a hét"
             : `${weekDates[0].getMonth()+1}/${weekDates[0].getDate()} – ${weekDates[6].getMonth()+1}/${weekDates[6].getDate()}`}
         </button>
         <button onClick={() => setWeekOffset(w => w + 1)}
           className="h-10 w-10 rounded-2xl flex items-center justify-center font-black pressable"
-          style={{ background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.5)" }}>
+          style={{ background:"var(--surface-1)", color:"var(--text-secondary)" }}>
           →
         </button>
       </div>
@@ -358,7 +358,7 @@ export default function CalendarPage() {
                 </div>
 
                 {/* Elválasztó */}
-                <div className="w-px self-stretch shrink-0" style={{ background: "rgba(255,255,255,0.07)" }} />
+                <div className="w-px self-stretch shrink-0" style={{ background:"var(--surface-2)" }} />
 
                 {/* Tartalom */}
                 <div className="flex-1 min-w-0">
@@ -372,7 +372,7 @@ export default function CalendarPage() {
                           {items.map((item, i) => (
                             <span key={i} className="rounded-lg px-2 py-0.5 text-xs font-black"
                               style={{
-                                background: "rgba(255,255,255,0.08)",
+                                background:"var(--surface-2)",
                                 color: slot.accent === "var(--accent-primary)" ? "var(--accent-primary)" : slot.accent,
                               }}>
                               {item.sess!.name}
@@ -392,7 +392,7 @@ export default function CalendarPage() {
                 {/* + / ✎ gomb */}
                 {!isPast && (
                   <div className="shrink-0 h-7 w-7 rounded-xl flex items-center justify-center text-sm font-black"
-                    style={{ background: "rgba(255,255,255,0.07)", color: "rgba(255,255,255,0.35)" }}>
+                    style={{ background:"var(--surface-2)", color:"var(--text-muted)" }}>
                     {slotGroups.length > 0 ? "✎" : "+"}
                   </div>
                 )}
@@ -414,10 +414,10 @@ export default function CalendarPage() {
       {/* Üres állapot — nincs program */}
       {programs.length === 0 && (
         <div className="mx-4 mt-4 rounded-2xl p-8 flex flex-col items-center justify-center text-center"
-          style={{ background: "rgba(255,255,255,0.03)" }}>
+          style={{ background:"var(--surface-0)" }}>
           <div className="text-4xl mb-3">📅</div>
           <div className="text-base font-black mb-1" style={{ color: "var(--text-primary)" }}>Nincs program</div>
-          <div className="text-sm mb-5" style={{ color: "rgba(255,255,255,0.3)" }}>Hozz létre programot az ütemezéshez</div>
+          <div className="text-sm mb-5" style={{ color:"var(--text-muted)" }}>Hozz létre programot az ütemezéshez</div>
           <button onClick={() => router.push("/programs")}
             className="rounded-xl px-5 py-3 text-sm font-black pressable"
             style={{ background: "var(--accent-primary)", color: "#000" }}>

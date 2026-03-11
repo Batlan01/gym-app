@@ -45,13 +45,13 @@ function ChartTooltip({ active, payload, mode }: any) {
   if (!active || !payload?.length) return null;
   const d = payload[0].payload as ExerciseHistoryPoint;
   return (
-    <div className="rounded-xl px-3 py-2 text-xs" style={{ background: "#0d0d0f", border: "1px solid rgba(255,255,255,0.1)" }}>
-      <div className="font-black mb-1" style={{ color: "rgba(255,255,255,0.5)" }}>{fmtDate(d.date)}</div>
+    <div className="rounded-xl px-3 py-2 text-xs" style={{ background:"var(--bg-elevated)", border:"1px solid var(--border-mid)" }}>
+      <div className="font-black mb-1" style={{ color:"var(--text-secondary)" }}>{fmtDate(d.date)}</div>
       {mode === "weight"
         ? <div style={{ color: "var(--accent-primary)" }}>{d.bestWeight} kg × {d.bestReps} rep</div>
         : <div style={{ color: "#a78bfa" }}>{Math.round(d.bestVolume)} kg vol</div>
       }
-      <div style={{ color: "rgba(255,255,255,0.3)" }}>{d.sets} szet</div>
+      <div style={{ color:"var(--text-muted)" }}>{d.sets} szet</div>
     </div>
   );
 }
@@ -112,7 +112,7 @@ export function PRChartSheet({ open, entry, history, onClose }: Props) {
       >
         {/* drag handle */}
         <div className="flex justify-center pt-3 pb-1 shrink-0">
-          <div className="h-1 w-10 rounded-full" style={{ background: "rgba(255,255,255,0.12)" }} />
+          <div className="h-1 w-10 rounded-full" style={{ background:"var(--surface-3)" }} />
         </div>
 
         {/* scrollable content */}
@@ -122,15 +122,15 @@ export function PRChartSheet({ open, entry, history, onClose }: Props) {
           <div className="flex items-start justify-between mb-5 pt-2">
             <div>
               <div className="text-[9px] font-black tracking-widest mb-1"
-                style={{ color: "rgba(255,255,255,0.25)" }}>SZEMÉLYES REKORD</div>
+                style={{ color:"var(--text-muted)" }}>SZEMÉLYES REKORD</div>
               <div className="text-xl font-black" style={{ color: "var(--text-primary)" }}>{entry.name}</div>
-              <div className="text-xs mt-1" style={{ color: "rgba(255,255,255,0.3)" }}>
+              <div className="text-xs mt-1" style={{ color:"var(--text-muted)" }}>
                 {firstDate} – {lastDate} · {history.length} alkalom
               </div>
             </div>
             <button onClick={onClose}
               className="rounded-2xl h-9 w-9 flex items-center justify-center shrink-0"
-              style={{ background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.4)" }}>
+              style={{ background:"var(--surface-2)", color:"var(--text-secondary)" }}>
               ✕
             </button>
           </div>
@@ -168,11 +168,11 @@ export function PRChartSheet({ open, entry, history, onClose }: Props) {
               { label: "Alkalmak", value: String(history.length), unit: "db" },
             ].map(s => (
               <div key={s.label} className="rounded-2xl p-3 text-center"
-                style={{ background: "rgba(255,255,255,0.04)" }}>
+                style={{ background:"var(--surface-1)" }}>
                 <div className="text-lg font-black leading-none" style={{ color: "var(--accent-primary)" }}>
                   {s.value}
                 </div>
-                <div className="text-[9px] font-bold mt-0.5" style={{ color: "rgba(255,255,255,0.3)" }}>
+                <div className="text-[9px] font-bold mt-0.5" style={{ color:"var(--text-muted)" }}>
                   {s.unit}
                 </div>
                 <div className="text-[9px] mt-1" style={{ color: "rgba(255,255,255,0.2)" }}>{s.label}</div>
@@ -187,7 +187,7 @@ export function PRChartSheet({ open, entry, history, onClose }: Props) {
                 className="flex-1 rounded-2xl py-2.5 text-xs font-black pressable"
                 style={mode === m
                   ? { background: m === "weight" ? "var(--accent-primary)" : "#7c3aed", color: "#fff" }
-                  : { background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.35)" }}>
+                  : { background:"var(--surface-1)", color:"var(--text-muted)" }}>
                 {label}
               </button>
             ))}
@@ -196,11 +196,11 @@ export function PRChartSheet({ open, entry, history, onClose }: Props) {
           {/* Chart */}
           {history.length < 2 ? (
             <div className="rounded-2xl py-10 text-center text-sm"
-              style={{ background: "rgba(255,255,255,0.03)", color: "rgba(255,255,255,0.25)" }}>
+              style={{ background:"var(--surface-0)", color:"var(--text-muted)" }}>
               Legalább 2 edzés kell a grafikonhoz
             </div>
           ) : (
-            <div className="rounded-2xl overflow-hidden" style={{ background: "rgba(255,255,255,0.03)" }}>
+            <div className="rounded-2xl overflow-hidden" style={{ background:"var(--surface-0)" }}>
               <div className="px-2 pt-4 pb-2">
                 <ResponsiveContainer width="100%" height={160}>
                   <LineChart data={history} margin={{ top: 8, right: 8, left: -20, bottom: 0 }}>
@@ -246,19 +246,19 @@ export function PRChartSheet({ open, entry, history, onClose }: Props) {
           {history.length > 0 && (
             <div className="mt-4">
               <div className="text-[9px] font-black tracking-widest mb-2"
-                style={{ color: "rgba(255,255,255,0.25)" }}>ELŐZMÉNYEK</div>
-              <div className="rounded-2xl overflow-hidden" style={{ background: "rgba(255,255,255,0.03)" }}>
+                style={{ color:"var(--text-muted)" }}>ELŐZMÉNYEK</div>
+              <div className="rounded-2xl overflow-hidden" style={{ background:"var(--surface-0)" }}>
                 {[...history].reverse().slice(0, 10).map((h, i, arr) => (
                   <div key={h.date}
                     className="flex items-center gap-3 px-4 py-2.5"
                     style={{ borderBottom: i < arr.length - 1 ? "1px solid rgba(255,255,255,0.04)" : "none" }}>
-                    <div className="text-[10px] w-16 shrink-0" style={{ color: "rgba(255,255,255,0.3)" }}>
+                    <div className="text-[10px] w-16 shrink-0" style={{ color:"var(--text-muted)" }}>
                       {fmtDate(h.date)}
                     </div>
                     <div className="flex-1 text-xs font-black" style={{ color: "var(--text-primary)" }}>
                       {h.bestWeight} kg × {h.bestReps}
                     </div>
-                    <div className="text-[10px]" style={{ color: "rgba(255,255,255,0.3)" }}>
+                    <div className="text-[10px]" style={{ color:"var(--text-muted)" }}>
                       {h.sets} szet
                     </div>
                     {h.bestWeight === maxWeight && (

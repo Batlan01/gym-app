@@ -79,8 +79,8 @@ function WeekStrip({ activeDays, days }: { activeDays: Set<number>; days: string
               style={done
                 ? { background: "var(--accent-primary)", color: "#000" }
                 : isToday
-                  ? { background: "rgba(255,255,255,0.08)", color: "var(--accent-primary)", outline: "1px solid var(--accent-primary)" }
-                  : { background: "rgba(255,255,255,0.04)", color: "rgba(255,255,255,0.2)" }
+                  ? { background:"var(--surface-2)", color: "var(--accent-primary)", outline: "1px solid var(--accent-primary)" }
+                  : { background:"var(--surface-1)", color: "rgba(255,255,255,0.2)" }
               }>
               {done ? "✓" : label}
             </div>
@@ -104,7 +104,7 @@ function StatBlock({ value, label, accent = false }: { value: string; label: str
         {value}
       </div>
       <div className="text-[10px] font-semibold mt-1.5 uppercase tracking-wider"
-        style={{ color: "rgba(255,255,255,0.3)" }}>
+        style={{ color:"var(--text-muted)" }}>
         {label}
       </div>
     </div>
@@ -127,7 +127,7 @@ function ProgramsRow({ label, allLabel, perWeek }: { label: string; allLabel: st
   return (
     <div>
       <div className="flex items-center justify-between mb-3">
-        <div className="text-[10px] font-black tracking-widest" style={{ color: "rgba(255,255,255,0.3)" }}>{label}</div>
+        <div className="text-[10px] font-black tracking-widest" style={{ color:"var(--text-muted)" }}>{label}</div>
         <button onClick={() => router.push("/programs")} className="text-[10px] font-bold pressable"
           style={{ color: "var(--accent-primary)" }}>{allLabel}</button>
       </div>
@@ -135,17 +135,17 @@ function ProgramsRow({ label, allLabel, perWeek }: { label: string; allLabel: st
         {shown.map((p) => (
           <button key={p.id} onClick={() => router.push("/programs")}
             className="shrink-0 rounded-2xl p-3 pressable text-left"
-            style={{ width: 110, background: SPORT_BG[p.sport ?? "gym"] ?? SPORT_BG.gym, border: "1px solid rgba(255,255,255,0.06)" }}>
+            style={{ width: 110, background: SPORT_BG[p.sport ?? "gym"] ?? SPORT_BG.gym, border:"1px solid var(--border-subtle)" }}>
             <div className="text-2xl mb-2">{SPORT_EMOJI[p.sport ?? "gym"] ?? "🏋️"}</div>
             <div className="text-[11px] font-black leading-tight" style={{ color: "var(--text-primary)" }}>{p.title}</div>
-            <div className="text-[9px] mt-1" style={{ color: "rgba(255,255,255,0.3)" }}>{p.sessions?.length ?? 0} {perWeek}</div>
+            <div className="text-[9px] mt-1" style={{ color:"var(--text-muted)" }}>{p.sessions?.length ?? 0} {perWeek}</div>
           </button>
         ))}
         <button onClick={() => router.push("/programs")}
           className="shrink-0 rounded-2xl p-3 pressable flex flex-col items-center justify-center"
-          style={{ width: 80, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
+          style={{ width: 80, background:"var(--surface-0)", border:"1px solid var(--border-subtle)" }}>
           <div className="text-xl mb-1">＋</div>
-          <div className="text-[9px] font-bold" style={{ color: "rgba(255,255,255,0.3)" }}>{allLabel}</div>
+          <div className="text-[9px] font-bold" style={{ color:"var(--text-muted)" }}>{allLabel}</div>
         </button>
       </div>
     </div>
@@ -187,7 +187,7 @@ export default function Home() {
         {/* ── HEADER ── */}
         <header className="flex items-center justify-between mb-6">
           <div>
-            <div className="text-[10px] font-black tracking-widest mb-0.5" style={{ color: "rgba(255,255,255,0.25)" }}>ARCX</div>
+            <div className="text-[10px] font-black tracking-widest mb-0.5" style={{ color:"var(--text-muted)" }}>ARCX</div>
             <h1 className="text-2xl font-black leading-tight" style={{ color: "var(--text-primary)" }}>
               {greeting}{name ? "," : ""}<br />
               {name ? <span style={{ color: "var(--accent-primary)" }}>{name}</span> : ""}
@@ -245,8 +245,8 @@ export default function Home() {
 
         {/* ── HETI CSÍK ── */}
         <div className="mt-3 rounded-2xl px-4 py-3"
-          style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.05)" }}>
-          <div className="text-[9px] font-black tracking-widest mb-2.5" style={{ color: "rgba(255,255,255,0.25)" }}>
+          style={{ background:"var(--surface-0)", border:"1px solid var(--border-subtle)" }}>
+          <div className="text-[9px] font-black tracking-widest mb-2.5" style={{ color:"var(--text-muted)" }}>
             {t.home.this_week}
           </div>
           <WeekStrip activeDays={activeDays} days={weekDays} />
@@ -259,7 +259,7 @@ export default function Home() {
 
         {/* ── GYORS AKCIÓK ── */}
         <div className="mt-5">
-          <div className="text-[10px] font-black tracking-widest mb-3" style={{ color: "rgba(255,255,255,0.25)" }}>
+          <div className="text-[10px] font-black tracking-widest mb-3" style={{ color:"var(--text-muted)" }}>
             {t.home.quick_access}
           </div>
           <div className="grid grid-cols-3 gap-2">
@@ -270,9 +270,9 @@ export default function Home() {
             ].map(({ label, icon, href }) => (
               <Link key={href} href={href}
                 className="flex flex-col items-center justify-center gap-2 rounded-2xl py-4 pressable"
-                style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                style={{ background:"var(--surface-1)", border:"1px solid var(--border-subtle)" }}>
                 <span className="text-xl">{icon}</span>
-                <span className="text-[10px] font-bold" style={{ color: "rgba(255,255,255,0.45)" }}>{label}</span>
+                <span className="text-[10px] font-bold" style={{ color:"var(--text-secondary)" }}>{label}</span>
               </Link>
             ))}
           </div>

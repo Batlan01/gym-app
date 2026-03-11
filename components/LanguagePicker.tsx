@@ -20,7 +20,7 @@ export function LanguagePicker({ currentLang, onClose }: Props) {
             className="flex items-center gap-2.5 rounded-2xl px-4 py-3 pressable text-left"
             style={active
               ? { background: "var(--accent-primary)", color: "#000" }
-              : { background: "rgba(255,255,255,0.05)", color: "var(--text-primary)" }
+              : { background:"var(--surface-1)", color: "var(--text-primary)" }
             }
           >
             <span className="text-xl leading-none">{l.flag}</span>

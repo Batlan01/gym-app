@@ -22,7 +22,7 @@ export function ExerciseCard({
 
   return (
     <div className="overflow-hidden rounded-3xl"
-      style={{ background: 'rgba(255,255,255,0.04)' }}>
+      style={{ background:"var(--surface-1)" }}>
 
       {/* Zöld top accent csík ha kész */}
       {allDone && (
@@ -35,7 +35,7 @@ export function ExerciseCard({
           <h3 className="text-base font-black truncate" style={{ color: allDone ? '#4ade80' : 'var(--text-primary)' }}>
             {ex.name}
           </h3>
-          <div className="mt-0.5 text-xs" style={{ color: 'rgba(255,255,255,0.3)' }}>
+          <div className="mt-0.5 text-xs" style={{ color:"var(--text-muted)" }}>
             Előző: {lastSummary}
           </div>
         </div>
@@ -49,7 +49,7 @@ export function ExerciseCard({
           </div>
           <button onClick={onRemoveExercise}
             className="grid h-7 w-7 place-items-center rounded-xl text-xs pressable"
-            style={{ background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.3)' }}>
+            style={{ background:"var(--surface-2)", color:"var(--text-muted)" }}>
             ✕
           </button>
         </div>
@@ -75,7 +75,7 @@ export function ExerciseCard({
 
                 {/* # */}
                 <div className="text-center text-[11px] font-bold"
-                  style={{ color: 'rgba(255,255,255,0.25)' }}>{idx + 1}</div>
+                  style={{ color:"var(--text-muted)" }}>{idx + 1}</div>
 
                 {/* KG */}
                 <button onClick={() => onEditSet(s.id)}
@@ -104,8 +104,8 @@ export function ExerciseCard({
                     background: '#4ade80',
                     color: '#000',
                   } : {
-                    background: 'rgba(255,255,255,0.06)',
-                    color: 'rgba(255,255,255,0.25)',
+                    background:"var(--surface-2)",
+                    color:"var(--text-muted)",
                   }}>
                   ✓
                 </button>
@@ -119,12 +119,12 @@ export function ExerciseCard({
       <div className="flex gap-2 px-3 pb-4 pt-2">
         <button onClick={onAddSet}
           className="flex-1 rounded-2xl py-3 text-sm font-black pressable"
-          style={{ background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.6)' }}>
+          style={{ background:"var(--surface-2)", color:"var(--text-secondary)" }}>
           + Set
         </button>
         <button onClick={onStartRest}
           className="w-20 rounded-2xl py-3 text-sm font-bold pressable"
-          style={{ background: 'rgba(255,255,255,0.04)', color: 'rgba(255,255,255,0.3)' }}>
+          style={{ background:"var(--surface-1)", color:"var(--text-muted)" }}>
           ⏱ Rest
         </button>
       </div>

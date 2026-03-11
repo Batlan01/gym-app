@@ -76,7 +76,7 @@ export function VideoModal({
           </div>
           <button onClick={onClose}
             className="shrink-0 grid h-9 w-9 place-items-center rounded-full text-sm pressable"
-            style={{ background: "rgba(255,255,255,0.08)", color: "var(--text-muted)" }}>
+            style={{ background:"var(--surface-2)", color: "var(--text-muted)" }}>
             ✕
           </button>
         </div>
@@ -91,7 +91,7 @@ export function VideoModal({
                   background: "var(--accent-primary)",
                   color: "#000",
                 } : {
-                  background: "rgba(255,255,255,0.06)",
+                  background:"var(--surface-2)",
                   color: "var(--text-muted)",
                   border: "1px solid var(--border-subtle)",
                 }}>
@@ -124,7 +124,7 @@ export function VideoModal({
             <button onClick={() => setActive(a => Math.max(0, a - 1))}
               disabled={active === 0}
               className="flex-1 rounded-2xl py-3 text-sm font-semibold pressable"
-              style={{ background: "rgba(255,255,255,0.05)", color: active === 0 ? "var(--text-muted)" : "var(--text-primary)", border: "1px solid var(--border-subtle)", opacity: active === 0 ? 0.4 : 1 }}>
+              style={{ background:"var(--surface-1)", color: active === 0 ? "var(--text-muted)" : "var(--text-primary)", border: "1px solid var(--border-subtle)", opacity: active === 0 ? 0.4 : 1 }}>
               ← Előző
             </button>
             <div className="text-xs font-bold px-2" style={{ color: "var(--text-muted)" }}>
@@ -133,7 +133,7 @@ export function VideoModal({
             <button onClick={() => setActive(a => Math.min(clips.length - 1, a + 1))}
               disabled={active === clips.length - 1}
               className="flex-1 rounded-2xl py-3 text-sm font-semibold pressable"
-              style={{ background: "rgba(255,255,255,0.05)", color: active === clips.length - 1 ? "var(--text-muted)" : "var(--text-primary)", border: "1px solid var(--border-subtle)", opacity: active === clips.length - 1 ? 0.4 : 1 }}>
+              style={{ background:"var(--surface-1)", color: active === clips.length - 1 ? "var(--text-muted)" : "var(--text-primary)", border: "1px solid var(--border-subtle)", opacity: active === clips.length - 1 ? 0.4 : 1 }}>
               Következő →
             </button>
           </div>
@@ -143,7 +143,7 @@ export function VideoModal({
         <a href={`https://www.youtube.com/watch?v=${clip.videoId}${clip.start != null ? `&t=${clip.start}s` : ""}`}
           target="_blank" rel="noopener noreferrer"
           className="mt-2 flex items-center justify-center gap-2 rounded-2xl py-3 text-sm pressable"
-          style={{ background: "rgba(255,255,255,0.04)", color: "var(--text-muted)", border: "1px solid var(--border-subtle)" }}>
+          style={{ background:"var(--surface-1)", color: "var(--text-muted)", border: "1px solid var(--border-subtle)" }}>
           ↗ Megnyitás YouTube-on
         </a>
       </div>

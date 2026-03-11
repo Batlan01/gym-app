@@ -66,7 +66,7 @@ function PosterCard({ tpl, onClick, size = 'md', owned = false }: {
           style={{ background: 'linear-gradient(to top, rgba(8,11,15,0.95), transparent)' }} />
         {/* Level badge */}
         <div className="absolute top-2 right-2 rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide"
-          style={{ background: 'rgba(0,0,0,0.6)', color: 'rgba(255,255,255,0.7)', backdropFilter: 'blur(4px)' }}>
+          style={{ background: 'rgba(0,0,0,0.6)', color:"var(--text-primary)", backdropFilter: 'blur(4px)' }}>
           {levelLabel(tpl.level)}
         </div>
         {/* Megvan badge */}
@@ -120,7 +120,7 @@ function MyProgramCard({ program, onClick }: { program: UserProgram; onClick: ()
       className="shrink-0 snap-start text-left pressable"
       style={{ width: 150 }}>
       <div className="relative overflow-hidden rounded-2xl p-3"
-        style={{ height: 100, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' }}>
+        style={{ height: 100, background:"var(--surface-1)", border:"1px solid var(--border-mid)" }}>
         <div className="text-2xl">{icon}</div>
         <div className="mt-1 text-xs font-bold leading-tight line-clamp-2"
           style={{ color: 'var(--text-primary)' }}>{program.name}</div>

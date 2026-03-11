@@ -356,11 +356,11 @@ export default function WorkoutPage() {
           <div className="mb-5">
 
             {/* Timer sáv — solid block, nem glass */}
-            <div className="rounded-3xl overflow-hidden mb-3" style={{ background: 'rgba(255,255,255,0.04)' }}>
+            <div className="rounded-3xl overflow-hidden mb-3" style={{ background:"var(--surface-1)" }}>
 
               {/* Progress bar a tetején */}
               {filledTotalSets > 0 && (
-                <div className="h-1 w-full" style={{ background: 'rgba(255,255,255,0.06)' }}>
+                <div className="h-1 w-full" style={{ background:"var(--surface-2)" }}>
                   <div className="h-full transition-all duration-500"
                     style={{
                       width: `${(filledDoneSets / filledTotalSets) * 100}%`,
@@ -378,7 +378,7 @@ export default function WorkoutPage() {
 
                 {/* Meta sor */}
                 <div className="flex items-center gap-3 text-[11px] font-semibold"
-                  style={{ color: 'rgba(255,255,255,0.35)' }}>
+                  style={{ color:"var(--text-muted)" }}>
                   <span>{active.exercises.length} gyakorlat</span>
                   <span style={{ color: filledDoneSets === filledTotalSets && filledTotalSets > 0 ? '#4ade80' : 'rgba(255,255,255,0.35)' }}>
                     {filledDoneSets}/{filledTotalSets} set
@@ -412,7 +412,7 @@ export default function WorkoutPage() {
         ) : (
           /* ── HEADER — üres állapot ── */
           <div className="mb-5">
-            <div className="text-[10px] font-black tracking-widest mb-1" style={{ color: 'rgba(255,255,255,0.25)' }}>
+            <div className="text-[10px] font-black tracking-widest mb-1" style={{ color:"var(--text-muted)" }}>
               EDZÉS
             </div>
             <h1 className="text-2xl font-black mb-4" style={{ color: 'var(--text-primary)' }}>{t.workout.today}</h1>
@@ -420,8 +420,8 @@ export default function WorkoutPage() {
             {/* Tervezett program */}
             {todaySessions.length > 0 && (
               <div className="mb-4 rounded-2xl p-4 space-y-2"
-                style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
-                <div className="text-[9px] font-black tracking-widest mb-3" style={{ color: 'rgba(255,255,255,0.25)' }}>
+                style={{ background:"var(--surface-0)", border:"1px solid var(--border-subtle)" }}>
+                <div className="text-[9px] font-black tracking-widest mb-3" style={{ color:"var(--text-muted)" }}>
                   MAI PROGRAM
                 </div>
                 {todaySessions.map((sess, i) => {
@@ -431,7 +431,7 @@ export default function WorkoutPage() {
                       <span className="text-base">{SLOT_EMOJIS[sess.slotId] ?? "💪"}</span>
                       <div>
                         <div className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>{sess.sessionName}</div>
-                        <div className="text-xs mt-0.5" style={{ color: 'rgba(255,255,255,0.3)' }}>
+                        <div className="text-xs mt-0.5" style={{ color:"var(--text-muted)" }}>
                           {sess.exercises.slice(0, 3).join(" · ")}{sess.exercises.length > 3 ? ` +${sess.exercises.length - 3}` : ""}
                         </div>
                       </div>
@@ -451,7 +451,7 @@ export default function WorkoutPage() {
 
             {history.length > 0 && (
               <div className="mt-4">
-                <div className="text-[9px] font-black tracking-widest mb-2 px-1" style={{ color: 'rgba(255,255,255,0.25)' }}>
+                <div className="text-[9px] font-black tracking-widest mb-2 px-1" style={{ color:"var(--text-muted)" }}>
                   UTOLSÓ EDZÉSEK
                 </div>
                 <div className="space-y-2">
@@ -464,12 +464,12 @@ export default function WorkoutPage() {
                       <button key={w.id}
                         onClick={() => { setDetailWorkoutId(w.id); setDetailOpen(true); }}
                         className="w-full rounded-2xl px-4 py-3 text-left pressable"
-                        style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.05)' }}>
+                        style={{ background:"var(--surface-1)", border:"1px solid var(--border-subtle)" }}>
                         <div className="flex items-center justify-between mb-1.5">
                           <div className="text-sm font-black truncate" style={{ color: 'var(--text-primary)' }}>
                             {w.title || new Date(w.startedAt).toLocaleDateString(lang, { weekday: 'short', month: 'short', day: 'numeric' })}
                           </div>
-                          <div className="text-[10px] shrink-0 ml-2" style={{ color: 'rgba(255,255,255,0.3)' }}>
+                          <div className="text-[10px] shrink-0 ml-2" style={{ color:"var(--text-muted)" }}>
                             {new Date(w.startedAt).toLocaleDateString(lang, { month: 'short', day: 'numeric' })}
                           </div>
                         </div>
@@ -481,7 +481,7 @@ export default function WorkoutPage() {
                             ...(wDur ? [{ v: '⏱ ' + wDur }] : []),
                           ].map(c => (
                             <span key={c.v} className="text-[10px] rounded-lg px-2 py-0.5 font-semibold"
-                              style={{ background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.4)' }}>
+                              style={{ background:"var(--surface-2)", color:"var(--text-secondary)" }}>
                               {c.v}
                             </span>
                           ))}
@@ -501,7 +501,7 @@ export default function WorkoutPage() {
             {active.exercises.length === 0 ? (
               <button onClick={() => setAddOpen(true)}
                 className="w-full rounded-3xl py-8 text-sm pressable"
-                style={{ background: 'rgba(255,255,255,0.03)', border: '1px dashed rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.3)' }}>
+                style={{ background:"var(--surface-0)", border: '1px dashed rgba(255,255,255,0.1)', color:"var(--text-muted)" }}>
                 + Adj hozzá egy gyakorlatot
               </button>
             ) : (

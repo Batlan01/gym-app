@@ -4,56 +4,108 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ══════════════════════════════════════════
+   DARK MODE (default)
+   ══════════════════════════════════════════ */
 :root {
   color-scheme: dark;
 
-  --accent-primary: #22d3ee;
-  --accent-green:   #4ade80;
-  --accent-amber:   #fbbf24;
+  --accent-primary:      #22d3ee;
+  --accent-green:        #4ade80;
+  --accent-amber:        #fbbf24;
 
-  --bg-base:        #080B0F;
-  --bg-surface:     #0F1318;
-  --bg-elevated:    #161C24;
-  --bg-card:        rgba(255,255,255,0.04);
-  --bg-card-hover:  rgba(255,255,255,0.07);
+  --bg-base:             #080B0F;
+  --bg-surface:          #0F1318;
+  --bg-elevated:         #161C24;
+  --bg-card:             rgba(255,255,255,0.04);
+  --bg-card-hover:       rgba(255,255,255,0.07);
 
-  --border-subtle:  rgba(255,255,255,0.07);
-  --border-mid:     rgba(255,255,255,0.12);
-  --border-accent:  rgba(34,211,238,0.3);
+  --border-subtle:       rgba(255,255,255,0.07);
+  --border-mid:          rgba(255,255,255,0.12);
+  --border-accent:       rgba(34,211,238,0.3);
 
-  --text-primary:   #F0F4F8;
-  --text-secondary: rgba(240,244,248,0.6);
-  --text-muted:     rgba(240,244,248,0.35);
+  --text-primary:        #F0F4F8;
+  --text-secondary:      rgba(240,244,248,0.6);
+  --text-muted:          rgba(240,244,248,0.35);
+
+  /* ── Semantic surface vars (used in components) ── */
+  --surface-0:           rgba(255,255,255,0.03);
+  --surface-1:           rgba(255,255,255,0.05);
+  --surface-2:           rgba(255,255,255,0.08);
+  --surface-3:           rgba(255,255,255,0.13);
+
+  --nav-bg:              rgba(10,14,20,0.88);
+  --nav-border:          rgba(255,255,255,0.07);
 }
 
-/* ── LIGHT MODE ─────────────────────────────────────── */
+/* ══════════════════════════════════════════
+   LIGHT MODE
+   ══════════════════════════════════════════ */
 [data-mode="light"] {
   color-scheme: light;
-  --bg-base:        #F0F4F8;
-  --bg-surface:     #E4EAF0;
-  --bg-elevated:    #FFFFFF;
-  --bg-card:        rgba(0,0,0,0.04);
-  --bg-card-hover:  rgba(0,0,0,0.07);
-  --border-subtle:  rgba(0,0,0,0.08);
-  --border-mid:     rgba(0,0,0,0.14);
-  --border-accent:  rgba(34,211,238,0.4);
-  --text-primary:   #0F172A;
-  --text-secondary: rgba(15,23,42,0.6);
-  --text-muted:     rgba(15,23,42,0.38);
+
+  --bg-base:             #F0F4F8;
+  --bg-surface:          #E8EEF4;
+  --bg-elevated:         #FFFFFF;
+  --bg-card:             rgba(0,0,0,0.04);
+  --bg-card-hover:       rgba(0,0,0,0.07);
+
+  --border-subtle:       rgba(0,0,0,0.08);
+  --border-mid:          rgba(0,0,0,0.15);
+  --border-accent:       rgba(34,211,238,0.5);
+
+  --text-primary:        #0F172A;
+  --text-secondary:      rgba(15,23,42,0.62);
+  --text-muted:          rgba(15,23,42,0.38);
+
+  /* ── Semantic surface vars inverted ── */
+  --surface-0:           rgba(0,0,0,0.03);
+  --surface-1:           rgba(0,0,0,0.05);
+  --surface-2:           rgba(0,0,0,0.08);
+  --surface-3:           rgba(0,0,0,0.12);
+
+  --nav-bg:              rgba(240,244,248,0.92);
+  --nav-border:          rgba(0,0,0,0.10);
 }
-[data-mode="light"] body { background-color: var(--bg-base); color: var(--text-primary); }
+
+[data-mode="light"] body {
+  background-color: var(--bg-base);
+  color: var(--text-primary);
+}
+
 [data-mode="light"] body::before {
   background:
-    radial-gradient(ellipse 80% 50% at 15% 10%, rgba(34,211,238,0.08) 0%, transparent 60%),
+    radial-gradient(ellipse 80% 50% at 15% 10%, rgba(34,211,238,0.09) 0%, transparent 60%),
     radial-gradient(ellipse 60% 40% at 85% 80%, rgba(74,222,128,0.07) 0%, transparent 55%),
     radial-gradient(ellipse 50% 60% at 50% 50%, rgba(99,102,241,0.05) 0%, transparent 70%);
 }
-[data-mode="light"] body::after { opacity: 0.006; }
-[data-mode="light"] nav div {
-  background: rgba(240,244,248,0.88) !important;
-  border-color: rgba(0,0,0,0.1) !important;
+[data-mode="light"] body::after { opacity: 0.004; }
+
+/* label-xs in light mode */
+[data-mode="light"] .label-xs { color: var(--text-muted); }
+
+/* .card in light mode */
+[data-mode="light"] .card {
+  background: var(--surface-1);
+  border-color: var(--border-subtle);
 }
 
+/* Sheets/modals: hardcoded dark backgrounds → elevated */
+[data-mode="light"] [style*='"#0d0d0f"'],
+[data-mode="light"] [style*="'#0d0d0f'"] {
+  background: var(--bg-elevated) !important;
+}
+
+/* BottomNav frosted glass */
+[data-mode="light"] nav .nav-glass {
+  background: var(--nav-bg) !important;
+  border-color: var(--nav-border) !important;
+}
+
+
+/* ══════════════════════════════════════════
+   BASE STYLES
+   ══════════════════════════════════════════ */
 html, body {
   height: 100%;
   background-color: var(--bg-base);
@@ -70,22 +122,15 @@ html, body {
 /* AMBIENT BACKGROUND */
 body::before {
   content: '';
-  position: fixed;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
+  position: fixed; inset: 0; z-index: 0; pointer-events: none;
   background:
     radial-gradient(ellipse 80% 50% at 15% 10%, rgba(34,211,238,0.06) 0%, transparent 60%),
     radial-gradient(ellipse 60% 40% at 85% 80%, rgba(74,222,128,0.05) 0%, transparent 55%),
     radial-gradient(ellipse 50% 60% at 50% 50%, rgba(99,102,241,0.04) 0%, transparent 70%);
 }
-
 body::after {
   content: '';
-  position: fixed;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
+  position: fixed; inset: 0; z-index: 0; pointer-events: none;
   opacity: 0.018;
   background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
   background-size: 200px 200px;
