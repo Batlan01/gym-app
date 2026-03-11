@@ -14,7 +14,6 @@ function uid() {
     ? crypto.randomUUID() : String(Date.now() + Math.random());
 }
 
-// ── Gradient térkép ──────────────────────────────────────────
 const GRAD: Record<string, { bg: string; glow: string; border: string }> = {
   emerald:{ bg:'rgba(52,211,153,0.18)',  glow:'rgba(52,211,153,0.12)',  border:'rgba(52,211,153,0.22)' },
   sky:    { bg:'rgba(56,189,248,0.18)',  glow:'rgba(56,189,248,0.12)',  border:'rgba(56,189,248,0.22)' },
@@ -26,7 +25,6 @@ const GRAD: Record<string, { bg: string; glow: string; border: string }> = {
   slate:  { bg:'rgba(148,163,184,0.10)', glow:'rgba(148,163,184,0.06)', border:'rgba(148,163,184,0.15)' },
 };
 
-// ── POSTER KÁRTYA ────────────────────────────────────────────
 function PosterCard({ tpl, onClick, size='md', owned=false }: {
   tpl: ProgramTemplate; onClick: ()=>void; size?:'sm'|'md'|'lg'; owned?:boolean;
 }) {
@@ -66,7 +64,6 @@ function PosterCard({ tpl, onClick, size='md', owned=false }: {
   );
 }
 
-// ── SAJÁT PROGRAM KÁRTYA ─────────────────────────────────────
 function MyCard({ program, onClick }: { program: UserProgram; onClick: ()=>void }) {
   const emoji = SPORT_EMOJI[program.sport as SportTag] ?? '🏋️';
   return (
@@ -88,7 +85,6 @@ function MyCard({ program, onClick }: { program: UserProgram; onClick: ()=>void 
   );
 }
 
-// ── VÍZSZINTES ROW ───────────────────────────────────────────
 function HRow({ title, accent, children }: { title:string; accent?:string; children:React.ReactNode }) {
   return (
     <section className="mt-7">
@@ -103,7 +99,6 @@ function HRow({ title, accent, children }: { title:string; accent?:string; child
   );
 }
 
-// ── ÚJ PROGRAM SHEET ─────────────────────────────────────────
 const LEVELS: { id: ProgramLevel; label: string; desc: string }[] = [
   { id:'beginner',     label:'Kezdő',          desc:'Alap mozgásminták, kis terhelés' },
   { id:'intermediate', label:'Középhaladó',    desc:'Rendszeres edzés, haladóbb technika' },
@@ -120,13 +115,14 @@ function CreateProgramSheet({ onClose, onCreate }: {
   const [level, setLevel] = React.useState<ProgramLevel>('beginner');
   const [step, setStep] = React.useState<'info'|'sport'|'level'>('info');
 
+  // FIXED: paddingBottom hogy a gomb ne kerüljön a BottomNav alá
   return (
     <div className="fixed inset-0 z-50 flex items-end" style={{ background:'rgba(0,0,0,0.6)' }}
       onClick={(e)=>{ if(e.target===e.currentTarget) onClose(); }}>
-      <div className="w-full rounded-t-3xl pb-10 animate-in slide-in-from-bottom"
-        style={{ background:'var(--bg-elevated)', maxHeight:'85dvh', overflowY:'auto' }}>
+      <div className="w-full rounded-t-3xl animate-in slide-in-from-bottom"
+        style={{ background:'var(--bg-elevated)', maxHeight:'90dvh', overflowY:'auto',
+          paddingBottom:'calc(80px + env(safe-area-inset-bottom, 0px))' }}>
 
-        {/* Handle */}
         <div className="flex justify-center pt-3 pb-4">
           <div className="h-1 w-10 rounded-full" style={{ background:'var(--surface-3)' }} />
         </div>
@@ -155,8 +151,7 @@ function CreateProgramSheet({ onClose, onCreate }: {
               rows={3} maxLength={200}
               className="w-full rounded-2xl px-4 py-3 text-sm outline-none resize-none mb-6"
               style={{ background:'var(--surface-1)', border:'1px solid var(--border-mid)', color:'var(--text-primary)' }} />
-            <button disabled={!name.trim()}
-              onClick={()=>setStep('sport')}
+            <button disabled={!name.trim()} onClick={()=>setStep('sport')}
               className="w-full rounded-2xl py-4 text-sm font-bold pressable"
               style={{ background: name.trim() ? 'var(--accent-primary)' : 'var(--surface-2)',
                 color: name.trim() ? '#000' : 'var(--text-muted)' }}>
@@ -183,8 +178,7 @@ function CreateProgramSheet({ onClose, onCreate }: {
                         className="rounded-full px-3 py-2 text-xs font-semibold pressable transition-all"
                         style={ sport===tag
                           ? { background:'var(--accent-primary)', color:'#000' }
-                          : { background:'var(--surface-1)', color:'var(--text-secondary)',
-                              border:'1px solid var(--border-subtle)' }}>
+                          : { background:'var(--surface-1)', color:'var(--text-secondary)', border:'1px solid var(--border-subtle)' }}>
                         {SPORT_EMOJI[tag]} {sportLabel(tag)}
                       </button>
                     ))}
@@ -222,16 +216,16 @@ function CreateProgramSheet({ onClose, onCreate }: {
             <button onClick={()=>onCreate(name.trim(), desc.trim(), sport, level)}
               className="w-full rounded-2xl py-4 text-sm font-bold pressable"
               style={{ background:'var(--accent-primary)', color:'#000' }}>
-              Program létrehozása ✓
+              ✓ Program létrehozása
             </button>
           </div>
         )}
+
       </div>
     </div>
   );
 }
 
-// ── FŐOLDAL ──────────────────────────────────────────────────
 const ALL_CHIPS: { id: 'all' | SportTag; label: string }[] = [
   { id:'all',          label:'Összes' },
   { id:'gym',          label:'🏋️ Terem' },
@@ -304,19 +298,18 @@ export default function ProgramsPage() {
 
   const ownedIds = React.useMemo(() => new Set(mine.map(p => p.fromTemplateId).filter(Boolean)), [mine]);
 
-  // Csoportosított sorok browse módban
-  const featured = PROGRAM_TEMPLATES.slice(0, 5);
-  const fighting = PROGRAM_TEMPLATES.filter(t => ['boxing','mma','muay_thai','bjj','kickboxing','wrestling','judo','karate'].includes(t.sport));
-  const gymPl    = PROGRAM_TEMPLATES.filter(t => ['gym','powerlifting','olympic','bodybuilding'].includes(t.sport));
-  const cardio   = PROGRAM_TEMPLATES.filter(t => ['running','hiit','cycling','jump_rope'].includes(t.sport));
-  const mobilityGroup = PROGRAM_TEMPLATES.filter(t => ['mobility','yoga','stretching','foam_roll','pilates','warmup'].includes(t.sport));
-  const bw       = PROGRAM_TEMPLATES.filter(t => ['home','calisthenics','crossfit'].includes(t.sport));
+  const featured   = PROGRAM_TEMPLATES.slice(0, 5);
+  const fighting   = PROGRAM_TEMPLATES.filter(t => ['boxing','mma','muay_thai','bjj','kickboxing','wrestling','judo','karate'].includes(t.sport));
+  const gymPl      = PROGRAM_TEMPLATES.filter(t => ['gym','powerlifting','olympic','bodybuilding'].includes(t.sport));
+  const cardio     = PROGRAM_TEMPLATES.filter(t => ['running','hiit','cycling','jump_rope'].includes(t.sport));
+  const mobilityGr = PROGRAM_TEMPLATES.filter(t => ['mobility','yoga','stretching','foam_roll','pilates','warmup'].includes(t.sport));
+  const bw         = PROGRAM_TEMPLATES.filter(t => ['home','calisthenics','crossfit'].includes(t.sport));
 
   return (
     <div className="flex flex-col" style={{ minHeight:'100dvh' }}>
       <div className="flex-1 pb-32 animate-in">
 
-        {/* ── Sticky header ── */}
+        {/* Sticky header */}
         <div className="sticky top-0 z-40 px-4 pt-4 pb-3"
           style={{ background:'var(--sticky-bg)', backdropFilter:'blur(16px)', borderBottom:'1px solid var(--border-subtle)' }}>
           <div className="label-xs mb-1">PROGRAMOK</div>
@@ -326,22 +319,18 @@ export default function ProgramsPage() {
               {(['browse','mine'] as const).map(t => (
                 <button key={t} onClick={()=>setTab(t)}
                   className="rounded-lg px-3 py-1.5 text-xs font-bold transition-all"
-                  style={tab===t
-                    ? { background:'var(--bg-elevated)', color:'var(--text-primary)' }
-                    : { color:'var(--text-muted)' }}>
+                  style={tab===t ? { background:'var(--bg-elevated)', color:'var(--text-primary)' } : { color:'var(--text-muted)' }}>
                   {t==='browse' ? 'Felfedezés' : `Saját${mine.length ? ` (${mine.length})` : ''}`}
                 </button>
               ))}
             </div>
           </div>
-          {/* Keresés */}
           <div className="relative mt-3">
             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm" style={{ color:'var(--text-muted)' }}>🔍</span>
             <input value={q} onChange={e=>setQ(e.target.value)} placeholder="Keresés…"
               className="w-full rounded-2xl py-2.5 pl-9 pr-4 text-sm outline-none"
               style={{ background:'var(--surface-1)', border:'1px solid var(--border-subtle)', color:'var(--text-primary)' }} />
           </div>
-          {/* Chip-ek */}
           <div className="mt-2.5 -mx-4 overflow-x-auto no-scrollbar px-4">
             <div className="flex gap-2 pb-0.5">
               {ALL_CHIPS.map(c => (
@@ -357,7 +346,7 @@ export default function ProgramsPage() {
           </div>
         </div>
 
-        {/* ── BROWSE TAB ── */}
+        {/* BROWSE TAB */}
         {tab==='browse' && (
           <>
             {(q || chip!=='all') ? (
@@ -379,49 +368,31 @@ export default function ProgramsPage() {
             ) : (
               <>
                 <HRow title="🔥 Kiemelt programok" accent="var(--accent-primary)">
-                  {featured.map(t => (
-                    <PosterCard key={t.id} tpl={t} onClick={()=>startFromTemplate(t.id)}
-                      size="lg" owned={ownedIds.has(t.id)} />
-                  ))}
+                  {featured.map(t => <PosterCard key={t.id} tpl={t} onClick={()=>startFromTemplate(t.id)} size="lg" owned={ownedIds.has(t.id)} />)}
                 </HRow>
                 {fighting.length>0 && (
                   <HRow title="🥊 Küzdősportok" accent="#f87171">
-                    {fighting.map(t => (
-                      <PosterCard key={t.id} tpl={t} onClick={()=>startFromTemplate(t.id)}
-                        size="md" owned={ownedIds.has(t.id)} />
-                    ))}
+                    {fighting.map(t => <PosterCard key={t.id} tpl={t} onClick={()=>startFromTemplate(t.id)} size="md" owned={ownedIds.has(t.id)} />)}
                   </HRow>
                 )}
                 {gymPl.length>0 && (
                   <HRow title="🏋️ Edzőterem" accent="var(--accent-green)">
-                    {gymPl.map(t => (
-                      <PosterCard key={t.id} tpl={t} onClick={()=>startFromTemplate(t.id)}
-                        size="md" owned={ownedIds.has(t.id)} />
-                    ))}
+                    {gymPl.map(t => <PosterCard key={t.id} tpl={t} onClick={()=>startFromTemplate(t.id)} size="md" owned={ownedIds.has(t.id)} />)}
                   </HRow>
                 )}
                 {cardio.length>0 && (
                   <HRow title="🏃 Kardio & Sport" accent="var(--accent-primary)">
-                    {cardio.map(t => (
-                      <PosterCard key={t.id} tpl={t} onClick={()=>startFromTemplate(t.id)}
-                        size="md" owned={ownedIds.has(t.id)} />
-                    ))}
+                    {cardio.map(t => <PosterCard key={t.id} tpl={t} onClick={()=>startFromTemplate(t.id)} size="md" owned={ownedIds.has(t.id)} />)}
                   </HRow>
                 )}
-                {mobilityGroup.length>0 && (
+                {mobilityGr.length>0 && (
                   <HRow title="🧘 Mobilitás & Regeneráció" accent="#c084fc">
-                    {mobilityGroup.map(t => (
-                      <PosterCard key={t.id} tpl={t} onClick={()=>startFromTemplate(t.id)}
-                        size="md" owned={ownedIds.has(t.id)} />
-                    ))}
+                    {mobilityGr.map(t => <PosterCard key={t.id} tpl={t} onClick={()=>startFromTemplate(t.id)} size="md" owned={ownedIds.has(t.id)} />)}
                   </HRow>
                 )}
                 {bw.length>0 && (
                   <HRow title="🤸 Testsúlyos & CrossFit" accent="#818cf8">
-                    {bw.map(t => (
-                      <PosterCard key={t.id} tpl={t} onClick={()=>startFromTemplate(t.id)}
-                        size="md" owned={ownedIds.has(t.id)} />
-                    ))}
+                    {bw.map(t => <PosterCard key={t.id} tpl={t} onClick={()=>startFromTemplate(t.id)} size="md" owned={ownedIds.has(t.id)} />)}
                   </HRow>
                 )}
               </>
@@ -429,22 +400,17 @@ export default function ProgramsPage() {
           </>
         )}
 
-        {/* ── MINE TAB ── */}
+        {/* MINE TAB */}
         {tab==='mine' && (
           <section className="px-4 mt-5">
-            {/* Új program gomb */}
             <button onClick={()=>setShowCreate(true)}
               className="w-full rounded-2xl px-4 py-4 mb-5 flex items-center gap-3 pressable"
               style={{ background:'rgba(34,211,238,0.08)', border:'2px dashed rgba(34,211,238,0.35)' }}>
               <div className="flex h-10 w-10 items-center justify-center rounded-xl text-xl"
                 style={{ background:'rgba(34,211,238,0.12)' }}>+</div>
               <div className="text-left">
-                <div className="font-bold text-sm" style={{ color:'var(--accent-primary)' }}>
-                  Új program létrehozása
-                </div>
-                <div className="text-xs mt-0.5" style={{ color:'var(--text-muted)' }}>
-                  Épít fel saját programot 0-ról
-                </div>
+                <div className="font-bold text-sm" style={{ color:'var(--accent-primary)' }}>Új program létrehozása</div>
+                <div className="text-xs mt-0.5" style={{ color:'var(--text-muted)' }}>Épít fel saját programot 0-ról</div>
               </div>
             </button>
 
@@ -452,12 +418,8 @@ export default function ProgramsPage() {
               <div className="flex flex-col items-center justify-center rounded-3xl py-14 text-center"
                 style={{ background:'var(--surface-1)', border:'1px dashed var(--border-mid)' }}>
                 <div className="text-4xl mb-3">📋</div>
-                <div className="text-base font-bold mb-1" style={{ color:'var(--text-primary)' }}>
-                  Még nincs saját programod
-                </div>
-                <div className="text-sm mb-5" style={{ color:'var(--text-muted)' }}>
-                  Hozz létre sajátot, vagy válassz sablont
-                </div>
+                <div className="text-base font-bold mb-1" style={{ color:'var(--text-primary)' }}>Még nincs saját programod</div>
+                <div className="text-sm mb-5" style={{ color:'var(--text-muted)' }}>Hozz létre sajátot, vagy válassz sablont</div>
                 <button onClick={()=>setTab('browse')}
                   className="rounded-2xl px-6 py-3 text-sm font-bold pressable"
                   style={{ background:'rgba(34,211,238,0.12)', color:'var(--accent-primary)', border:'1px solid rgba(34,211,238,0.25)' }}>
@@ -468,8 +430,7 @@ export default function ProgramsPage() {
               <div className="space-y-2">
                 <div className="label-xs mb-3">SAJÁT PROGRAMOK ({mine.length})</div>
                 {mine.map(p => (
-                  <MyCard key={p.id} program={p}
-                    onClick={()=>router.push(`/programs/builder/${p.id}`)} />
+                  <MyCard key={p.id} program={p} onClick={()=>router.push(`/programs/builder/${p.id}`)} />
                 ))}
               </div>
             )}
