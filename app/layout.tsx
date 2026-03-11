@@ -42,6 +42,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               var r = document.documentElement;
               Object.entries(themes[t]).forEach(function(e){ r.style.setProperty(e[0], e[1]); });
             }
+            var m = localStorage.getItem('gym.colorMode');
+            if (m === 'light') { document.documentElement.setAttribute('data-mode', 'light'); }
           } catch(e) {}
         `}} />
         <PushSWRegistrar />
