@@ -103,5 +103,5 @@ export function AppFrame({ children }: { children: React.ReactNode }) {
   const showBoot = !ready || !minBootDone;
   return showBoot
     ? <BootScreen subtitle="Connecting your account…" />
-    : <div className="min-h-dvh bg-black text-white">{children}</div>;
+    : <div className="min-h-dvh text-white" style={{backgroundColor:"var(--bg-base)",color:"var(--text-primary)"}}>{children}</div>;
 }
