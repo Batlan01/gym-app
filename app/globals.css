@@ -26,6 +26,34 @@
   --text-muted:     rgba(240,244,248,0.35);
 }
 
+/* ── LIGHT MODE ─────────────────────────────────────── */
+[data-mode="light"] {
+  color-scheme: light;
+  --bg-base:        #F0F4F8;
+  --bg-surface:     #E4EAF0;
+  --bg-elevated:    #FFFFFF;
+  --bg-card:        rgba(0,0,0,0.04);
+  --bg-card-hover:  rgba(0,0,0,0.07);
+  --border-subtle:  rgba(0,0,0,0.08);
+  --border-mid:     rgba(0,0,0,0.14);
+  --border-accent:  rgba(34,211,238,0.4);
+  --text-primary:   #0F172A;
+  --text-secondary: rgba(15,23,42,0.6);
+  --text-muted:     rgba(15,23,42,0.38);
+}
+[data-mode="light"] body { background-color: var(--bg-base); color: var(--text-primary); }
+[data-mode="light"] body::before {
+  background:
+    radial-gradient(ellipse 80% 50% at 15% 10%, rgba(34,211,238,0.08) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 40% at 85% 80%, rgba(74,222,128,0.07) 0%, transparent 55%),
+    radial-gradient(ellipse 50% 60% at 50% 50%, rgba(99,102,241,0.05) 0%, transparent 70%);
+}
+[data-mode="light"] body::after { opacity: 0.006; }
+[data-mode="light"] nav div {
+  background: rgba(240,244,248,0.88) !important;
+  border-color: rgba(0,0,0,0.1) !important;
+}
+
 html, body {
   height: 100%;
   background-color: var(--bg-base);
@@ -63,10 +91,7 @@ body::after {
   background-size: 200px 200px;
 }
 
-main, nav, header, footer {
-  position: relative;
-  z-index: 1;
-}
+main, nav, header, footer { position: relative; z-index: 1; }
 
 /* ANIMATIONS */
 @keyframes fadeUp {
@@ -110,10 +135,7 @@ main, nav, header, footer {
   border-radius: 1.5rem;
   transition: background 200ms ease, border-color 200ms ease;
 }
-.card:hover {
-  background: var(--bg-card-hover);
-  border-color: var(--border-mid);
-}
+.card:hover { background: var(--bg-card-hover); border-color: var(--border-mid); }
 
 /* TYPOGRAPHY */
 .label-xs {
