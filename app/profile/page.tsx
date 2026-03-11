@@ -13,7 +13,7 @@ import type { Workout } from "@/lib/types";
 import { readWeightHistory, addWeightEntry, type WeightEntry } from "@/lib/weightStorage";
 import { ACHIEVEMENTS, TIER_COLORS, calcXP, getLevel, checkNewAchievements, type UnlockedAchievement } from "@/lib/achievements";
 import { topExercisesByVolume } from "@/lib/workoutMetrics";
-import { THEMES, LS_THEME, applyTheme, type ThemeId } from "@/lib/theme";
+import { THEMES, LS_THEME, applyTheme, applyColorMode, LS_COLOR_MODE, type ThemeId, type ColorMode } from "@/lib/theme";
 import { LineChart, Line, XAxis, Tooltip, ResponsiveContainer } from "recharts";
 
 function calcStreak(workouts: Workout[]): number {
@@ -134,6 +134,7 @@ export default function ProfilePage() {
   const [editMode, setEditMode] = React.useState(false);
   const [avatarUploading, setAvatarUploading] = React.useState(false);
   const [savedTheme, setSavedTheme] = React.useState<ThemeId>("cyan");
+  const [colorMode, setColorMode] = React.useState<ColorMode>("dark");
   const fileRef = React.useRef<HTMLInputElement>(null);
   const [editName, setEditName] = React.useState("");
   const [editAge, setEditAge] = React.useState("");
@@ -156,6 +157,7 @@ export default function ProfilePage() {
     setWeightHistory(readWeightHistory(pid));
     setUnlocked(lsGet<UnlockedAchievement[]>(profileKey(pid,"achievements"), []));
     setSavedTheme((localStorage.getItem(LS_THEME) as ThemeId) ?? "cyan");
+    setColorMode((localStorage.getItem(LS_COLOR_MODE) as ColorMode | null) ?? "dark");
   }, [pid]);
 
   React.useEffect(() => {
@@ -352,6 +354,39 @@ export default function ProfilePage() {
       {/* ── MEGJELENÉS TAB ── */}
       {tab==="settings" && (
         <div className="px-4 space-y-3">
+          {/* Dark / Light mode toggle */}
+          <div className="rounded-2xl overflow-hidden mb-3" style={{background:"rgba(255,255,255,0.04)"}}>
+            <div className="px-4 py-3 flex items-center justify-between">
+              <div className="text-[9px] font-black tracking-widest" style={{color:"rgba(255,255,255,0.25)"}}>
+                {colorMode === "dark" ? "🌙 DARK MODE" : "☀️ LIGHT MODE"}
+              </div>
+              <button
+                onClick={() => {
+                  const next: ColorMode = colorMode === "dark" ? "light" : "dark";
+                  setColorMode(next);
+                  applyColorMode(next);
+                }}
+                style={{ position:"relative", width:52, height:28, flexShrink:0 }}
+                className="pressable"
+              >
+                <div style={{
+                  position:"absolute", inset:0, borderRadius:999,
+                  background: colorMode === "dark" ? "rgba(255,255,255,0.12)" : "var(--accent-primary)",
+                  transition:"background 0.3s"
+                }} />
+                <div style={{
+                  position:"absolute", top:4, width:20, height:20, borderRadius:999,
+                  left: colorMode === "dark" ? 4 : 28,
+                  background: colorMode === "dark" ? "rgba(255,255,255,0.7)" : "#000",
+                  display:"flex", alignItems:"center", justifyContent:"center",
+                  fontSize:10, transition:"left 0.3s"
+                }}>
+                  {colorMode === "dark" ? "🌙" : "☀️"}
+                </div>
+              </button>
+            </div>
+          </div>
+
           {/* Téma */}
           <div className="rounded-2xl overflow-hidden" style={{background:"rgba(255,255,255,0.04)"}}>
             <div className="px-4 py-3" style={{borderBottom:"1px solid rgba(255,255,255,0.05)"}}>
