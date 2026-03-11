@@ -1,5 +1,20 @@
 // lib/programsTypes.ts
-export type SportTag = "gym" | "home" | "running" | "boxing" | "mobility" | "hybrid";
+export type SportTag =
+  // Edzőterem
+  | "gym" | "powerlifting" | "olympic" | "bodybuilding" | "crossfit"
+  // Testsúlyos / otthon
+  | "home" | "calisthenics"
+  // Kardio / sport
+  | "running" | "cycling" | "swimming" | "rowing" | "jump_rope" | "hiit"
+  // Küzdősportok
+  | "boxing" | "mma" | "kickboxing" | "muay_thai" | "bjj" | "wrestling" | "judo" | "karate"
+  // Mobilitás / regeneráció
+  | "mobility" | "yoga" | "stretching" | "foam_roll" | "pilates"
+  // Bemelegítés
+  | "warmup"
+  // Egyéb
+  | "hybrid" | "sport_specific";
+
 export type ProgramLevel = "beginner" | "intermediate" | "advanced";
 export type ProgramBlockKind = "exercise" | "drill" | "interval";
 
@@ -7,8 +22,8 @@ export type ProgramBlockTemplate =
   | {
       kind: "exercise";
       name: string;
-      targetReps?: string; // pl "8-12"
-      targetSets?: number; // pl 3
+      targetReps?: string;
+      targetSets?: number;
       notes?: string;
     }
   | {
@@ -28,7 +43,7 @@ export type ProgramBlockTemplate =
 
 export type ProgramSessionTemplate = {
   id: string;
-  name: string; // pl "Full Body A"
+  name: string;
   blocks: ProgramBlockTemplate[];
 };
 
@@ -43,7 +58,7 @@ export type ProgramTemplate = {
   tags?: string[];
   cover?: {
     emoji?: string;
-    gradient?: "slate" | "ember" | "emerald" | "violet" | "sky";
+    gradient?: "slate" | "ember" | "emerald" | "violet" | "sky" | "rose" | "amber" | "indigo";
   };
   description?: string;
   sessions: ProgramSessionTemplate[];
@@ -52,24 +67,19 @@ export type ProgramTemplate = {
 export type ProgramScheduleStub = {
   enabled?: boolean;
   preferredDaysPerWeek?: number;
-  // nap→session leképezés: kulcs "0"..„6" (0=Hétfő), érték sessionId tömb
-  pinnedDays?: Record<string, string[]>; // { "0": [sessionId1, sessionId2], ... }
+  pinnedDays?: Record<string, string[]>;
 };
 
 export type UserProgram = {
   id: string;
   createdAt: number;
   updatedAt: number;
-
   fromTemplateId?: string;
-
   name: string;
+  description?: string;
   sport: SportTag;
   level: ProgramLevel;
   notes?: string;
-
-  // ✅ naptár-ágya
   schedule?: ProgramScheduleStub;
-
   sessions: ProgramSessionTemplate[];
 };
