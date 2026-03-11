@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useTranslation } from "@/lib/i18n";
 import { BottomNav } from "@/components/BottomNav";
 import { WorkoutDetailSheet } from "@/components/WorkoutDetailSheet";
 import type { Workout } from "@/lib/types";
@@ -47,7 +48,7 @@ function buildWeeklyChart(workouts: Workout[]) {
   }
   return weeks;
 }
-function fmtDate(iso: string) { return new Date(iso).toLocaleDateString("hu", {month:"short",day:"2-digit",weekday:"short"}); }
+function fmtDate(iso: string) { return new Date(iso).toLocaleDateString(undefined, {month:"short",day:"2-digit",weekday:"short"}); }
 function fmtDuration(w: Workout) {
   if (!w.finishedAt) return null;
   const mins = Math.round((new Date(w.finishedAt).getTime() - new Date(w.startedAt).getTime()) / 60000);
@@ -73,11 +74,12 @@ function exportWorkoutsCSV(workouts: Workout[]) {
 }
 
 function fmtDateShort(iso: string) {
-  return new Date(iso).toLocaleDateString("hu", {month:"short", day:"2-digit"});
+  return new Date(iso).toLocaleDateString(undefined, {month:"short", day:"2-digit"});
 }
 
 // ── PR Tab komponens ──────────────────────────────────────────
 function PRTab({ prs, onSearch, onOpenChart }: { prs: PRMap; onSearch: (q: string) => void; onOpenChart: (e: PREntry) => void }) {
+  const { t: pt } = useTranslation();
   const [q, setQ] = React.useState("");
   const entries = React.useMemo(() => {
     const all = Object.values(prs).sort((a, b) => b.bestWeight - a.bestWeight);
@@ -90,9 +92,9 @@ function PRTab({ prs, onSearch, onOpenChart }: { prs: PRMap; onSearch: (q: strin
     return (
       <div className="flex flex-col items-center justify-center py-20 text-center px-8">
         <div className="text-4xl mb-3">🏆</div>
-        <div className="text-base font-black mb-2" style={{color:"var(--text-primary)"}}>Még nincs PR</div>
+        <div className="text-base font-black mb-2" style={{color:"var(--text-primary)"}}>{pt.progress.pr_none}</div>
         <div className="text-sm" style={{color:"rgba(255,255,255,0.3)"}}>
-          Végezz el egy edzést és automatikusan megjelennek a személyes rekordjaid
+          {pt.progress.pr_none_sub}
         </div>
       </div>
     );
@@ -103,7 +105,7 @@ function PRTab({ prs, onSearch, onOpenChart }: { prs: PRMap; onSearch: (q: strin
       {/* Kereső */}
       <div className="relative">
         <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm" style={{color:"rgba(255,255,255,0.25)"}}>🔍</span>
-        <input value={q} onChange={e => setQ(e.target.value)} placeholder="Keresés gyakorlatra…"
+        <input value={q} onChange={e => setQ(e.target.value)} placeholder={pt.common.search}
           className="w-full rounded-2xl py-2.5 pl-9 pr-4 text-sm outline-none"
           style={{background:"rgba(255,255,255,0.05)", color:"var(--text-primary)"}} />
       </div>
@@ -118,6 +120,7 @@ function PRTab({ prs, onSearch, onOpenChart }: { prs: PRMap; onSearch: (q: strin
 }
 
 function PRCard({ entry, rank, onOpen }: { entry: PREntry; rank: number; onOpen: () => void }) {
+  const { t: ct } = useTranslation();
   const [expanded, setExpanded] = React.useState(false);
   return (
     <button onClick={() => setExpanded(x => !x)}
@@ -160,9 +163,9 @@ function PRCard({ entry, rank, onOpen }: { entry: PREntry; rank: number; onOpen:
         <div className="px-4 pb-3" style={{borderTop:"1px solid rgba(255,255,255,0.05)"}}>
           <div className="grid grid-cols-3 gap-2 pt-3">
             {[
-              {label:"Legsúlyosabb", value:`${entry.bestWeight} kg`, sub:`${entry.bestWeightReps} rep`},
-              {label:"Legjobb szet", value:`${entry.bestVolume} kg`, sub:`${entry.bestVolumeWeight}×${entry.bestVolumeReps}`},
-              {label:"Össz. szet", value:String(entry.totalSets), sub:`${formatK(entry.totalVolume)} kg vol`},
+              {label:ct.progress.pr_best_weight, value:`${entry.bestWeight} kg`, sub:`${entry.bestWeightReps} rep`},
+              {label:ct.progress.pr_best_set, value:`${entry.bestVolume} kg`, sub:`${entry.bestVolumeWeight}×${entry.bestVolumeReps}`},
+              {label:ct.progress.pr_total_sets, value:String(entry.totalSets), sub:`${formatK(entry.totalVolume)} kg vol`},
             ].map(stat => (
               <div key={stat.label} className="rounded-xl p-2.5 text-center"
                 style={{background:"rgba(255,255,255,0.05)"}}>
@@ -180,6 +183,7 @@ function PRCard({ entry, rank, onOpen }: { entry: PREntry; rank: number; onOpen:
 
 // ── Main Page ─────────────────────────────────────────────────
 export default function ProgressPage() {
+  const { t } = useTranslation();
   const [activeProfileId] = useLocalStorageState<string | null>(LS_ACTIVE_PROFILE, null);
   const profileId = activeProfileId ?? GUEST_PROFILE_ID;
   const LS_HISTORY = React.useMemo(() => profileKey(profileId, "workouts"), [profileId]);
@@ -231,7 +235,7 @@ export default function ProgressPage() {
 
   const deleteWorkout = React.useCallback(async () => {
     if (!selectedId) return;
-    if (!window.confirm("Törlöd ezt az edzést?")) return;
+    if (!window.confirm(t.progress.delete_workout)) return;
     if (usingCloud) {
       const uid = cloudUid(profileId); const user = auth.currentUser;
       if (!uid || !user?.uid || user.uid !== uid) return;
@@ -241,7 +245,7 @@ export default function ProgressPage() {
   }, [selectedId, usingCloud, profileId, setLocalHistory]);
 
   const clearAll = React.useCallback(async () => {
-    if (!window.confirm("Minden edzést törölsz?")) return;
+    if (!window.confirm(t.progress.delete_all)) return;
     if (usingCloud) {
       const uid = cloudUid(profileId); const user = auth.currentUser;
       if (!uid || !user?.uid || user.uid !== uid) return;
@@ -253,9 +257,9 @@ export default function ProgressPage() {
   }, [usingCloud, profileId, setLocalHistory]);
 
   const TABS = [
-    { id: "overview", label: "Áttekintés" },
-    { id: "prs", label: `PR${prCount ? ` (${prCount})` : ""}` },
-    { id: "history", label: `Edzések${history.length ? ` (${history.length})` : ""}` },
+    { id: "overview", label: t.progress.tab_overview },
+    { id: "prs", label: `${t.progress.tab_prs}${prCount ? ` (${prCount})` : ""}` },
+    { id: "history", label: `${t.progress.tab_history}${history.length ? ` (${history.length})` : ""}` },
   ] as const;
 
   return (
@@ -265,16 +269,16 @@ export default function ProgressPage() {
       {/* ── HEADER ── */}
       <div className="px-4 pt-10 pb-4">
         <div className="text-[10px] font-black tracking-widest mb-1" style={{color:"rgba(255,255,255,0.25)"}}>ARCX</div>
-        <h1 className="text-2xl font-black" style={{color:"var(--text-primary)"}}>Progress</h1>
+        <h1 className="text-2xl font-black" style={{color:"var(--text-primary)"}}>{t.progress.title}</h1>
       </div>
 
       {/* ── STAT GRID ── */}
       <div className="px-4 grid grid-cols-2 gap-2 mb-4">
         {[
-          {label:"Összes edzés", value: String(history.length), sub: `${last30count} az elmúlt 30 napban`},
-          {label:"Streak", value: streak ? `${streak} nap` : "—", sub: `${last7count} edzés 7 napban`},
-          {label:"Összes volume", value: formatK(totalVol), sub:"kg összesen"},
-          {label:"Átlag/hét", value: history.length ? `${(last30count/4).toFixed(1)}` : "—", sub:"edzés/hét (30n)"},
+          {label:t.progress.total_workouts, value:String(history.length), sub:`${last30count} ${t.progress.last_30}`},
+          {label:t.progress.streak, value:streak ? `${streak} ${t.progress.nap}` : "—", sub:`${last7count} ${t.progress.last_7}`},
+          {label:t.progress.total_volume, value:formatK(totalVol), sub:t.progress.kg_total},
+          {label:t.progress.avg_per_week, value:history.length ? `${(last30count/4).toFixed(1)}` : "—", sub:t.progress.per_week_30},
         ].map(s => (
           <div key={s.label} className="rounded-2xl p-4" style={{background:"rgba(255,255,255,0.04)"}}>
             <div className="text-xl font-black leading-none" style={{color:"var(--accent-primary)"}}>{s.value}</div>
@@ -305,7 +309,7 @@ export default function ProgressPage() {
             <div className="rounded-2xl overflow-hidden" style={{background:"rgba(255,255,255,0.04)"}}>
               <div className="flex items-center justify-between px-4 py-3"
                 style={{borderBottom:"1px solid rgba(255,255,255,0.05)"}}>
-                <div className="text-[9px] font-black tracking-widest" style={{color:"rgba(255,255,255,0.25)"}}>GRAFIKON</div>
+                <div className="text-[9px] font-black tracking-widest" style={{color:"rgba(255,255,255,0.25)"}}>{t.progress.chart}</div>
                 <div className="flex gap-1">
                   {(["volume","frequency"] as const).map(m => (
                     <button key={m} onClick={() => setChartMode(m)}
@@ -313,7 +317,7 @@ export default function ProgressPage() {
                       style={chartMode===m
                         ? {background:"var(--accent-primary)",color:"#000"}
                         : {background:"rgba(255,255,255,0.06)",color:"rgba(255,255,255,0.35)"}}>
-                      {m==="volume" ? "Volume" : "Frekvencia"}
+                      {m==="volume" ? t.progress.chart_volume : t.progress.chart_freq}
                     </button>
                   ))}
                 </div>
@@ -348,7 +352,7 @@ export default function ProgressPage() {
           {top.length > 0 && (
             <div className="rounded-2xl overflow-hidden" style={{background:"rgba(255,255,255,0.04)"}}>
               <div className="px-4 py-3" style={{borderBottom:"1px solid rgba(255,255,255,0.05)"}}>
-                <div className="text-[9px] font-black tracking-widest" style={{color:"rgba(255,255,255,0.25)"}}>TOP GYAKORLATOK</div>
+                <div className="text-[9px] font-black tracking-widest" style={{color:"rgba(255,255,255,0.25)"}}>{t.progress.top_exercises}</div>
               </div>
               <div className="px-4 py-2">
                 {top.map((t,i) => {
@@ -390,16 +394,16 @@ export default function ProgressPage() {
           {isCloudPid(profileId) && cloudStatus==="wrong-user" && (
             <div className="rounded-2xl p-4 text-sm"
               style={{background:"rgba(239,68,68,0.08)",color:"#fca5a5"}}>
-              Cloud profil aktív, de nincs bejelentkezve. Lépj be újra.
+              {t.progress.cloud_wrong_user}
             </div>
           )}
           {cloudStatus==="loading" && (
-            <div className="text-sm px-2" style={{color:"rgba(255,255,255,0.3)"}}>Cloud adatok betöltése…</div>
+            <div className="text-sm px-2" style={{color:"rgba(255,255,255,0.3)"}}>{t.progress.cloud_loading}</div>
           )}
           {history.length===0 && cloudStatus!=="loading" && (
             <div className="rounded-2xl p-10 text-center" style={{background:"rgba(255,255,255,0.03)"}}>
               <div className="text-3xl mb-2">🏋️</div>
-              <div className="text-sm" style={{color:"rgba(255,255,255,0.3)"}}>Még nincs mentett edzés</div>
+              <div className="text-sm" style={{color:"rgba(255,255,255,0.3)"}}>{t.progress.no_workouts}</div>
             </div>
           )}
           {sorted.map(w => {
