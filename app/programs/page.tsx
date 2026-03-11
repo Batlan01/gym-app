@@ -119,16 +119,15 @@ function CreateProgramSheet({ onClose, onCreate }: {
   return (
     <div className="fixed inset-0 z-50 flex items-end" style={{ background:'rgba(0,0,0,0.6)' }}
       onClick={(e)=>{ if(e.target===e.currentTarget) onClose(); }}>
-      <div className="w-full rounded-t-3xl animate-in slide-in-from-bottom"
-        style={{ background:'var(--bg-elevated)', maxHeight:'90dvh', overflowY:'auto',
-          paddingBottom:'calc(80px + env(safe-area-inset-bottom, 0px))' }}>
+      <div className="w-full rounded-t-3xl animate-in slide-in-from-bottom flex flex-col"
+        style={{ background:'var(--bg-elevated)', maxHeight:'85dvh' }}>
 
         <div className="flex justify-center pt-3 pb-4">
           <div className="h-1 w-10 rounded-full" style={{ background:'var(--surface-3)' }} />
         </div>
 
-        {step === 'info' && (
-          <div className="px-5">
+        {step === 'info' && (<>
+          <div className="flex-1 overflow-y-auto px-5 pt-2 pb-4">
             <h2 className="text-xl font-black mb-1" style={{ color:'var(--text-primary)' }}>
               Új edzésprogram
             </h2>
@@ -149,8 +148,10 @@ function CreateProgramSheet({ onClose, onCreate }: {
             <textarea value={desc} onChange={e=>setDesc(e.target.value)}
               placeholder="Miről szól ez a program? Mi a célja?"
               rows={3} maxLength={200}
-              className="w-full rounded-2xl px-4 py-3 text-sm outline-none resize-none mb-6"
+              className="w-full rounded-2xl px-4 py-3 text-sm outline-none resize-none"
               style={{ background:'var(--surface-1)', border:'1px solid var(--border-mid)', color:'var(--text-primary)' }} />
+          </div>
+          <div className="px-5 pb-8 pt-3 shrink-0" style={{ borderTop:'1px solid var(--border-subtle)' }}>
             <button disabled={!name.trim()} onClick={()=>setStep('sport')}
               className="w-full rounded-2xl py-4 text-sm font-bold pressable"
               style={{ background: name.trim() ? 'var(--accent-primary)' : 'var(--surface-2)',
@@ -158,16 +159,16 @@ function CreateProgramSheet({ onClose, onCreate }: {
               Következő: Kategória →
             </button>
           </div>
-        )}
+        </>)}
 
-        {step === 'sport' && (
-          <div className="px-5">
-            <button onClick={()=>setStep('info')} className="mb-4 text-sm" style={{ color:'var(--text-muted)' }}>
+        {step === 'sport' && (<>
+          <div className="flex-1 overflow-y-auto px-5 pt-2 pb-4">
+            <button onClick={()=>setStep('info')} className="mb-4 text-sm block" style={{ color:'var(--text-muted)' }}>
               ← Vissza
             </button>
             <h2 className="text-xl font-black mb-1" style={{ color:'var(--text-primary)' }}>Válassz kategóriát</h2>
             <p className="text-sm mb-5" style={{ color:'var(--text-muted)' }}>Mi jellemzi legjobban a programodat?</p>
-            <div className="space-y-5 mb-6">
+            <div className="space-y-5">
               {SPORT_GROUPS.map(group => (
                 <div key={group.label}>
                   <div className="text-xs font-bold uppercase tracking-wide mb-2"
@@ -186,22 +187,24 @@ function CreateProgramSheet({ onClose, onCreate }: {
                 </div>
               ))}
             </div>
+          </div>
+          <div className="px-5 pb-8 pt-3 shrink-0" style={{ borderTop:'1px solid var(--border-subtle)' }}>
             <button onClick={()=>setStep('level')}
               className="w-full rounded-2xl py-4 text-sm font-bold pressable"
               style={{ background:'var(--accent-primary)', color:'#000' }}>
               Következő: Szint →
             </button>
           </div>
-        )}
+        </>)}
 
-        {step === 'level' && (
-          <div className="px-5">
-            <button onClick={()=>setStep('sport')} className="mb-4 text-sm" style={{ color:'var(--text-muted)' }}>
+        {step === 'level' && (<>
+          <div className="flex-1 overflow-y-auto px-5 pt-2 pb-4">
+            <button onClick={()=>setStep('sport')} className="mb-4 text-sm block" style={{ color:'var(--text-muted)' }}>
               ← Vissza
             </button>
             <h2 className="text-xl font-black mb-1" style={{ color:'var(--text-primary)' }}>Nehézségi szint</h2>
             <p className="text-sm mb-5" style={{ color:'var(--text-muted)' }}>Kinek szól ez a program?</p>
-            <div className="space-y-3 mb-6">
+            <div className="space-y-3">
               {LEVELS.map(l => (
                 <button key={l.id} onClick={()=>setLevel(l.id)}
                   className="w-full rounded-2xl px-4 py-4 text-left pressable transition-all"
@@ -213,13 +216,15 @@ function CreateProgramSheet({ onClose, onCreate }: {
                 </button>
               ))}
             </div>
+          </div>
+          <div className="px-5 pb-8 pt-3 shrink-0" style={{ borderTop:'1px solid var(--border-subtle)' }}>
             <button onClick={()=>onCreate(name.trim(), desc.trim(), sport, level)}
               className="w-full rounded-2xl py-4 text-sm font-bold pressable"
               style={{ background:'var(--accent-primary)', color:'#000' }}>
               ✓ Program létrehozása
             </button>
           </div>
-        )}
+        </>)}
 
       </div>
     </div>
