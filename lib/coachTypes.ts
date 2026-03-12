@@ -41,13 +41,16 @@ export type Invite = {
   coachUid: string;
   method: InviteMethod;
 
-  // email meghívó esetén
+  // email / in-app meghívó esetén
   email?: string;
 
-  // in-app kód meghívó esetén
+  // in-app: meghívott user uid-ja (ha már regisztrált az appban)
+  targetUid?: string;
+
+  // meghívókód esetén
   inviteCode?: string;
 
-  group?: string;       // csoport ahova meghívva
+  group?: string;        // csoport ahova meghívva
   status: InviteStatus;
   createdAt: string;     // ISO
   expiresAt: string;     // ISO – alapból +7 nap

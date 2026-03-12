@@ -3,6 +3,7 @@ import "./globals.css";
 import { AppFrame } from "@/components/AppFrame";
 import { PendingSyncRunner } from "@/components/PendingSyncRunner";
 import { PushSWRegistrar } from "@/components/PushSWRegistrar";
+import { InviteBanner } from "@/components/InviteBanner";
 
 export const metadata: Metadata = {
   title: "ARCX — Train Smarter",
@@ -47,6 +48,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           } catch(e) {}
         `}} />
         <PushSWRegistrar />
+        <InviteBanner />
         <AppFrame>
           {children}
           <PendingSyncRunner />
