@@ -1,6 +1,4 @@
 // lib/useInviteNotification.ts
-// Hook – lekéri az aktuális user pending invite-jait Firestore-ból
-// Ezek jelennek meg az appban meghívóként
 "use client";
 import * as React from "react";
 import { auth, db } from "@/lib/firebase";
@@ -9,12 +7,13 @@ import type { Invite } from "@/lib/coachTypes";
 
 export function useInviteNotification() {
   const [invites, setInvites] = React.useState<Invite[]>([]);
+  // Lokálisan kezelt elfogadott/visszautasított id-k (azonnali eltüntetés)
+  const [resolved, setResolved] = React.useState<Set<string>>(new Set());
 
   React.useEffect(() => {
     const unsub = auth.onAuthStateChanged(user => {
       if (!user) { setInvites([]); return; }
 
-      // Figyeljük a pending invite-okat ahol targetUid === user.uid
       const q = query(
         collection(db, "invites"),
         where("targetUid", "==", user.uid),
@@ -36,6 +35,8 @@ export function useInviteNotification() {
   }, []);
 
   const acceptInvite = async (inviteId: string) => {
+    // Azonnal eltüntetjük lokálisan
+    setResolved(prev => new Set([...prev, inviteId]));
     const token = await auth.currentUser?.getIdToken();
     await fetch("/api/coach/invite/accept", {
       method: "POST",
@@ -45,8 +46,12 @@ export function useInviteNotification() {
   };
 
   const declineInvite = async (inviteId: string) => {
+    // Azonnal eltüntetjük lokálisan
+    setResolved(prev => new Set([...prev, inviteId]));
     await updateDoc(doc(db, "invites", inviteId), { status: "cancelled" });
   };
 
-  return { invites, acceptInvite, declineInvite };
+  const visibleInvites = invites.filter(i => !resolved.has(i.id));
+
+  return { invites: visibleInvites, acceptInvite, declineInvite };
 }

@@ -44,6 +44,18 @@ export function BottomNav() {
       ),
     },
     {
+      label: t.nav.team ?? "Csapat",
+      href: "/team",
+      icon: (active) => (
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={active ? 2.2 : 1.8} strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="9" cy="7" r="4"/>
+          <path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/>
+          <circle cx="19" cy="7" r="3"/>
+          <path d="M21 21v-2a3 3 0 0 0-2-2.83"/>
+        </svg>
+      ),
+    },
+    {
       label: t.nav.exercises ?? "Gyakorlatok",
       href: "/exercises",
       icon: (active: boolean) => (
