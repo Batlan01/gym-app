@@ -330,6 +330,7 @@ export default function CoachDashboard() {
   };
 
   return (
+    <>
     <div className="flex h-dvh overflow-hidden" style={{ backgroundColor: "var(--bg-base)", color: "var(--text-primary)" }}>
       {sidebarOpen && (
         <div className="fixed inset-0 z-40 md:hidden" onClick={() => setSidebarOpen(false)}
@@ -357,5 +358,6 @@ export default function CoachDashboard() {
       </div>
     </div>
     <InviteModal open={inviteOpen} onClose={() => setInviteOpen(false)} />
+    </>
   );
 }
