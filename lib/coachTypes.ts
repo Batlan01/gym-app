@@ -47,6 +47,7 @@ export type Invite = {
   // in-app kód meghívó esetén
   inviteCode?: string;
 
+  group?: string;       // csoport ahova meghívva
   status: InviteStatus;
   createdAt: string;     // ISO
   expiresAt: string;     // ISO – alapból +7 nap
