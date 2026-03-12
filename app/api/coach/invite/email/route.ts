@@ -1,11 +1,10 @@
 // app/api/coach/invite/email/route.ts
-// POST – email alapú meghívó küldése
+// POST – email alapú meghívó küldése + Resend email dispatch
 // Body: { email: string, group?: string }
 import { NextRequest } from "next/server";
 import { verifyIdToken, jsonError, nanoid } from "@/app/api/coach/_authHelper";
-import {
-  getTeamByCoach, createInvite, getInviteByEmail,
-} from "@/lib/coachFirestore";
+import { getTeamByCoach, createInvite, getInviteByEmail } from "@/lib/coachFirestore";
+import { sendInviteEmail } from "@/lib/email/sendInvite";
 import type { Invite } from "@/lib/coachTypes";
 
 export async function POST(req: NextRequest) {
@@ -17,7 +16,6 @@ export async function POST(req: NextRequest) {
 
   const body = await req.json().catch(() => ({}));
   const email: string = (body?.email ?? "").trim().toLowerCase();
-  const group: string = (body?.group ?? "").trim() || "Általános";
 
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     return jsonError("Valid email required");
@@ -30,7 +28,7 @@ export async function POST(req: NextRequest) {
   }
 
   const now = new Date();
-  const expiresAt = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000); // +7 nap
+  const expiresAt = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
 
   const invite: Invite = {
     id: nanoid(24),
@@ -45,8 +43,19 @@ export async function POST(req: NextRequest) {
 
   await createInvite(invite);
 
-  // TODO: itt fog jönni az email küldés (Resend/SendGrid)
-  // await sendInviteEmail({ to: email, coachName: team.coachName, inviteId: invite.id, teamName: team.name });
+  // Email küldés Resend-en keresztül
+  const coachName = team.coachName ?? "Az edződ";
+  const emailResult = await sendInviteEmail({
+    toEmail: email,
+    coachName,
+    teamName: team.name,
+    inviteId: invite.id,
+    expiresAt: invite.expiresAt,
+  });
 
-  return Response.json({ invite }, { status: 201 });
+  return Response.json({
+    invite,
+    emailSent: emailResult.ok,
+    emailError: emailResult.error ?? null,
+  }, { status: 201 });
 }
