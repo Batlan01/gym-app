@@ -49,7 +49,6 @@ function StatCard({ label, value, sub, accent = false }: { label: string; value:
       </span>
       {sub && <span className="text-xs" style={{ color: "var(--text-muted)" }}>{sub}</span>}
     </div>
-    <InviteModal open={inviteOpen} onClose={() => setInviteOpen(false)} />
   );
 }
 
@@ -357,5 +356,6 @@ export default function CoachDashboard() {
         </div>
       </div>
     </div>
+    <InviteModal open={inviteOpen} onClose={() => setInviteOpen(false)} />
   );
 }
