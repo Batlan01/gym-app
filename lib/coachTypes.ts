@@ -20,16 +20,17 @@ export type Team = {
   createdAt: string;
 };
 
-export type TeamMemberStatus = "active" | "invited" | "removed";
+export type TeamMemberStatus = "active" | "invited" | "idle" | "inactive" | "removed";
 
 export type TeamMember = {
   uid: string;
   displayName: string;
   email: string;
-  group: string;         // pl. "A csoport"
+  group?: string;        // pl. "A csoport"
   status: TeamMemberStatus;
   joinedAt: string;      // ISO
   addedBy: string;       // coachUid
+  compliance?: number;   // 0–100, edzésbetartási arány
 };
 
 export type InviteMethod = "email" | "code";
