@@ -46,7 +46,7 @@ export function BottomNav() {
     {
       label: t.nav.team ?? "Csapat",
       href: "/team",
-      icon: (active) => (
+      icon: (active: boolean) => (
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={active ? 2.2 : 1.8} strokeLinecap="round" strokeLinejoin="round">
           <circle cx="9" cy="7" r="4"/>
           <path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/>
