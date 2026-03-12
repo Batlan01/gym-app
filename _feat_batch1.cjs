@@ -1,76 +1,29 @@
-import type { Workout, WorkoutExercise, SetEntry } from "./types";
+const fs = require('fs');
 
-export function setVolume(s: SetEntry): number {
-  if (s.weight == null || s.reps == null) return 0;
-  return Math.max(0, s.weight) * Math.max(0, s.reps);
-}
+// ── 1. lib/types.ts — setType mező WorkoutSet-hez ─────────────
+let types = fs.readFileSync('D:/gym-webapp/gym-webapp/lib/types.ts', 'utf8');
+if (!types.includes('setType')) {
+  types = types.replace(
+    'export type WorkoutSet = {\n  id: string;\n  reps?: number | null;\n  weight?: number | null;\n  rpe?: number | null;\n  notes?: string;\n  done?: boolean;\n};',
+    `export type SetType = "normal" | "warmup" | "superset" | "dropset" | "failure";
 
-export function workoutVolume(w: Workout): number {
-  return w.exercises.reduce((acc, ex) => acc + ex.sets.reduce((a, s) => a + setVolume(s), 0), 0);
-}
+export type WorkoutSet = {
+  id: string;
+  reps?: number | null;
+  weight?: number | null;
+  rpe?: number | null;
+  notes?: string;
+  done?: boolean;
+  setType?: SetType;
+};`
+  );
+  fs.writeFileSync('D:/gym-webapp/gym-webapp/lib/types.ts', types, 'utf8');
+  console.log('types.ts setType added');
+} else { console.log('types.ts already has setType'); }
 
-export function workoutSetCounts(w: Workout): { total: number; done: number } {
-  let total = 0;
-  let done = 0;
-  for (const ex of w.exercises) {
-    for (const s of ex.sets) {
-      // history-ban már normalizált lesz, de így biztos
-      if (s.weight == null || s.reps == null) continue;
-      total += 1;
-      if (s.done) done += 1;
-    }
-  }
-  return { total, done };
-}
-
-
-export function workoutExerciseCount(w: Workout): number {
-  return w.exercises.length;
-}
-
-export function formatDT(iso: string): string {
-  const d = new Date(iso);
-  return d.toLocaleString([], { month: "short", day: "2-digit", hour: "2-digit", minute: "2-digit" });
-}
-
-export function startOfDay(d: Date): Date {
-  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
-}
-
-export function daysAgo(n: number): Date {
-  const d = new Date();
-  const s = startOfDay(d);
-  s.setDate(s.getDate() - n);
-  return s;
-}
-
-export function withinLastDays(w: Workout, days: number): boolean {
-  const from = daysAgo(days);
-  return new Date(w.startedAt) >= from;
-}
-
-export function topExercisesByVolume(history: Workout[], topN = 5): Array<{ name: string; volume: number }> {
-  const map = new Map<string, { name: string; volume: number }>();
-
-  for (const w of history) {
-    for (const ex of w.exercises) {
-      const vol = ex.sets.reduce((a, s) => a + setVolume(s), 0);
-      const key = ex.exerciseId || ex.name;
-      const cur = map.get(key);
-      if (!cur) map.set(key, { name: ex.name, volume: vol });
-      else cur.volume += vol;
-    }
-  }
-
-  return [...map.values()].sort((a, b) => b.volume - a.volume).slice(0, topN);
-}
-
-export function formatK(num: number): string {
-  if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`;
-  if (num >= 1000) return `${(num / 1000).toFixed(1)}k`;
-  return `${Math.round(num)}`;
-}
-
+// ── 2. lib/workoutMetrics.ts — volume/heti/havi chart helpers ─
+let metrics = fs.readFileSync('D:/gym-webapp/gym-webapp/lib/workoutMetrics.ts', 'utf8');
+const newHelpers = `
 /** Heti aggregált volume — utolsó N hét */
 export function buildWeeklyVolumeChart(workouts: Workout[], weeks = 12): {week: string; vol: number}[] {
   const now = Date.now();
@@ -82,7 +35,7 @@ export function buildWeeklyVolumeChart(workouts: Workout[], weeks = 12): {week: 
     const vol = workouts
       .filter(w => { const t = new Date(w.startedAt).getTime(); return t >= start && t < end; })
       .reduce((a, w) => a + workoutVolume(w), 0);
-    return { week: `${d.getMonth()+1}/${d.getDate()}`, vol: Math.round(vol) };
+    return { week: \`\${d.getMonth()+1}/\${d.getDate()}\`, vol: Math.round(vol) };
   });
 }
 
@@ -160,3 +113,7 @@ export function getProgressionSuggestion(workouts: Workout[], exerciseId: string
     date: last.date,
   };
 }
+`;
+metrics = metrics.trimEnd() + '\n' + newHelpers;
+fs.writeFileSync('D:/gym-webapp/gym-webapp/lib/workoutMetrics.ts', metrics, 'utf8');
+console.log('workoutMetrics.ts extended');

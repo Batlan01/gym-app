@@ -16,6 +16,7 @@ import { readPrograms } from "@/lib/programsStorage";
 import type { Workout, WorkoutExercise, SetEntry } from "@/lib/types";
 import { useLocalStorageState } from "@/lib/useLocalStorageState";
 import { lsSet, lsGet, uid } from "@/lib/storage";
+import { getProgressionSuggestion } from "@/lib/workoutMetrics";
 import {
   formatLastSummary, newExercise, newSet, newWorkout,
   normalizeWorkoutForSave, isSetFilled,
@@ -514,6 +515,19 @@ export default function WorkoutPage() {
                   onRemoveExercise={() => removeExercise(ex.id)}
                   onToggleDone={setId => toggleSetDone(ex.id, setId)}
                   onStartRest={() => startRest(settings.restSec)}
+                  onSetTypeChange={(setId, type) => {
+                    setActive(prev => prev ? {
+                      ...prev,
+                      exercises: prev.exercises.map(e => e.id !== ex.id ? e : {
+                        ...e,
+                        sets: e.sets.map(s => s.id === setId ? {...s, setType: type} : s),
+                      }),
+                    } : prev);
+                  }}
+                  progressionTip={(() => {
+                    const sorted = [...history].sort((a,b)=>new Date(b.startedAt).getTime()-new Date(a.startedAt).getTime());
+                    return getProgressionSuggestion(sorted, ex.exerciseId);
+                  })()}
                 />
               ))
             )}

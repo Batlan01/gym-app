@@ -9,6 +9,8 @@ import { useLocalStorageState } from "@/lib/useLocalStorageState";
 import {
   workoutVolume, workoutSetCounts, workoutExerciseCount,
   withinLastDays, topExercisesByVolume, formatK,
+  buildWeeklyVolumeChart, buildMonthlyVolumeChart,
+  buildHeatmapData, topExercisesDetailed,
 } from "@/lib/workoutMetrics";
 import { LS_ACTIVE_PROFILE, GUEST_PROFILE_ID, profileKey } from "@/lib/profiles";
 import { auth, db } from "@/lib/firebase";
@@ -28,6 +30,75 @@ function calcStreak(workouts: Workout[]): number {
   for (const d of days) { if (d===cursor||d===cursor-86400000){streak++;cursor=d-86400000;}else break; }
   return streak;
 }
+
+// ── Hőtérkép komponens (GitHub-style) ────────────────────────
+const MONTH_LABELS = ["Jan","Feb","Már","Ápr","Máj","Jún","Júl","Aug","Szep","Okt","Nov","Dec"];
+const DAY_LABELS = ["H","K","Sze","Cs","P","Szo","V"];
+
+function WorkoutHeatmap({ workouts }: { workouts: Workout[] }) {
+  const data = React.useMemo(() => buildHeatmapData(workouts), [workouts]);
+
+  // 52 hét × 7 nap grid
+  const weeks: { date: string; count: number }[][] = [];
+  // Kezdőnap: 364 nappal ezelőtt (hétfőre igazítva)
+  const today = new Date();
+  const todayStr = today.toISOString().slice(0,10);
+  // data already ordered oldest → newest (365 items)
+  // Build week columns
+  let weekBuf: { date: string; count: number }[] = [];
+  for (const d of data) {
+    weekBuf.push(d);
+    const dow = new Date(d.date).getDay(); // 0=Sun
+    if (dow === 0) { weeks.push(weekBuf); weekBuf = []; }
+  }
+  if (weekBuf.length) weeks.push(weekBuf);
+
+  function cellColor(count: number): string {
+    if (count === 0) return "rgba(255,255,255,0.05)";
+    if (count === 1) return "rgba(34,211,238,0.25)";
+    if (count === 2) return "rgba(34,211,238,0.55)";
+    return "rgba(34,211,238,0.9)";
+  }
+
+  const totalWorkouts = data.reduce((a,d)=>a+d.count,0);
+  const activeDays = data.filter(d=>d.count>0).length;
+
+  return (
+    <div className="rounded-2xl overflow-hidden" style={{background:"var(--surface-1)"}}>
+      <div className="flex items-center justify-between px-4 py-3" style={{borderBottom:"1px solid var(--border-subtle)"}}>
+        <div className="text-[9px] font-black tracking-widest" style={{color:"var(--text-muted)"}}>EDZÉS HŐTÉRKÉP</div>
+        <div className="text-[9px]" style={{color:"var(--text-muted)"}}>{totalWorkouts} edzés · {activeDays} aktív nap</div>
+      </div>
+      <div className="px-3 pt-2 pb-3 overflow-x-auto">
+        <div className="flex gap-0.5" style={{minWidth: 'max-content'}}>
+          {weeks.map((week, wi) => (
+            <div key={wi} className="flex flex-col gap-0.5">
+              {week.map((d, di) => (
+                <div key={d.date} title={`${d.date}: ${d.count} edzés`}
+                  className="rounded-sm"
+                  style={{
+                    width: 10, height: 10,
+                    background: cellColor(d.count),
+                    outline: d.date === todayStr ? '1px solid rgba(34,211,238,0.8)' : 'none',
+                  }} />
+              ))}
+            </div>
+          ))}
+        </div>
+        {/* Jelmagyarázat */}
+        <div className="flex items-center gap-1.5 mt-2 justify-end">
+          <span className="text-[8px]" style={{color:"var(--text-muted)"}}>Kevés</span>
+          {[0,1,2,3].map(v => (
+            <div key={v} className="rounded-sm" style={{width:9,height:9,background:cellColor(v)}} />
+          ))}
+          <span className="text-[8px]" style={{color:"var(--text-muted)"}}>Sok</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Volume chart helpers ──────────────────────────────────────
 function buildVolumeChart(workouts: Workout[]) {
   const map = new Map<string, number>();
   const now = Date.now();
@@ -77,7 +148,7 @@ function fmtDateShort(iso: string) {
   return new Date(iso).toLocaleDateString(undefined, {month:"short", day:"2-digit"});
 }
 
-// ── PR Tab komponens ──────────────────────────────────────────
+// ── PR Tab ───────────────────────────────────────────────────
 function PRTab({ prs, onSearch, onOpenChart }: { prs: PRMap; onSearch: (q: string) => void; onOpenChart: (e: PREntry) => void }) {
   const { t: pt } = useTranslation();
   const [q, setQ] = React.useState("");
@@ -93,27 +164,19 @@ function PRTab({ prs, onSearch, onOpenChart }: { prs: PRMap; onSearch: (q: strin
       <div className="flex flex-col items-center justify-center py-20 text-center px-8">
         <div className="text-4xl mb-3">🏆</div>
         <div className="text-base font-black mb-2" style={{color:"var(--text-primary)"}}>{pt.progress.pr_none}</div>
-        <div className="text-sm" style={{color:"var(--text-muted)"}}>
-          {pt.progress.pr_none_sub}
-        </div>
+        <div className="text-sm" style={{color:"var(--text-muted)"}}>{pt.progress.pr_none_sub}</div>
       </div>
     );
   }
-
   return (
     <div className="px-4 space-y-3">
-      {/* Kereső */}
       <div className="relative">
         <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm" style={{color:"var(--text-muted)"}}>🔍</span>
         <input value={q} onChange={e => setQ(e.target.value)} placeholder={pt.common.search}
           className="w-full rounded-2xl py-2.5 pl-9 pr-4 text-sm outline-none"
           style={{background:"var(--surface-1)", color:"var(--text-primary)"}} />
       </div>
-
-      {/* PR lista */}
-      <div className="text-[9px] font-black tracking-widest" style={{color:"var(--text-muted)"}}>
-        {entries.length} GYAKORLAT
-      </div>
+      <div className="text-[9px] font-black tracking-widest" style={{color:"var(--text-muted)"}}>{entries.length} GYAKORLAT</div>
       {entries.map((e, i) => <PRCard key={e.exerciseId} entry={e} rank={i + 1} onOpen={() => onOpenChart(e)} />)}
     </div>
   );
@@ -123,42 +186,29 @@ function PRCard({ entry, rank, onOpen }: { entry: PREntry; rank: number; onOpen:
   const { t: ct } = useTranslation();
   const [expanded, setExpanded] = React.useState(false);
   return (
-    <button onClick={() => setExpanded(x => !x)}
-      className="w-full rounded-2xl text-left pressable overflow-hidden"
-      style={{background:"var(--surface-1)"}}>
-      {/* Fő sor */}
+    <button onClick={() => setExpanded(x => !x)} className="w-full rounded-2xl text-left pressable overflow-hidden" style={{background:"var(--surface-1)"}}>
       <div className="flex items-center gap-3 px-4 py-3">
-        <div className="text-xs font-black w-5 text-center shrink-0"
-          style={{color: rank <= 3 ? "var(--accent-primary)" : "rgba(255,255,255,0.2)"}}>
+        <div className="text-xs font-black w-5 text-center shrink-0" style={{color: rank <= 3 ? "var(--accent-primary)" : "rgba(255,255,255,0.2)"}}>
           {rank <= 3 ? ["🥇","🥈","🥉"][rank-1] : rank}
         </div>
         <div className="flex-1 min-w-0">
           <div className="text-sm font-black truncate" style={{color:"var(--text-primary)"}}>{entry.name}</div>
-          <div className="text-[10px] mt-0.5" style={{color:"var(--text-muted)"}}>
-            {fmtDateShort(entry.achievedAt)}
-          </div>
+          <div className="text-[10px] mt-0.5" style={{color:"var(--text-muted)"}}>{fmtDateShort(entry.achievedAt)}</div>
         </div>
-        {/* Best weight badge */}
         <div className="text-right shrink-0">
           <div className="text-lg font-black leading-none" style={{color:"var(--accent-primary)"}}>
-            {entry.bestWeight}
-            <span className="text-xs font-normal ml-0.5" style={{color:"var(--text-muted)"}}>kg</span>
+            {entry.bestWeight}<span className="text-xs font-normal ml-0.5" style={{color:"var(--text-muted)"}}>kg</span>
           </div>
-          <div className="text-[10px]" style={{color:"var(--text-muted)"}}>
-            × {entry.bestWeightReps} rep
-          </div>
+          <div className="text-[10px]" style={{color:"var(--text-muted)"}}>× {entry.bestWeightReps} rep</div>
         </div>
         <div className="flex items-center gap-2">
           <button onClick={(e) => { e.stopPropagation(); onOpen(); }}
-            className="rounded-xl px-2 py-1 text-[10px] font-black"
-            style={{background:"var(--accent-primary)",color:"#000"}}>
+            className="rounded-xl px-2 py-1 text-[10px] font-black" style={{background:"var(--accent-primary)",color:"#000"}}>
             Grafikon →
           </button>
           <div className="text-xs" style={{color:"rgba(255,255,255,0.2)"}}>{expanded ? "▲" : "▼"}</div>
         </div>
       </div>
-
-      {/* Kibontva — részletek */}
       {expanded && (
         <div className="px-4 pb-3" style={{borderTop:"1px solid var(--border-subtle)"}}>
           <div className="grid grid-cols-3 gap-2 pt-3">
@@ -167,8 +217,7 @@ function PRCard({ entry, rank, onOpen }: { entry: PREntry; rank: number; onOpen:
               {label:ct.progress.pr_best_set, value:`${entry.bestVolume} kg`, sub:`${entry.bestVolumeWeight}×${entry.bestVolumeReps}`},
               {label:ct.progress.pr_total_sets, value:String(entry.totalSets), sub:`${formatK(entry.totalVolume)} kg vol`},
             ].map(stat => (
-              <div key={stat.label} className="rounded-xl p-2.5 text-center"
-                style={{background:"var(--surface-1)"}}>
+              <div key={stat.label} className="rounded-xl p-2.5 text-center" style={{background:"var(--surface-1)"}}>
                 <div className="text-sm font-black" style={{color:"var(--accent-primary)"}}>{stat.value}</div>
                 <div className="text-[9px] mt-0.5" style={{color:"var(--text-muted)"}}>{stat.sub}</div>
                 <div className="text-[8px] mt-1" style={{color:"rgba(255,255,255,0.2)"}}>{stat.label}</div>
@@ -193,7 +242,7 @@ export default function ProgressPage() {
   const [tab, setTab] = React.useState<"overview"|"prs"|"history">("overview");
   const [detailOpen, setDetailOpen] = React.useState(false);
   const [selectedId, setSelectedId] = React.useState<string | null>(null);
-  const [chartMode, setChartMode] = React.useState<"volume"|"frequency">("volume");
+  const [chartMode, setChartMode] = React.useState<"daily"|"weekly"|"monthly">("daily");
   const [prs, setPrs] = React.useState<PRMap>({});
   const [prChartEntry, setPrChartEntry] = React.useState<PREntry | null>(null);
   const [prChartHistory, setPrChartHistory] = React.useState<ExerciseHistoryPoint[]>([]);
@@ -213,20 +262,18 @@ export default function ProgressPage() {
   const sorted = React.useMemo(() => [...history].sort((a,b) =>
     new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime()), [history]);
 
-  // PR-ek újraszámítása ha változik a history
   React.useEffect(() => {
-    if (history.length > 0) {
-      const computed = rebuildPRs(profileId, history);
-      setPrs(computed);
-    }
+    if (history.length > 0) { const computed = rebuildPRs(profileId, history); setPrs(computed); }
   }, [history, profileId]);
 
   const streak = React.useMemo(() => calcStreak(history), [history]);
   const totalVol = React.useMemo(() => history.reduce((a,w) => a+workoutVolume(w), 0), [history]);
   const last7count = history.filter(w => withinLastDays(w, 7)).length;
   const last30count = history.filter(w => withinLastDays(w, 30)).length;
-  const top = React.useMemo(() => topExercisesByVolume(history, 5), [history]);
+  const topDetailed = React.useMemo(() => topExercisesDetailed(history, 5), [history]);
   const volChart = React.useMemo(() => buildVolumeChart(history), [history]);
+  const weekVolChart = React.useMemo(() => buildWeeklyVolumeChart(history, 12), [history]);
+  const monthVolChart = React.useMemo(() => buildMonthlyVolumeChart(history, 12), [history]);
   const weekChart = React.useMemo(() => buildWeeklyChart(history), [history]);
   const prCount = Object.keys(prs).length;
 
@@ -242,7 +289,7 @@ export default function ProgressPage() {
       try { await deleteDoc(doc(db, "users", user.uid, "workouts", selectedId)); } catch {}
     } else { setLocalHistory(p => p.filter(w => w.id !== selectedId)); }
     setDetailOpen(false); setSelectedId(null);
-  }, [selectedId, usingCloud, profileId, setLocalHistory]);
+  }, [selectedId, usingCloud, profileId, setLocalHistory, t.progress.delete_workout]);
 
   const clearAll = React.useCallback(async () => {
     if (!window.confirm(t.progress.delete_all)) return;
@@ -254,13 +301,15 @@ export default function ProgressPage() {
         const batch = writeBatch(db); snap.docs.forEach(d => batch.delete(d.ref)); await batch.commit();
       } catch {}
     } else { setLocalHistory([]); }
-  }, [usingCloud, profileId, setLocalHistory]);
+  }, [usingCloud, profileId, setLocalHistory, t.progress.delete_all]);
 
   const TABS = [
     { id: "overview", label: t.progress.tab_overview },
     { id: "prs", label: `${t.progress.tab_prs}${prCount ? ` (${prCount})` : ""}` },
     { id: "history", label: `${t.progress.tab_history}${history.length ? ` (${history.length})` : ""}` },
   ] as const;
+
+  const chartData = chartMode === "daily" ? volChart : chartMode === "weekly" ? weekVolChart.map(d=>({date:d.week,vol:d.vol})) : monthVolChart.map(d=>({date:d.month,vol:d.vol}));
 
   return (
     <div className="flex flex-col" style={{minHeight:"100dvh"}}>
@@ -290,13 +339,13 @@ export default function ProgressPage() {
 
       {/* ── TAB BAR ── */}
       <div className="flex gap-1 px-4 mb-4">
-        {TABS.map(t => (
-          <button key={t.id} onClick={() => setTab(t.id)}
+        {TABS.map(tt => (
+          <button key={tt.id} onClick={() => setTab(tt.id)}
             className="flex-1 rounded-2xl py-2.5 text-[11px] font-black pressable"
-            style={tab===t.id
+            style={tab===tt.id
               ? { background: "var(--accent-primary)", color: "#000" }
               : { background:"var(--surface-1)", color:"var(--text-secondary)" }}>
-            {t.label}
+            {tt.label}
           </button>
         ))}
       </div>
@@ -304,68 +353,66 @@ export default function ProgressPage() {
       {/* ── OVERVIEW TAB ── */}
       {tab==="overview" && (
         <div className="px-4 space-y-3">
-          {/* Chart */}
+
+          {/* Volume grafikon — napi/heti/havi váltóval */}
           {history.length > 1 && (
             <div className="rounded-2xl overflow-hidden" style={{background:"var(--surface-1)"}}>
-              <div className="flex items-center justify-between px-4 py-3"
-                style={{borderBottom:"1px solid var(--border-subtle)"}}>
-                <div className="text-[9px] font-black tracking-widest" style={{color:"var(--text-muted)"}}>{t.progress.chart}</div>
+              <div className="flex items-center justify-between px-4 py-3" style={{borderBottom:"1px solid var(--border-subtle)"}}>
+                <div className="text-[9px] font-black tracking-widest" style={{color:"var(--text-muted)"}}>ÖSSZTÖMEG (KG)</div>
                 <div className="flex gap-1">
-                  {(["volume","frequency"] as const).map(m => (
+                  {([["daily","30 nap"],["weekly","12 hét"],["monthly","12 hó"]] as const).map(([m,lbl]) => (
                     <button key={m} onClick={() => setChartMode(m)}
                       className="rounded-xl px-2.5 py-1 text-[10px] font-black pressable"
-                      style={chartMode===m
-                        ? {background:"var(--accent-primary)",color:"#000"}
-                        : {background:"var(--surface-2)",color:"var(--text-muted)"}}>
-                      {m==="volume" ? t.progress.chart_volume : t.progress.chart_freq}
+                      style={chartMode===m ? {background:"var(--accent-primary)",color:"#000"} : {background:"var(--surface-2)",color:"var(--text-muted)"}}>
+                      {lbl}
                     </button>
                   ))}
                 </div>
               </div>
               <div className="px-2 pt-2 pb-3">
-                {chartMode==="volume" ? (
-                  <ResponsiveContainer width="100%" height={90}>
-                    <BarChart data={volChart} margin={{top:4,right:0,left:-28,bottom:0}}>
-                      <XAxis dataKey="date" tick={{fontSize:8,fill:"rgba(255,255,255,0.2)"}} tickLine={false} axisLine={false} interval={6} />
-                      <Tooltip contentStyle={{background:"var(--bg-elevated)",border:"none",borderRadius:10,fontSize:11}}
-                        itemStyle={{color:"var(--accent-primary)"}} labelStyle={{color:"var(--text-secondary)"}}
-                        formatter={(v:any) => [`${formatK(Number(v))} kg`]} />
-                      <Bar dataKey="vol" fill="var(--accent-primary)" radius={[3,3,0,0]} opacity={0.85} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                ) : (
-                  <ResponsiveContainer width="100%" height={90}>
-                    <BarChart data={weekChart} margin={{top:4,right:0,left:-28,bottom:0}}>
-                      <XAxis dataKey="week" tick={{fontSize:8,fill:"rgba(255,255,255,0.2)"}} tickLine={false} axisLine={false} />
-                      <Tooltip contentStyle={{background:"var(--bg-elevated)",border:"none",borderRadius:10,fontSize:11}}
-                        itemStyle={{color:"#4ade80"}} labelStyle={{color:"var(--text-secondary)"}}
-                        formatter={(v:any) => [`${v} edzés`]} />
-                      <Bar dataKey="count" fill="#4ade80" radius={[3,3,0,0]} opacity={0.85} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                )}
+                <ResponsiveContainer width="100%" height={100}>
+                  <BarChart data={chartData} margin={{top:4,right:0,left:-28,bottom:0}}>
+                    <XAxis dataKey="date" tick={{fontSize:8,fill:"rgba(255,255,255,0.2)"}} tickLine={false} axisLine={false}
+                      interval={chartMode==="daily" ? 6 : 2} />
+                    <Tooltip contentStyle={{background:"var(--bg-elevated)",border:"none",borderRadius:10,fontSize:11}}
+                      itemStyle={{color:"var(--accent-primary)"}} labelStyle={{color:"var(--text-secondary)"}}
+                      formatter={(v:any) => [`${formatK(Number(v))} kg`]} />
+                    <Bar dataKey="vol" fill="var(--accent-primary)" radius={[3,3,0,0]} opacity={0.85} />
+                  </BarChart>
+                </ResponsiveContainer>
               </div>
             </div>
           )}
 
-          {/* Top gyakorlatok */}
-          {top.length > 0 && (
+          {/* Hőtérkép */}
+          {history.length > 0 && <WorkoutHeatmap workouts={history} />}
+
+          {/* Top 5 gyakorlat — részletes */}
+          {topDetailed.length > 0 && (
             <div className="rounded-2xl overflow-hidden" style={{background:"var(--surface-1)"}}>
               <div className="px-4 py-3" style={{borderBottom:"1px solid var(--border-subtle)"}}>
-                <div className="text-[9px] font-black tracking-widest" style={{color:"var(--text-muted)"}}>{t.progress.top_exercises}</div>
+                <div className="text-[9px] font-black tracking-widest" style={{color:"var(--text-muted)"}}>TOP 5 GYAKORLAT</div>
               </div>
-              <div className="px-4 py-2">
-                {top.map((t,i) => {
-                  const maxVol = top[0].volume;
+              <div className="px-4 py-2 space-y-0">
+                {topDetailed.map((ex, i) => {
+                  const maxVol = topDetailed[0].volume;
+                  const MEDALS = ["🥇","🥈","🥉"];
                   return (
-                    <div key={t.name} className="py-2" style={{borderBottom: i<top.length-1 ? "1px solid rgba(255,255,255,0.04)" : "none"}}>
-                      <div className="flex justify-between text-xs mb-1.5">
-                        <span style={{color:"var(--text-primary)"}}>{i+1}. {t.name}</span>
-                        <span style={{color:"var(--text-muted)"}}>{formatK(t.volume)} kg</span>
+                    <div key={ex.exerciseId} className="py-2.5" style={{borderBottom: i<topDetailed.length-1 ? "1px solid rgba(255,255,255,0.04)" : "none"}}>
+                      <div className="flex items-center justify-between mb-1.5">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm">{MEDALS[i] ?? `${i+1}.`}</span>
+                          <span className="text-xs font-bold" style={{color:"var(--text-primary)"}}>{ex.name}</span>
+                        </div>
+                        <div className="flex gap-3 text-[9px]" style={{color:"var(--text-muted)"}}>
+                          <span>{ex.sessions} session</span>
+                          <span>{ex.totalSets} set</span>
+                          <span className="font-bold" style={{color:"var(--accent-primary)"}}>{formatK(ex.volume)} kg</span>
+                        </div>
                       </div>
                       <div className="h-1 rounded-full overflow-hidden" style={{background:"var(--surface-2)"}}>
-                        <div className="h-full rounded-full"
-                          style={{width:`${Math.round((t.volume/maxVol)*100)}%`,background:"var(--accent-primary)",opacity:1-i*0.15}} />
+                        <div className="h-full rounded-full transition-all"
+                          style={{width:`${Math.round((ex.volume/maxVol)*100)}%`, background:"var(--accent-primary)", opacity: 1-i*0.12}} />
                       </div>
                     </div>
                   );
@@ -373,27 +420,52 @@ export default function ProgressPage() {
               </div>
             </div>
           )}
+
+          {/* Edzés frekvencia grafikon */}
+          {history.length > 1 && (
+            <div className="rounded-2xl overflow-hidden" style={{background:"var(--surface-1)"}}>
+              <div className="px-4 py-3" style={{borderBottom:"1px solid var(--border-subtle)"}}>
+                <div className="text-[9px] font-black tracking-widest" style={{color:"var(--text-muted)"}}>EDZÉS FREKVENCIA (HETI)</div>
+              </div>
+              <div className="px-2 pt-2 pb-3">
+                <ResponsiveContainer width="100%" height={80}>
+                  <BarChart data={weekChart} margin={{top:4,right:0,left:-28,bottom:0}}>
+                    <XAxis dataKey="week" tick={{fontSize:8,fill:"rgba(255,255,255,0.2)"}} tickLine={false} axisLine={false} />
+                    <Tooltip contentStyle={{background:"var(--bg-elevated)",border:"none",borderRadius:10,fontSize:11}}
+                      itemStyle={{color:"#4ade80"}} labelStyle={{color:"var(--text-secondary)"}}
+                      formatter={(v:any) => [`${v} edzés`]} />
+                    <Bar dataKey="count" fill="#4ade80" radius={[3,3,0,0]} opacity={0.85} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          )}
+
+          {/* CSV Export */}
+          {history.length > 0 && (
+            <button onClick={() => exportWorkoutsCSV(history)}
+              className="w-full rounded-2xl py-3 text-sm font-bold pressable"
+              style={{background:"var(--surface-1)",color:"var(--text-muted)"}}>
+              ↓ CSV exportálás
+            </button>
+          )}
         </div>
       )}
 
       {/* ── PR TAB ── */}
       {tab==="prs" && (
-        <PRTab
-          prs={prs}
-          onSearch={() => {}}
+        <PRTab prs={prs} onSearch={() => {}}
           onOpenChart={(entry) => {
             setPrChartEntry(entry);
             setPrChartHistory(buildExerciseHistory(history, entry.exerciseId));
-          }}
-        />
+          }} />
       )}
 
       {/* ── HISTORY TAB ── */}
       {tab==="history" && (
         <div className="px-4 space-y-2">
           {isCloudPid(profileId) && cloudStatus==="wrong-user" && (
-            <div className="rounded-2xl p-4 text-sm"
-              style={{background:"rgba(239,68,68,0.08)",color:"#fca5a5"}}>
+            <div className="rounded-2xl p-4 text-sm" style={{background:"rgba(239,68,68,0.08)",color:"#fca5a5"}}>
               {t.progress.cloud_wrong_user}
             </div>
           )}
@@ -409,62 +481,50 @@ export default function ProgressPage() {
           {sorted.map(w => {
             const counts = workoutSetCounts(w);
             const vol = workoutVolume(w);
-            const exCount = workoutExerciseCount(w);
             const dur = fmtDuration(w);
+            const exCount = workoutExerciseCount(w);
             return (
               <button key={w.id} onClick={() => { setSelectedId(w.id); setDetailOpen(true); }}
                 className="w-full rounded-2xl p-4 text-left pressable"
                 style={{background:"var(--surface-1)"}}>
-                <div className="flex items-start justify-between gap-2 mb-2">
-                  <div className="text-sm font-black" style={{color:"var(--text-primary)"}}>
-                    {w.title || fmtDate(w.startedAt)}
+                <div className="flex justify-between items-start mb-2">
+                  <div>
+                    <div className="text-sm font-black" style={{color:"var(--text-primary)"}}>{w.title || fmtDate(w.startedAt)}</div>
+                    <div className="text-[10px] mt-0.5" style={{color:"var(--text-muted)"}}>{fmtDate(w.startedAt)}</div>
                   </div>
-                  <div className="text-[10px] shrink-0" style={{color:"var(--text-muted)"}}>
-                    {new Date(w.startedAt).toLocaleDateString("hu",{month:"short",day:"2-digit"})}
-                  </div>
+                  {dur && <div className="text-xs font-bold" style={{color:"var(--text-muted)"}}>{dur}</div>}
                 </div>
-                <div className="flex gap-1.5 flex-wrap">
-                  {[
-                    {icon:"🏋️", val:`${exCount} gyakorlat`},
-                    {icon:"✅", val:`${counts.done}/${counts.total} set`},
-                    {icon:"📈", val:`${formatK(vol)} kg`},
-                    ...(dur ? [{icon:"⏱", val:dur}] : []),
-                  ].map(chip => (
-                    <span key={chip.val} className="rounded-xl px-2 py-1 text-[10px] font-semibold"
-                      style={{background:"var(--surface-2)",color:"var(--text-secondary)"}}>
-                      {chip.icon} {chip.val}
-                    </span>
-                  ))}
+                <div className="flex gap-3 text-[10px]" style={{color:"var(--text-muted)"}}>
+                  <span>{exCount} gyakorlat</span>
+                  <span>{counts.done} set</span>
+                  <span style={{color:"var(--accent-primary)"}}>{formatK(vol)} kg</span>
                 </div>
               </button>
             );
           })}
           {history.length > 0 && (
-            <div className="flex gap-2 mt-1">
-              <button onClick={() => exportWorkoutsCSV(sorted)}
-                className="flex-1 rounded-2xl py-3 text-xs font-black pressable"
-                style={{background:"var(--surface-1)",color:"var(--text-secondary)"}}>
-                CSV export
-              </button>
-              <button onClick={clearAll} className="flex-1 rounded-2xl py-3 text-xs pressable"
-                style={{background:"rgba(239,68,68,0.06)",color:"rgba(239,68,68,0.5)"}}>
-                Összes törlése
-              </button>
-            </div>
+            <button onClick={clearAll} className="w-full rounded-2xl py-3 text-sm font-bold mt-2 pressable"
+              style={{background:"rgba(239,68,68,0.06)",color:"#fca5a5"}}>
+              Összes edzés törlése
+            </button>
           )}
         </div>
       )}
-    </div>
 
-    <PRChartSheet
-      open={!!prChartEntry}
-      entry={prChartEntry}
-      history={prChartHistory}
-      onClose={() => setPrChartEntry(null)}
-    />
-    <WorkoutDetailSheet open={detailOpen} onClose={() => setDetailOpen(false)}
-      workout={selected} onDelete={deleteWorkout} />
+    </div>
     <BottomNav />
+
+    {/* WorkoutDetailSheet */}
+    {selected && (
+      <WorkoutDetailSheet open={detailOpen} onClose={() => { setDetailOpen(false); setSelectedId(null); }}
+        workout={selected} onDelete={deleteWorkout} />
+    )}
+
+    {/* PR Chart Sheet */}
+    {prChartEntry && (
+      <PRChartSheet open={!!prChartEntry} onClose={() => setPrChartEntry(null)}
+        entry={prChartEntry} history={prChartHistory} />
+    )}
     </div>
   );
 }

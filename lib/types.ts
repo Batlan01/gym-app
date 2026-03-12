@@ -1,4 +1,6 @@
 // lib/types.ts
+export type SetType = "normal" | "warmup" | "superset" | "dropset" | "failure";
+
 export type WorkoutSet = {
   id: string;
   reps?: number | null;
@@ -6,6 +8,7 @@ export type WorkoutSet = {
   rpe?: number | null;
   notes?: string;
   done?: boolean;
+  setType?: SetType;
 };
 
 // Alias for backward compatibility
