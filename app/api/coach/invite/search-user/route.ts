@@ -1,6 +1,6 @@
 // app/api/coach/invite/search-user/route.ts
 // GET – keresi a usert email alapján a Firestore /users kollekcióban
-// (Firebase Auth REST API csak email/password usereknél műkdig, Google OAuth-nál nem)
+// A coach ID tokenjével hitelesíti a Firestore REST hívást
 // Query: ?email=...
 import { NextRequest } from "next/server";
 import { verifyIdToken, jsonError } from "@/app/api/coach/_authHelper";
@@ -8,7 +8,8 @@ import { verifyIdToken, jsonError } from "@/app/api/coach/_authHelper";
 const FIRESTORE_BASE = `https://firestore.googleapis.com/v1/projects/${process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID}/databases/(default)/documents`;
 
 export async function GET(req: NextRequest) {
-  const uid = await verifyIdToken(req.headers.get("authorization"));
+  const authHeader = req.headers.get("authorization");
+  const uid = await verifyIdToken(authHeader);
   if (!uid) return jsonError("Unauthorized", 401);
 
   const email = (req.nextUrl.searchParams.get("email") ?? "").trim().toLowerCase();
@@ -16,11 +17,16 @@ export async function GET(req: NextRequest) {
     return jsonError("Valid email required");
   }
 
+  // A coach Bearer tokenjével hitelesítjük a Firestore REST query-t
+  const idToken = authHeader!.slice(7);
+
   try {
-    // Firestore REST API – query: users collection where email == ?
     const res = await fetch(`${FIRESTORE_BASE}:runQuery`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${idToken}`,
+      },
       body: JSON.stringify({
         structuredQuery: {
           from: [{ collectionId: "users" }],
@@ -36,14 +42,20 @@ export async function GET(req: NextRequest) {
       }),
     });
 
-    if (!res.ok) return Response.json({ found: false });
+    if (!res.ok) {
+      const errText = await res.text();
+      console.error("[search-user] Firestore error:", res.status, errText);
+      return Response.json({ found: false });
+    }
 
     const results = await res.json();
-    const doc = results?.[0]?.document;
-    if (!doc) return Response.json({ found: false });
+    const docResult = results?.[0]?.document;
+    if (!docResult) return Response.json({ found: false });
 
-    const fields = doc.fields ?? {};
+    const fields = docResult.fields ?? {};
     const foundUid = fields.uid?.stringValue;
+
+    // Ne találjuk meg magunkat
     if (!foundUid || foundUid === uid) return Response.json({ found: false });
 
     return Response.json({
