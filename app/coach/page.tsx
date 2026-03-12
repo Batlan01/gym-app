@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { InviteModal } from "@/components/coach/InviteModal";
 
 // ─── Mock data ───────────────────────────────────────────────────────────────
 const COACH = { name: "Kovács Péter", plan: "ARCX Premium", avatar: "KP" };
@@ -48,6 +49,7 @@ function StatCard({ label, value, sub, accent = false }: { label: string; value:
       </span>
       {sub && <span className="text-xs" style={{ color: "var(--text-muted)" }}>{sub}</span>}
     </div>
+    <InviteModal open={inviteOpen} onClose={() => setInviteOpen(false)} />
   );
 }
 
@@ -226,7 +228,7 @@ function DashboardPage() {
 }
 
 // ─── Team Page ────────────────────────────────────────────────────────────────
-function TeamPage() {
+function TeamPage({ onInvite }: { onInvite: () => void }) {
   const [activeGroup, setActiveGroup] = React.useState("Összes");
   const [search, setSearch] = React.useState("");
   const filtered = TEAM_MEMBERS.filter(m => {
@@ -242,10 +244,8 @@ function TeamPage() {
           <p className="text-sm mt-0.5" style={{ color: "var(--text-muted)" }}>{TEAM_MEMBERS.length} tag · 3 csoport</p>
         </div>
         <div className="flex gap-2">
-          <button className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold pressable"
-            style={{ background: "var(--surface-2)", border: "1px solid var(--border-mid)", color: "var(--text-primary)" }}>Email meghívó</button>
-          <button className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold pressable"
-            style={{ background: "var(--accent-primary)", color: "#080B0F" }}>+ Tag hozzáadása</button>
+          <button onClick={onInvite} className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold pressable"
+            style={{ background: "var(--accent-primary)", color: "#080B0F" }}>+ Tag meghívása</button>
         </div>
       </div>
       <div className="flex items-center gap-3 flex-wrap">
@@ -316,11 +316,12 @@ function PlaceholderPage({ title, desc }: { title: string; desc: string }) {
 export default function CoachDashboard() {
   const [activePage, setActivePage] = React.useState("dashboard");
   const [sidebarOpen, setSidebarOpen] = React.useState(false);
+  const [inviteOpen, setInviteOpen] = React.useState(false);
 
   const renderPage = () => {
     switch (activePage) {
       case "dashboard": return <DashboardPage />;
-      case "team":      return <TeamPage />;
+      case "team":      return <TeamPage onInvite={() => setInviteOpen(true)} />;
       case "plans":     return <PlaceholderPage title="Edzéstervek" desc="Hozz létre részletes edzésterveket és rendeld hozzá csapattagjaidhoz." />;
       case "calendar":  return <PlaceholderPage title="Naptár" desc="Heti edzésmenetrend tervezése, szerkesztése és kiküldése." />;
       case "stats":     return <PlaceholderPage title="Statisztikák" desc="Csapatod teljesítményének részletes elemzése." />;
