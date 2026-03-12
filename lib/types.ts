@@ -20,6 +20,7 @@ export type WorkoutExercise = {
   sets: WorkoutSet[];
   notes?: string;
   favorite?: boolean;
+  bilateral?: boolean;
 };
 
 export type Workout = {

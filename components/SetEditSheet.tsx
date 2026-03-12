@@ -1,7 +1,8 @@
 "use client";
 
 import * as React from "react";
-import type { SetEntry } from "@/lib/types";
+import type { SetEntry, WorkoutExercise } from "@/lib/types";
+import { isBilateralExercise } from "@/lib/workoutHelpers";
 
 // Epley formula: 1RM = w * (1 + r/30)
 function calc1RM(weight: number, reps: number): number {
@@ -91,11 +92,14 @@ function NumericWheel({ label, value, onChange, step = 1, decimals = 0 }: {
 }
 
 // Inline plate + 1RM info panel
-function InfoPanel({ weight, reps }: { weight: number; reps: number }) {
+function InfoPanel({ weight, reps, bilateral }: { weight: number; reps: number; bilateral: boolean }) {
   const [barKg, setBarKg] = React.useState(20);
   const orm = weight > 0 && reps > 0 ? calc1RM(weight, reps) : null;
-  const plates = weight > 0 ? calcPlates(weight, barKg) : [];
-  const actualTotal = barKg + plates.reduce((s, p) => s + p.plate * p.count * 2, 0);
+  // Egykezes: a suly 1 kézre vonatkozik, a barbell calc is 1 kézre
+  const plates = weight > 0 && !bilateral ? calcPlates(weight, barKg) : [];
+  const actualTotal = bilateral
+    ? weight * 2
+    : barKg + plates.reduce((s, p) => s + p.plate * p.count * 2, 0);
 
   return (
     <div className="rounded-2xl overflow-hidden mb-4" style={{ background:"var(--surface-1)", border:"1px solid var(--border-subtle)" }}>
@@ -119,21 +123,40 @@ function InfoPanel({ weight, reps }: { weight: number; reps: number }) {
         <div className="flex-1 px-4 py-3">
           <div className="flex items-center justify-between mb-1">
             <div className="text-[9px] font-black tracking-widest" style={{ color:"var(--text-muted)" }}>LEMEZEK / OLDAL</div>
-            {/* Bar selector */}
-            <div className="flex gap-1">
-              {[15, 20].map(b => (
-                <button key={b} onClick={() => setBarKg(b)}
-                  className="rounded-lg px-1.5 py-0.5 text-[9px] font-black pressable"
-                  style={barKg === b
-                    ? { background: "var(--accent-primary)", color: "#000" }
-                    : { background:"var(--surface-2)", color:"var(--text-muted)" }}>
-                  {b}kg
-                </button>
-              ))}
-            </div>
+            {/* Bar selector — csak barbell esetén */}
+            {!bilateral && (
+              <div className="flex gap-1">
+                {[15, 20].map(b => (
+                  <button key={b} onClick={() => setBarKg(b)}
+                    className="rounded-lg px-1.5 py-0.5 text-[9px] font-black pressable"
+                    style={barKg === b
+                      ? { background: "var(--accent-primary)", color: "#000" }
+                      : { background:"var(--surface-2)", color:"var(--text-muted)" }}>
+                    {b}kg
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
           {weight === 0 ? (
             <div className="text-sm font-black" style={{ color: "rgba(255,255,255,0.2)" }}>—</div>
+          ) : bilateral ? (
+            /* Egykezes: két dumbbell */
+            <div className="flex items-center justify-center gap-4 my-1">
+              {[0,1].map(side => (
+                <div key={side} className="flex flex-col items-center gap-1">
+                  <div className="flex items-center gap-0.5">
+                    <div className="rounded" style={{ width: 8, height: 20, background: 'rgba(255,255,255,0.12)' }} />
+                    <div className="flex items-center justify-center rounded text-[9px] font-black"
+                      style={{ width: 28, height: 28, background: 'var(--accent-primary)', color: '#000' }}>
+                      {weight}
+                    </div>
+                    <div className="rounded" style={{ width: 8, height: 20, background: 'rgba(255,255,255,0.12)' }} />
+                  </div>
+                  <div className="text-[8px]" style={{ color: 'var(--text-muted)' }}>{side === 0 ? 'bal' : 'jobb'}</div>
+                </div>
+              ))}
+            </div>
           ) : (
             <>
               {/* Szimmetrikus barbell vizualizáció */}
@@ -195,16 +218,26 @@ function InfoPanel({ weight, reps }: { weight: number; reps: number }) {
   );
 }
 
-export function SetEditSheet({ open, onClose, title, set, onSave, onDelete, onCopyPrev }: {
+export function SetEditSheet({ open, onClose, title, set, exercise, onSave, onDelete, onCopyPrev, onBilateralChange }: {
   open: boolean; onClose: () => void; title: string;
   set: SetEntry | null;
+  exercise?: WorkoutExercise;
   onSave: (patch: Partial<SetEntry>) => void;
   onDelete: () => void; onCopyPrev: () => void;
+  onBilateralChange?: (bilateral: boolean) => void;
 }) {
   if (!open || !set) return null;
 
   const w = set.weight ?? 0;
   const r = set.reps ?? 0;
+  const autoBilateral = isBilateralExercise(exercise?.category, exercise?.bilateral);
+  const [bilateral, setBilateral] = React.useState(exercise?.bilateral ?? autoBilateral);
+
+  function toggleBilateral() {
+    const next = !bilateral;
+    setBilateral(next);
+    onBilateralChange?.(next);
+  }
 
   return (
     <div className="fixed inset-0 z-[70]">
@@ -237,8 +270,29 @@ export function SetEditSheet({ open, onClose, title, set, onSave, onDelete, onCo
             <NumericWheel label="Ismétlés" value={r} step={1} decimals={0} onChange={v => onSave({ reps: v })} />
           </div>
 
+          {/* Bilateral toggle */}
+          <button onClick={toggleBilateral}
+            className="w-full flex items-center justify-between rounded-2xl px-4 py-2.5 mb-2 pressable"
+            style={{ background: bilateral ? "rgba(34,211,238,0.08)" : "rgba(255,255,255,0.03)", border: `1px solid ${bilateral ? "rgba(34,211,238,0.25)" : "var(--border-subtle)"}` }}>
+            <div className="flex items-center gap-2">
+              <span className="text-base">{bilateral ? "🏋️🏋️" : "🏋️"}</span>
+              <div className="text-left">
+                <div className="text-xs font-bold" style={{ color: bilateral ? "var(--accent-primary)" : "var(--text-secondary)" }}>
+                  {bilateral ? "Egykezes (×2)" : "Kétkezes / Rúd (×1)"}
+                </div>
+                <div className="text-[10px]" style={{ color: "var(--text-muted)" }}>
+                  {bilateral ? `Össztömeg: ${w * 2} kg (2 × ${w} kg)` : `Össztömeg: ${w} kg`}
+                </div>
+              </div>
+            </div>
+            <div className="text-xs font-bold px-2 py-1 rounded-lg"
+              style={{ background: bilateral ? "rgba(34,211,238,0.15)" : "var(--surface-2)", color: bilateral ? "var(--accent-primary)" : "var(--text-muted)" }}>
+              {bilateral ? "DB" : "BB"}
+            </div>
+          </button>
+
           {/* 1RM + Plates inline panel — always visible */}
-          <InfoPanel weight={w} reps={r} />
+          <InfoPanel weight={w} reps={r} bilateral={bilateral} />
 
           {/* Done gomb */}
           <button onClick={() => onSave({ done: !set.done })}

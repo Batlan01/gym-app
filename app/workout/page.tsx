@@ -532,7 +532,20 @@ export default function WorkoutPage() {
 
       <SetEditSheet open={editOpen} onClose={closeEdit}
         title={currentEdit?.ex?.name ?? "—"} set={currentEdit?.set ?? null}
-        onSave={patchEditSet} onDelete={deleteEditSet} onCopyPrev={copyPrevSet} />
+        exercise={currentEdit?.ex ?? undefined}
+        onSave={patchEditSet} onDelete={deleteEditSet} onCopyPrev={copyPrevSet}
+        onBilateralChange={bilateral => {
+          if (!active || !currentEdit?.ex) return;
+          setActive(prev => {
+            if (!prev) return prev;
+            return {
+              ...prev,
+              exercises: prev.exercises.map(ex =>
+                ex.id === currentEdit.ex!.id ? { ...ex, bilateral } : ex
+              ),
+            };
+          });
+        }} />
 
       <RestTimerOverlay open={!!restEndAt} totalSec={restTotal} leftSec={restLeftSec}
         muted={settings.muted} onAdd={addRest} onSkip={skipRest}

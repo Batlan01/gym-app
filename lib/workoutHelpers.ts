@@ -53,3 +53,15 @@ export function normalizeWorkoutForSave(w: Workout): Workout {
 
   return { ...w, exercises };
 }
+
+// Auto-detect: DB group → bilateral (×2), minden más → unilateral (×1)
+export function isBilateralExercise(group?: string, bilateral?: boolean): boolean {
+  if (bilateral !== undefined) return bilateral;
+  if (!group) return false;
+  return group.includes('(DB)');
+}
+
+// Volume számítás bilateral figyelembevételével
+export function effectiveSetVolume(weight: number, reps: number, bilateral: boolean): number {
+  return weight * reps * (bilateral ? 2 : 1);
+}
