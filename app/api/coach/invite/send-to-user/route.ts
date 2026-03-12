@@ -1,13 +1,33 @@
 // app/api/coach/invite/send-to-user/route.ts
 // POST – in-app meghívó küldése egy létező usernek (uid alapján)
-// Teljes Firestore REST API – nem használ kliens SDK-t
+// Ha nincs még csapat, automatikusan létrehozza
 // Body: { targetUid, targetEmail, targetName?, group? }
 import { NextRequest } from "next/server";
 import { verifyIdToken, jsonError, nanoid } from "@/app/api/coach/_authHelper";
 
 const FS = `https://firestore.googleapis.com/v1/projects/${process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID}/databases/(default)/documents`;
 
-async function fsQuery(idToken: string, collectionId: string, filters: {field: string, value: string}[]) {
+function strVal(v: string) { return { stringValue: v }; }
+
+async function fsGet(idToken: string, path: string) {
+  const res = await fetch(`${FS}/${path}`, {
+    headers: { "Authorization": `Bearer ${idToken}` },
+  });
+  if (!res.ok) return null;
+  const data = await res.json();
+  return data.fields ? data : null;
+}
+
+async function fsSet(idToken: string, path: string, fields: Record<string, unknown>) {
+  const res = await fetch(`${FS}/${path}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${idToken}` },
+    body: JSON.stringify({ fields }),
+  });
+  return res.ok;
+}
+
+async function fsQuery(idToken: string, collectionId: string, filters: { field: string; value: string }[]) {
   const whereClause = filters.length === 1
     ? { fieldFilter: { field: { fieldPath: filters[0].field }, op: "EQUAL", value: { stringValue: filters[0].value } } }
     : { compositeFilter: { op: "AND", filters: filters.map(f => ({ fieldFilter: { field: { fieldPath: f.field }, op: "EQUAL", value: { stringValue: f.value } } })) } };
@@ -22,16 +42,33 @@ async function fsQuery(idToken: string, collectionId: string, filters: {field: s
   return data?.[0]?.document ?? null;
 }
 
-async function fsSet(idToken: string, path: string, fields: Record<string, unknown>) {
-  const res = await fetch(`${FS}/${path}`, {
-    method: "PATCH",
-    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${idToken}` },
-    body: JSON.stringify({ fields }),
-  });
-  return res.ok;
-}
+async function getOrCreateTeam(idToken: string, coachUid: string): Promise<string> {
+  // Keresés: van-e már team ehhez a coachhoz?
+  const teamDoc = await fsQuery(idToken, "teams", [{ field: "coachUid", value: coachUid }]);
+  if (teamDoc) {
+    return teamDoc.fields?.id?.stringValue ?? "";
+  }
 
-function strVal(v: string) { return { stringValue: v }; }
+  // Nincs team → létrehozás automatikusan
+  const teamId = nanoid(20);
+  const now = new Date().toISOString();
+  await fsSet(idToken, `teams/${teamId}`, {
+    id: strVal(teamId),
+    name: strVal("Saját csapat"),
+    coachUid: strVal(coachUid),
+    plan: strVal("premium"),
+    createdAt: strVal(now),
+  });
+  // PremiumUser doc is
+  await fsSet(idToken, `premiumUsers/${coachUid}`, {
+    uid: strVal(coachUid),
+    role: strVal("coach"),
+    plan: strVal("premium"),
+    teamId: strVal(teamId),
+    createdAt: strVal(now),
+  });
+  return teamId;
+}
 
 export async function POST(req: NextRequest) {
   const authHeader = req.headers.get("authorization");
@@ -48,15 +85,11 @@ export async function POST(req: NextRequest) {
   if (!targetUid || !targetEmail) return jsonError("targetUid and targetEmail required");
   if (targetUid === uid) return jsonError("Cannot invite yourself");
 
-  // Csapat lekérése coachUid alapján
-  const teamDoc = await fsQuery(idToken, "teams", [{ field: "coachUid", value: uid }]);
-  if (!teamDoc) return jsonError("No team found – create a team first", 404);
+  // Team lekérése vagy automatikus létrehozása
+  const teamId = await getOrCreateTeam(idToken, uid);
+  if (!teamId) return jsonError("Nem sikerült a csapatot létrehozni", 500);
 
-  const teamFields = teamDoc.fields ?? {};
-  const teamId = teamFields.id?.stringValue;
-  if (!teamId) return jsonError("Team id missing", 500);
-
-  // Már van pending invite ennek a usernek?
+  // Már van pending invite ennek a usernek ebben a teamben?
   const existingInvite = await fsQuery(idToken, "invites", [
     { field: "targetUid", value: targetUid },
     { field: "teamId", value: teamId },
@@ -72,7 +105,7 @@ export async function POST(req: NextRequest) {
     id: strVal(inviteId),
     teamId: strVal(teamId),
     coachUid: strVal(uid),
-    method: strVal("email"),
+    method: strVal("in-app"),
     email: strVal(targetEmail),
     targetUid: strVal(targetUid),
     status: strVal("pending"),
