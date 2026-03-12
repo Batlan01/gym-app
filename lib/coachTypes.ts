@@ -1,5 +1,5 @@
 // lib/coachTypes.ts
-// ─── Premium / Coach típusok ─────────────────────────────────────────────────
+// â”€â”€â”€ Premium / Coach tĂ­pusok â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export type PremiumRole = "coach" | "athlete";
 
@@ -7,7 +7,7 @@ export type PremiumUser = {
   uid: string;
   role: PremiumRole;
   plan: "premium";
-  teamId?: string;       // ha coach: saját csapat; ha athlete: amelyikhez tartozik
+  teamId?: string;       // ha coach: sajĂˇt csapat; ha athlete: amelyikhez tartozik
   createdAt: string;     // ISO
 };
 
@@ -41,19 +41,19 @@ export type Invite = {
   coachUid: string;
   method: InviteMethod;
 
-  // email / in-app meghívó esetén
+  // email / in-app meghĂ­vĂł esetĂ©n
   email?: string;
 
-  // in-app: meghívott user uid-ja (ha már regisztrált az appban)
+  // in-app: meghĂ­vott user uid-ja (ha mĂˇr regisztrĂˇlt az appban)
   targetUid?: string;
 
-  // meghívókód esetén
+  // meghĂ­vĂłkĂłd esetĂ©n
   inviteCode?: string;
 
-  group?: string;        // csoport ahova meghívva
+  group?: string;        // csoport ahova meghĂ­vva
   status: InviteStatus;
   createdAt: string;     // ISO
-  expiresAt: string;     // ISO – alapból +7 nap
-  acceptedBy?: string;   // uid, ha elfogadták
+  expiresAt: string;     // ISO â€“ alapbĂłl +7 nap
+  acceptedBy?: string;   // uid, ha elfogadtĂˇk
   acceptedAt?: string;   // ISO
 };
