@@ -1,18 +1,43 @@
 // app/api/coach/invite/send-to-user/route.ts
 // POST – in-app meghívó küldése egy létező usernek (uid alapján)
-// Az invite megjelenik a célszemély appjában
-// Body: { targetUid: string, targetEmail: string, targetName?: string, group?: string }
+// Teljes Firestore REST API – nem használ kliens SDK-t
+// Body: { targetUid, targetEmail, targetName?, group? }
 import { NextRequest } from "next/server";
 import { verifyIdToken, jsonError, nanoid } from "@/app/api/coach/_authHelper";
-import { getTeamByCoach, createInvite, getTeamMembers } from "@/lib/coachFirestore";
-import type { Invite } from "@/lib/coachTypes";
+
+const FS = `https://firestore.googleapis.com/v1/projects/${process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID}/databases/(default)/documents`;
+
+async function fsQuery(idToken: string, collectionId: string, filters: {field: string, value: string}[]) {
+  const whereClause = filters.length === 1
+    ? { fieldFilter: { field: { fieldPath: filters[0].field }, op: "EQUAL", value: { stringValue: filters[0].value } } }
+    : { compositeFilter: { op: "AND", filters: filters.map(f => ({ fieldFilter: { field: { fieldPath: f.field }, op: "EQUAL", value: { stringValue: f.value } } })) } };
+
+  const res = await fetch(`${FS}:runQuery`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${idToken}` },
+    body: JSON.stringify({ structuredQuery: { from: [{ collectionId }], where: whereClause, limit: 1 } }),
+  });
+  if (!res.ok) return null;
+  const data = await res.json();
+  return data?.[0]?.document ?? null;
+}
+
+async function fsSet(idToken: string, path: string, fields: Record<string, unknown>) {
+  const res = await fetch(`${FS}/${path}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${idToken}` },
+    body: JSON.stringify({ fields }),
+  });
+  return res.ok;
+}
+
+function strVal(v: string) { return { stringValue: v }; }
 
 export async function POST(req: NextRequest) {
-  const uid = await verifyIdToken(req.headers.get("authorization"));
+  const authHeader = req.headers.get("authorization");
+  const uid = await verifyIdToken(authHeader);
   if (!uid) return jsonError("Unauthorized", 401);
-
-  const team = await getTeamByCoach(uid);
-  if (!team) return jsonError("No team found – create a team first", 404);
+  const idToken = authHeader!.slice(7);
 
   const body = await req.json().catch(() => ({}));
   const targetUid: string = (body?.targetUid ?? "").trim();
@@ -21,33 +46,44 @@ export async function POST(req: NextRequest) {
   const group: string = (body?.group ?? "").trim();
 
   if (!targetUid || !targetEmail) return jsonError("targetUid and targetEmail required");
-
-  // Ne hívjuk meg magunkat
   if (targetUid === uid) return jsonError("Cannot invite yourself");
 
-  // Már tag?
-  const members = await getTeamMembers(team.id);
-  if (members.some(m => m.uid === targetUid)) {
-    return jsonError("Ez a felhasználó már a csapat tagja");
-  }
+  // Csapat lekérése coachUid alapján
+  const teamDoc = await fsQuery(idToken, "teams", [{ field: "coachUid", value: uid }]);
+  if (!teamDoc) return jsonError("No team found – create a team first", 404);
+
+  const teamFields = teamDoc.fields ?? {};
+  const teamId = teamFields.id?.stringValue;
+  if (!teamId) return jsonError("Team id missing", 500);
+
+  // Már van pending invite ennek a usernek?
+  const existingInvite = await fsQuery(idToken, "invites", [
+    { field: "targetUid", value: targetUid },
+    { field: "teamId", value: teamId },
+    { field: "status", value: "pending" },
+  ]);
+  if (existingInvite) return jsonError("Ennek a felhasználónak már van függő meghívója");
 
   const now = new Date();
   const expiresAt = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+  const inviteId = nanoid(24);
 
-  const invite: Invite = {
-    id: nanoid(24),
-    teamId: team.id,
-    coachUid: uid,
-    method: "email",
-    email: targetEmail,
-    targetUid,
-    status: "pending",
-    group: group || undefined,
-    createdAt: now.toISOString(),
-    expiresAt: expiresAt.toISOString(),
+  const fields: Record<string, unknown> = {
+    id: strVal(inviteId),
+    teamId: strVal(teamId),
+    coachUid: strVal(uid),
+    method: strVal("email"),
+    email: strVal(targetEmail),
+    targetUid: strVal(targetUid),
+    status: strVal("pending"),
+    createdAt: strVal(now.toISOString()),
+    expiresAt: strVal(expiresAt.toISOString()),
   };
+  if (group) fields.group = strVal(group);
+  if (targetName) fields.targetName = strVal(targetName);
 
-  await createInvite(invite);
+  const ok = await fsSet(idToken, `invites/${inviteId}`, fields);
+  if (!ok) return jsonError("Failed to create invite", 500);
 
-  return Response.json({ invite }, { status: 201 });
+  return Response.json({ invite: { id: inviteId, teamId, targetUid, status: "pending" } }, { status: 201 });
 }
