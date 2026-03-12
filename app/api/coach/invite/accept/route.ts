@@ -46,7 +46,7 @@ export async function POST(req: NextRequest) {
     uid,
     displayName: (displayName ?? "").trim() || "Névtelen",
     email: email ?? "",
-    group: "Általános",
+    group: invite.group ?? "Általános",
     status: "active",
     joinedAt: now,
     addedBy: invite.coachUid,

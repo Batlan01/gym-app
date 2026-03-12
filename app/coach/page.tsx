@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { InviteModal } from "@/components/coach/InviteModal";
-import { useCoachTeam } from "@/lib/useCoach";
+import { useCoachTeam, apiUpdateMember, apiRemoveMember } from "@/lib/useCoach";
 import { auth } from "@/lib/firebase";
 import type { User } from "firebase/auth";
 import type { TeamMember } from "@/lib/coachTypes";
@@ -182,6 +182,135 @@ function DashboardPage({ members, loading }: { members: TeamMember[]; loading: b
   );
 }
 
+// ─── Member Edit Modal ────────────────────────────────────────────────────────
+function MemberEditModal({ member, allGroups, onSave, onRemove, onClose }: {
+  member: TeamMember;
+  allGroups: string[];
+  onSave: (uid: string, group: string, status: string) => Promise<void>;
+  onRemove: (uid: string) => Promise<void>;
+  onClose: () => void;
+}) {
+  const [group, setGroup] = React.useState(member.group ?? "");
+  const [customGroup, setCustomGroup] = React.useState("");
+  const [useCustom, setUseCustom] = React.useState(false);
+  const [status, setStatus] = React.useState(member.status);
+  const [saving, setSaving] = React.useState(false);
+  const [confirmRemove, setConfirmRemove] = React.useState(false);
+
+  const effectiveGroup = useCustom ? customGroup : group;
+
+  const handleSave = async () => {
+    setSaving(true);
+    try { await onSave(member.uid, effectiveGroup, status); onClose(); }
+    finally { setSaving(false); }
+  };
+
+  const handleRemove = async () => {
+    setSaving(true);
+    try { await onRemove(member.uid); onClose(); }
+    finally { setSaving(false); }
+  };
+
+  const statusOptions = [
+    { value: "active", label: "Aktív" },
+    { value: "idle", label: "Inaktív" },
+    { value: "inactive", label: "Kieső" },
+  ];
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4"
+      style={{ background: "rgba(0,0,0,0.7)", backdropFilter: "blur(8px)" }}>
+      <div className="w-full max-w-sm rounded-2xl flex flex-col gap-5 p-6"
+        style={{ background: "var(--bg-surface)", border: "1px solid var(--border-subtle)" }}>
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Avatar name={member.displayName} size="md" />
+            <div>
+              <div className="font-bold text-sm" style={{ color: "var(--text-primary)" }}>{member.displayName}</div>
+              <div className="text-xs" style={{ color: "var(--text-muted)" }}>{member.email}</div>
+            </div>
+          </div>
+          <button onClick={onClose} className="p-1.5 rounded-lg pressable" style={{ color: "var(--text-muted)" }}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+
+        {/* Csoport */}
+        <div className="flex flex-col gap-2">
+          <label className="label-xs">CSOPORT</label>
+          {!useCustom ? (
+            <div className="flex gap-2 flex-wrap">
+              {allGroups.map(g => (
+                <button key={g} onClick={() => setGroup(g)}
+                  className="px-3 py-1.5 rounded-lg text-xs font-semibold pressable"
+                  style={{ background: group === g ? "var(--accent-primary)" : "var(--surface-2)", color: group === g ? "#080B0F" : "var(--text-secondary)", border: "1px solid var(--border-subtle)" }}>
+                  {g}
+                </button>
+              ))}
+              <button onClick={() => setUseCustom(true)}
+                className="px-3 py-1.5 rounded-lg text-xs font-semibold pressable"
+                style={{ background: "var(--surface-1)", color: "var(--accent-primary)", border: "1px dashed rgba(34,211,238,0.4)" }}>
+                + Új csoport
+              </button>
+            </div>
+          ) : (
+            <div className="flex gap-2">
+              <input autoFocus value={customGroup} onChange={e => setCustomGroup(e.target.value)}
+                placeholder="Új csoport neve…"
+                className="flex-1 px-3 py-2 rounded-xl text-sm outline-none"
+                style={{ background: "var(--surface-1)", border: "1px solid var(--border-mid)", color: "var(--text-primary)" }} />
+              <button onClick={() => setUseCustom(false)} className="px-3 py-2 rounded-xl text-xs pressable"
+                style={{ background: "var(--surface-2)", color: "var(--text-muted)" }}>Vissza</button>
+            </div>
+          )}
+        </div>
+
+        {/* Státusz */}
+        <div className="flex flex-col gap-2">
+          <label className="label-xs">STÁTUSZ</label>
+          <div className="flex gap-2">
+            {statusOptions.map(s => (
+              <button key={s.value} onClick={() => setStatus(s.value as TeamMember["status"])}
+                className="flex-1 py-2 rounded-xl text-xs font-semibold pressable"
+                style={{ background: status === s.value ? "rgba(34,211,238,0.15)" : "var(--surface-2)", color: status === s.value ? "var(--accent-primary)" : "var(--text-secondary)", border: status === s.value ? "1px solid rgba(34,211,238,0.3)" : "1px solid var(--border-subtle)" }}>
+                {s.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Actions */}
+        <div className="flex gap-2">
+          {!confirmRemove ? (
+            <>
+              <button onClick={() => setConfirmRemove(true)} className="px-4 py-2.5 rounded-xl text-sm font-semibold pressable"
+                style={{ background: "rgba(239,68,68,0.1)", color: "#ef4444", border: "1px solid rgba(239,68,68,0.2)" }}>
+                Eltávolítás
+              </button>
+              <button onClick={handleSave} disabled={saving}
+                className="flex-1 py-2.5 rounded-xl text-sm font-semibold pressable"
+                style={{ background: "var(--accent-primary)", color: "#080B0F" }}>
+                {saving ? "Mentés…" : "Mentés ✓"}
+              </button>
+            </>
+          ) : (
+            <>
+              <button onClick={() => setConfirmRemove(false)} className="flex-1 py-2.5 rounded-xl text-sm font-semibold pressable"
+                style={{ background: "var(--surface-2)", color: "var(--text-secondary)" }}>Mégse</button>
+              <button onClick={handleRemove} disabled={saving}
+                className="flex-1 py-2.5 rounded-xl text-sm font-semibold pressable"
+                style={{ background: "#ef4444", color: "#fff" }}>
+                {saving ? "…" : "Igen, eltávolítom"}
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Team Page (live) ─────────────────────────────────────────────────────────
 function TeamPage({ members, loading, refresh, onInvite }: {
   members: TeamMember[];
@@ -191,8 +320,10 @@ function TeamPage({ members, loading, refresh, onInvite }: {
 }) {
   const [activeGroup, setActiveGroup] = React.useState("Összes");
   const [search, setSearch] = React.useState("");
+  const [editMember, setEditMember] = React.useState<TeamMember | null>(null);
 
-  const groups = ["Összes", ...Array.from(new Set(members.map(m => m.group ?? "").filter(Boolean)))];
+  const groups = Array.from(new Set(members.map(m => m.group ?? "").filter(Boolean)));
+  const groupTabs = ["Összes", ...groups];
 
   const filtered = members.filter(m => {
     const groupMatch = activeGroup === "Összes" || m.group === activeGroup;
@@ -203,8 +334,28 @@ function TeamPage({ members, loading, refresh, onInvite }: {
 
   const statusLabel: Record<string, string> = { active: "Aktív", idle: "Inaktív", inactive: "Kieső", removed: "Eltávolítva" };
 
+  const handleSave = async (uid: string, group: string, status: string) => {
+    await apiUpdateMember(uid, { group, status });
+    await refresh();
+  };
+
+  const handleRemove = async (uid: string) => {
+    await apiRemoveMember(uid);
+    await refresh();
+  };
+
   return (
     <div className="flex flex-col gap-6 p-6 lg:p-8 h-full overflow-y-auto no-scrollbar animate-in">
+      {editMember && (
+        <MemberEditModal
+          member={editMember}
+          allGroups={groups}
+          onSave={handleSave}
+          onRemove={handleRemove}
+          onClose={() => setEditMember(null)}
+        />
+      )}
+
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-bold" style={{ color: "var(--text-primary)" }}>Csapat</h1>
@@ -219,23 +370,21 @@ function TeamPage({ members, loading, refresh, onInvite }: {
         </div>
       </div>
 
-      {/* Szűrők */}
-      {groups.length > 1 && (
-        <div className="flex items-center gap-3 flex-wrap">
-          <div className="flex gap-1 p-1 rounded-xl" style={{ background: "var(--surface-1)", border: "1px solid var(--border-subtle)" }}>
-            {groups.map(g => (
-              <button key={g} onClick={() => setActiveGroup(g)}
-                className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all pressable"
-                style={{ background: activeGroup === g ? "var(--accent-primary)" : "transparent", color: activeGroup === g ? "#080B0F" : "var(--text-secondary)" }}>
-                {g}
-              </button>
-            ))}
-          </div>
-          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Keresés…"
-            className="px-3 py-2 rounded-xl text-sm outline-none"
-            style={{ background: "var(--surface-1)", border: "1px solid var(--border-mid)", color: "var(--text-primary)", minWidth: 180 }} />
+      {/* Csoport & Kereső szűrők */}
+      <div className="flex items-center gap-3 flex-wrap">
+        <div className="flex gap-1 p-1 rounded-xl" style={{ background: "var(--surface-1)", border: "1px solid var(--border-subtle)" }}>
+          {groupTabs.map(g => (
+            <button key={g} onClick={() => setActiveGroup(g)}
+              className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all pressable"
+              style={{ background: activeGroup === g ? "var(--accent-primary)" : "transparent", color: activeGroup === g ? "#080B0F" : "var(--text-secondary)" }}>
+              {g}
+            </button>
+          ))}
         </div>
-      )}
+        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Keresés…"
+          className="px-3 py-2 rounded-xl text-sm outline-none"
+          style={{ background: "var(--surface-1)", border: "1px solid var(--border-mid)", color: "var(--text-primary)", minWidth: 180 }} />
+      </div>
 
       {loading ? (
         <div className="text-sm py-8 text-center" style={{ color: "var(--text-muted)" }}>Betöltés...</div>
@@ -283,9 +432,10 @@ function TeamPage({ members, loading, refresh, onInvite }: {
                     <td className="px-4 py-3 text-xs" style={{ color: "var(--text-muted)" }}>{m.email ?? "–"}</td>
                     <td className="px-4 py-3 min-w-[120px]"><ComplianceBar value={m.compliance ?? 80} /></td>
                     <td className="px-4 py-3">
-                      <button className="text-xs px-3 py-1.5 rounded-lg font-medium pressable"
+                      <button onClick={() => setEditMember(m)}
+                        className="text-xs px-3 py-1.5 rounded-lg font-medium pressable"
                         style={{ background: "var(--surface-2)", color: "var(--text-secondary)", border: "1px solid var(--border-subtle)" }}>
-                        Profil
+                        ✏️ Szerkesztés
                       </button>
                     </td>
                   </tr>

@@ -48,6 +48,14 @@ export async function apiRemoveMember(memberUid: string): Promise<void> {
   if (!res.ok) throw new Error(await res.text());
 }
 
+export async function apiUpdateMember(memberUid: string, updates: { group?: string; status?: string }): Promise<void> {
+  const res = await apiFetch("/api/coach/team/member-update", {
+    method: "PATCH",
+    body: JSON.stringify({ memberUid, ...updates }),
+  });
+  if (!res.ok) throw new Error(await res.text());
+}
+
 // ─── Invites ──────────────────────────────────────────────────────────────────
 export async function apiInviteByEmail(email: string, group?: string): Promise<Invite> {
   const res = await apiFetch("/api/coach/invite/email", {
