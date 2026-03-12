@@ -4,12 +4,14 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import { useLocalStorageState } from "@/lib/useLocalStorageState";
 import { lsGet, lsSet } from "@/lib/storage";
+import { PROGRAM_TEMPLATES } from "@/lib/programTemplates";
+import { readPrograms, upsertProgram } from "@/lib/programsStorage";
 import {
   LS_ACTIVE_PROFILE, onboardedKey, profileMetaKey, type ProfileMeta,
   type Goal, type TrainingPlace, type Level, type TrainingSplit,
 } from "@/lib/profiles";
 
-type StepId = "welcome" | "basic" | "body" | "goals" | "training" | "experience" | "finish";
+type StepId = "welcome" | "basic" | "body" | "goals" | "training" | "experience" | "program" | "finish";
 
 function clampInt(n: number, min: number, max: number) { return Math.max(min, Math.min(max, n)); }
 function parseOptionalInt(s: string) {
@@ -96,6 +98,7 @@ export default function OnboardingPage() {
     { id: "goals",      title: "Mi a célod?",        subtitle: "Személyre szabjuk az appot", emoji: "🎯" },
     { id: "training",   title: "Edzés körülmény",    subtitle: "Hol és milyen sűrűn?", emoji: "🏋️" },
     { id: "experience", title: "Tapasztalat",         subtitle: "Szint és edzésrendszer", emoji: "⭐" },
+    { id: "program",   title: "Program ajánlás",      subtitle: "Kezdd rögtön ezzel", emoji: "📋" },
     { id: "finish",     title: "Kész!",               subtitle: "Ellenőrzöd és mentesz", emoji: "🚀" },
   ];
 
@@ -147,6 +150,7 @@ export default function OnboardingPage() {
 
   const canNext = React.useMemo(() => {
     if (step.id === "basic") return fullName.trim().length >= 2;
+    if (step.id === "program") return true;
     if (step.id === "training") {
       const d = parseOptionalInt(draftDays);
       return !!place && d != null && d >= 1 && d <= 7;
@@ -218,13 +222,22 @@ export default function OnboardingPage() {
         <div className="space-y-4">
 
           {step.id === "welcome" && (
-            <div className="rounded-3xl p-5"
-              style={{ background: "linear-gradient(135deg, rgba(34,211,238,0.12), rgba(34,211,238,0.04))", border: "1px solid rgba(34,211,238,0.2)" }}>
-              <div className="text-sm leading-relaxed" style={{ color: "var(--text-secondary)" }}>
-                Az ARCX-szel <strong style={{ color: "var(--text-primary)" }}>programokat tervezhetsz</strong>,
-                edzéseket naplózhatsz, és nyomon követheted a fejlődésedet.<br /><br />
-                Pár gyors kérdéssel személyre szabjuk az élményt.
-              </div>
+            <div className="space-y-3">
+              {[
+                { icon: "📋", title: "Edzésprogramok", desc: "Tervezz saját vagy töltsd be a sablonokat" },
+                { icon: "📝", title: "Edzésnapló", desc: "Kövesd a szetteket, súlyokat, fejlődést" },
+                { icon: "📈", title: "Statisztikák", desc: "PR-ok, volum, streak — minden egy helyen" },
+                { icon: "📅", title: "Heti naptár", desc: "Tervezd meg, mikor mit edzel" },
+              ].map(f => (
+                <div key={f.title} className="flex items-center gap-4 rounded-2xl px-4 py-3"
+                  style={{ background: "var(--bg-card)", border: "1px solid var(--border-subtle)" }}>
+                  <span className="text-2xl shrink-0">{f.icon}</span>
+                  <div>
+                    <div className="text-sm font-bold" style={{ color: "var(--text-primary)" }}>{f.title}</div>
+                    <div className="text-xs mt-0.5" style={{ color: "var(--text-muted)" }}>{f.desc}</div>
+                  </div>
+                </div>
+              ))}
             </div>
           )}
 
@@ -258,7 +271,7 @@ export default function OnboardingPage() {
               <NumberInput label="MAGASSÁG" value={draftHeight} onChange={setDraftHeight} placeholder="175" unit="cm" />
               <NumberInput label="TESTSÚLY" value={draftWeight} onChange={setDraftWeight} placeholder="80" unit="kg" />
               <div className="col-span-3 text-xs mt-1" style={{ color: "var(--text-muted)" }}>
-                💡 Opcionális — testsúly grafikonhoz és célokhoz hasznos
+                💡 Ezek az adatok segítenek a testsúly grafikonban és a kalória becslésben. Bármikor módosíthatod a profilban.
               </div>
             </div>
           )}
@@ -340,6 +353,66 @@ export default function OnboardingPage() {
               </div>
             </div>
           )}
+
+
+          {step.id === "program" && (() => {
+            // Ajánl 1-2 programot szint + hely alapján
+            const recommended = PROGRAM_TEMPLATES.filter(p => {
+              const sportMatch = place === "home" ? p.sport === "home" || p.sport === "calisthenics"
+                : place === "gym" ? p.sport === "gym" || p.sport === "powerlifting" || p.sport === "bodybuilding"
+                : true;
+              const levelMatch = !p.level || p.level === level || (level === "intermediate" && p.level === "beginner");
+              return sportMatch && levelMatch;
+            }).slice(0, 3);
+
+            return (
+              <div className="space-y-3">
+                <p className="text-sm" style={{ color: "var(--text-muted)" }}>
+                  A megadott adatok alapján ezek illenek hozzád. Egyet rögtön hozzáadhatsz — vagy később is megcsinálod.
+                </p>
+                {recommended.map(tmpl => (
+                  <div key={tmpl.id} className="rounded-2xl p-4"
+                    style={{ background: "var(--bg-card)", border: "1px solid var(--border-subtle)" }}>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="text-sm font-bold" style={{ color: "var(--text-primary)" }}>{tmpl.title}</div>
+                        <div className="text-xs mt-0.5" style={{ color: "var(--text-muted)" }}>
+                          {tmpl.sessions?.length ?? 0} session · {tmpl.level === "beginner" ? "Kezdő" : tmpl.level === "intermediate" ? "Közép" : "Haladó"}
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => {
+                          if (!activeProfileId) return;
+                          const existing = readPrograms(activeProfileId);
+                          if (existing.some(p => p.name === tmpl.title)) return;
+                          const prog = {
+                            id: typeof crypto !== "undefined" ? crypto.randomUUID() : String(Date.now()),
+                            createdAt: Date.now(), updatedAt: Date.now(),
+                            name: tmpl.title, sport: tmpl.sport as any, level: tmpl.level as any,
+                            sessions: (tmpl.sessions ?? []).map((s: any, i: number) => ({
+                              id: String(Date.now() + i),
+                              name: s.name ?? `Session ${i+1}`,
+                              blocks: (s.exercises ?? []).map((e: string) => ({ kind: "exercise", name: e, targetSets: 3, targetReps: "8-12" })),
+                            })),
+                          };
+                          upsertProgram(activeProfileId, prog as any);
+                          alert(`"${tmpl.title}" hozzáadva! ✓`);
+                        }}
+                        className="rounded-xl px-4 py-2 text-xs font-bold pressable shrink-0"
+                        style={{ background: "rgba(34,211,238,0.12)", color: "var(--accent-primary)", border: "1px solid rgba(34,211,238,0.3)" }}>
+                        + Hozzáad
+                      </button>
+                    </div>
+                  </div>
+                ))}
+                {recommended.length === 0 && (
+                  <div className="rounded-2xl p-4 text-sm text-center" style={{ color: "var(--text-muted)", background: "var(--bg-card)" }}>
+                    Programokat a Programok oldalon hozzáadhatsz bármikor.
+                  </div>
+                )}
+              </div>
+            );
+          })()}
 
           {step.id === "finish" && (
             <div className="rounded-3xl overflow-hidden"
