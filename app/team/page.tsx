@@ -243,14 +243,22 @@ export default function TeamPage() {
   }, [user]);
 
   const handleAccept = async (inviteId: string) => {
+    if (!user) return;
     setBusy(inviteId);
-    setResolved(prev => new Set([...prev, inviteId]));
-    const token = await user?.getIdToken();
-    await fetch("/api/coach/invite/accept", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ inviteId }),
-    });
+    try {
+      const token = await user.getIdToken();
+      const displayName = user.displayName || user.email?.split("@")[0] || "Tag";
+      const res = await fetch("/api/coach/invite/accept", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ inviteId, displayName, email: user.email ?? "" }),
+      });
+      if (res.ok) {
+        setResolved(prev => new Set([...prev, inviteId]));
+        // Frissítjük a tagságokat
+        setTimeout(() => window.location.reload(), 800);
+      }
+    } catch { /* ignore */ }
     setBusy(null);
   };
 
