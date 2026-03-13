@@ -478,6 +478,255 @@ function TeamPage({ members, loading, refresh, onInvite }: { members: TeamMember
   );
 }
 
+// ─── Plans Page ──────────────────────────────────────────────────────────────
+type CoachProgram = {
+  id: string; name: string; description?: string; sport: string; level: string;
+  sessions: unknown[]; assignedTo: string[]; createdAt: number; updatedAt: number;
+};
+
+const SPORT_EMOJI_MAP: Record<string, string> = {
+  gym:"🏋️", home:"🏠", running:"🏃", boxing:"🥊", mma:"🥋", muay_thai:"🦵",
+  bjj:"🥋", kickboxing:"🥊", crossfit:"⚡", calisthenics:"🤸", hiit:"🔥",
+  cycling:"🚴", mobility:"🧘", yoga:"🧘", stretching:"🤸", foam_roll:"🟫",
+  warmup:"🔥", powerlifting:"🏋️", bodybuilding:"💪", hybrid:"⚡",
+};
+const LEVEL_LABEL: Record<string, string> = { beginner:"Kezdő", intermediate:"Középhaladó", advanced:"Haladó" };
+const LEVEL_COLOR: Record<string, string> = { beginner:"rgba(74,222,128,0.15)", intermediate:"rgba(34,211,238,0.15)", advanced:"rgba(251,191,36,0.15)" };
+const LEVEL_TEXT: Record<string, string>  = { beginner:"#4ade80", intermediate:"#22d3ee", advanced:"#fbbf24" };
+
+async function apiCall(method: string, path: string, body?: unknown) {
+  const { getAuth } = await import("firebase/auth");
+  const token = await getAuth().currentUser?.getIdToken();
+  const res = await fetch(path, {
+    method,
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  return res.json();
+}
+
+function AssignModal({ program, members, onSave, onClose }: {
+  program: CoachProgram; members: TeamMember[];
+  onSave: (uids: string[]) => Promise<void>; onClose: () => void;
+}) {
+  const [selected, setSelected] = React.useState<string[]>(program.assignedTo ?? []);
+  const [saving, setSaving] = React.useState(false);
+  const toggle = (uid: string) => setSelected(prev => prev.includes(uid) ? prev.filter(x => x !== uid) : [...prev, uid]);
+  const handleSave = async () => { setSaving(true); try { await onSave(selected); onClose(); } finally { setSaving(false); } };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4" style={{ background:"rgba(0,0,0,0.7)", backdropFilter:"blur(8px)" }}>
+      <div className="w-full max-w-sm rounded-2xl flex flex-col gap-4 p-6" style={{ background:"var(--bg-surface)", border:"1px solid var(--border-subtle)" }}>
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="font-bold text-base" style={{ color:"var(--text-primary)" }}>Hozzárendelés</h2>
+            <p className="text-xs mt-0.5" style={{ color:"var(--text-muted)" }}>{program.name}</p>
+          </div>
+          <button onClick={onClose} className="p-1.5 rounded-lg pressable" style={{ color:"var(--text-muted)" }}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+        {members.length === 0 ? (
+          <p className="text-sm text-center py-6" style={{ color:"var(--text-muted)" }}>Még nincsenek csapattagok.</p>
+        ) : (
+          <div className="flex flex-col gap-2 max-h-64 overflow-y-auto">
+            {members.map(m => {
+              const checked = selected.includes(m.uid);
+              return (
+                <button key={m.uid} onClick={() => toggle(m.uid)}
+                  className="flex items-center gap-3 px-3 py-2.5 rounded-xl pressable text-left transition-all"
+                  style={{ background: checked ? "rgba(34,211,238,0.1)" : "var(--surface-1)", border: checked ? "1px solid rgba(34,211,238,0.3)" : "1px solid var(--border-subtle)" }}>
+                  <Avatar name={m.displayName} size="sm" />
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-medium truncate" style={{ color:"var(--text-primary)" }}>{m.displayName}</div>
+                    {m.group && <div className="text-xs" style={{ color:"var(--text-muted)" }}>{m.group}</div>}
+                  </div>
+                  <div className="w-5 h-5 rounded-md flex items-center justify-center shrink-0"
+                    style={{ background: checked ? "var(--accent-primary)" : "var(--surface-2)", border: checked ? "none" : "1px solid var(--border-mid)" }}>
+                    {checked && <svg width="11" height="11" viewBox="0 0 12 12" fill="none"><polyline points="2,6 5,9 10,3" stroke="#080B0F" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        )}
+        <div className="flex gap-2">
+          <button onClick={onClose} className="flex-1 py-2.5 rounded-xl text-sm font-semibold pressable" style={{ background:"var(--surface-2)", color:"var(--text-secondary)" }}>Mégse</button>
+          <button onClick={handleSave} disabled={saving} className="flex-1 py-2.5 rounded-xl text-sm font-bold pressable" style={{ background:"var(--accent-primary)", color:"#080B0F" }}>
+            {saving ? "Mentés…" : `✓ Mentés (${selected.length} tag)`}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function CreateProgramModal({ onClose, onCreate }: { onClose: () => void; onCreate: (name: string, sport: string, level: string) => Promise<void> }) {
+  const [name, setName] = React.useState("");
+  const [sport, setSport] = React.useState("gym");
+  const [level, setLevel] = React.useState("beginner");
+  const [saving, setSaving] = React.useState(false);
+  const sports = [["gym","🏋️ Terem"],["home","🏠 Otthon"],["running","🏃 Futás"],["boxing","🥊 Box"],["mma","🥋 MMA"],["crossfit","⚡ CrossFit"],["calisthenics","🤸 Calisthenics"],["mobility","🧘 Mobilitás"]];
+  const levels = [["beginner","Kezdő"],["intermediate","Középhaladó"],["advanced","Haladó"]];
+  const handleCreate = async () => { if (!name.trim()) return; setSaving(true); try { await onCreate(name.trim(), sport, level); onClose(); } finally { setSaving(false); } };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4" style={{ background:"rgba(0,0,0,0.7)", backdropFilter:"blur(8px)" }}>
+      <div className="w-full max-w-sm rounded-2xl flex flex-col gap-5 p-6" style={{ background:"var(--bg-surface)", border:"1px solid var(--border-subtle)" }}>
+        <div className="flex items-center justify-between">
+          <h2 className="font-bold text-base" style={{ color:"var(--text-primary)" }}>Új edzésterv</h2>
+          <button onClick={onClose} className="p-1.5 rounded-lg pressable" style={{ color:"var(--text-muted)" }}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+        <div>
+          <label className="label-xs block mb-1.5">PROGRAM NEVE *</label>
+          <input value={name} onChange={e => setName(e.target.value)} placeholder="pl. Haladó Push/Pull/Legs" maxLength={50} autoFocus
+            className="w-full rounded-2xl px-4 py-3 text-sm outline-none"
+            style={{ background:"var(--surface-1)", border:"1px solid var(--border-mid)", color:"var(--text-primary)" }} />
+        </div>
+        <div>
+          <label className="label-xs block mb-2">KATEGÓRIA</label>
+          <div className="flex flex-wrap gap-2">
+            {sports.map(([id, label]) => (
+              <button key={id} onClick={() => setSport(id)} className="rounded-full px-3 py-1.5 text-xs font-semibold pressable"
+                style={sport===id ? { background:"var(--accent-primary)", color:"#000" } : { background:"var(--surface-1)", color:"var(--text-secondary)", border:"1px solid var(--border-subtle)" }}>{label}</button>
+            ))}
+          </div>
+        </div>
+        <div>
+          <label className="label-xs block mb-2">SZINT</label>
+          <div className="flex gap-2">
+            {levels.map(([id, label]) => (
+              <button key={id} onClick={() => setLevel(id)} className="flex-1 py-2 rounded-xl text-xs font-semibold pressable"
+                style={level===id ? { background:"rgba(34,211,238,0.15)", color:"var(--accent-primary)", border:"1px solid rgba(34,211,238,0.3)" } : { background:"var(--surface-2)", color:"var(--text-secondary)", border:"1px solid var(--border-subtle)" }}>{label}</button>
+            ))}
+          </div>
+        </div>
+        <div className="flex gap-2">
+          <button onClick={onClose} className="flex-1 py-2.5 rounded-xl text-sm font-semibold pressable" style={{ background:"var(--surface-2)", color:"var(--text-secondary)" }}>Mégse</button>
+          <button onClick={handleCreate} disabled={!name.trim() || saving} className="flex-1 py-2.5 rounded-xl text-sm font-bold pressable"
+            style={{ background: name.trim() ? "var(--accent-primary)" : "var(--surface-2)", color: name.trim() ? "#080B0F" : "var(--text-muted)" }}>
+            {saving ? "Létrehozás…" : "Létrehozás →"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PlansPage({ members, user }: { members: TeamMember[]; user: User | null }) {
+  const [programs, setPrograms] = React.useState<CoachProgram[]>([]);
+  const [loading, setLoading] = React.useState(true);
+  const [showCreate, setShowCreate] = React.useState(false);
+  const [assignTarget, setAssignTarget] = React.useState<CoachProgram | null>(null);
+  const [deletingId, setDeletingId] = React.useState<string | null>(null);
+
+  const loadPrograms = React.useCallback(async () => {
+    setLoading(true);
+    try {
+      const data = await apiCall("GET", "/api/coach/programs");
+      setPrograms((data.programs ?? []).sort((a: CoachProgram, b: CoachProgram) => b.createdAt - a.createdAt));
+    } finally { setLoading(false); }
+  }, []);
+
+  React.useEffect(() => { if (user) loadPrograms(); }, [user, loadPrograms]);
+
+  const handleCreate = async (name: string, sport: string, level: string) => {
+    await apiCall("POST", "/api/coach/programs", { name, sport, level });
+    await loadPrograms();
+  };
+
+  const handleAssign = async (programId: string, uids: string[]) => {
+    await apiCall("PATCH", "/api/coach/programs", { programId, assignedTo: uids });
+    await loadPrograms();
+  };
+
+  const handleDelete = async (programId: string) => {
+    if (!confirm("Biztosan törlöd ezt a programot?")) return;
+    setDeletingId(programId);
+    try { await apiCall("DELETE", `/api/coach/programs?programId=${programId}`); await loadPrograms(); }
+    finally { setDeletingId(null); }
+  };
+
+  return (
+    <div className="flex flex-col h-full overflow-y-auto no-scrollbar animate-in">
+      {showCreate && <CreateProgramModal onClose={() => setShowCreate(false)} onCreate={handleCreate} />}
+      {assignTarget && <AssignModal program={assignTarget} members={members} onSave={uids => handleAssign(assignTarget.id, uids)} onClose={() => setAssignTarget(null)} />}
+
+      {/* Header */}
+      <div className="flex items-center justify-between gap-3 px-4 md:px-6 lg:px-8 pt-5 pb-4 flex-wrap" style={{ borderBottom:"1px solid var(--border-subtle)" }}>
+        <div>
+          <h1 className="text-xl md:text-2xl font-bold" style={{ color:"var(--text-primary)" }}>Tervek</h1>
+          <p className="text-sm mt-0.5" style={{ color:"var(--text-muted)" }}>{programs.length} edzésterv</p>
+        </div>
+        <button onClick={() => setShowCreate(true)} className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold pressable"
+          style={{ background:"var(--accent-primary)", color:"#080B0F" }}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Új terv
+        </button>
+      </div>
+
+      {/* Content */}
+      <div className="px-4 md:px-6 lg:px-8 py-4 pb-24 md:pb-8">
+        {loading ? (
+          <div className="text-sm py-16 text-center" style={{ color:"var(--text-muted)" }}>Betöltés...</div>
+        ) : programs.length === 0 ? (
+          <div className="card p-12 flex flex-col items-center gap-4 text-center">
+            <div className="text-5xl">📋</div>
+            <h2 className="font-bold text-lg" style={{ color:"var(--text-primary)" }}>Még nincs edzésterved</h2>
+            <p className="text-sm max-w-xs" style={{ color:"var(--text-muted)" }}>Hozz létre programokat és rendeld hozzá a csapattagjaidhoz.</p>
+            <button onClick={() => setShowCreate(true)} className="px-6 py-3 rounded-2xl text-sm font-bold pressable"
+              style={{ background:"rgba(34,211,238,0.12)", color:"var(--accent-primary)", border:"1px solid rgba(34,211,238,0.25)" }}>+ Első terv létrehozása</button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
+            {programs.map(p => {
+              const emoji = SPORT_EMOJI_MAP[p.sport] ?? "🏋️";
+              const assignedNames = members.filter(m => (p.assignedTo ?? []).includes(m.uid)).map(m => m.displayName);
+              return (
+                <div key={p.id} className="rounded-2xl p-4 flex flex-col gap-3"
+                  style={{ background:"var(--surface-1)", border:"1px solid var(--border-subtle)" }}>
+                  {/* Top row */}
+                  <div className="flex items-start gap-3">
+                    <div className="w-11 h-11 shrink-0 rounded-xl flex items-center justify-center text-2xl"
+                      style={{ background:"var(--surface-2)" }}>{emoji}</div>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-bold text-sm truncate" style={{ color:"var(--text-primary)" }}>{p.name}</div>
+                      <div className="flex items-center gap-2 mt-1 flex-wrap">
+                        <span className="text-[10px] px-1.5 py-0.5 rounded-full font-semibold"
+                          style={{ background:LEVEL_COLOR[p.level], color:LEVEL_TEXT[p.level] }}>{LEVEL_LABEL[p.level]}</span>
+                        <span className="text-xs" style={{ color:"var(--text-muted)" }}>{(p.sessions ?? []).length} session</span>
+                      </div>
+                    </div>
+                  </div>
+                  {/* Assigned members */}
+                  <div className="text-xs" style={{ color:"var(--text-muted)" }}>
+                    {assignedNames.length > 0
+                      ? <span><span style={{ color:"var(--accent-primary)" }}>👤 {assignedNames.length} tag</span>: {assignedNames.slice(0,3).join(", ")}{assignedNames.length > 3 ? ` +${assignedNames.length-3}` : ""}</span>
+                      : "Még nincs hozzárendelve"}
+                  </div>
+                  {/* Actions */}
+                  <div className="flex gap-2 mt-auto">
+                    <button onClick={() => setAssignTarget(p)} className="flex-1 py-2 rounded-xl text-xs font-semibold pressable"
+                      style={{ background:"rgba(34,211,238,0.08)", color:"var(--accent-primary)", border:"1px solid rgba(34,211,238,0.2)" }}>
+                      👤 Hozzárendelés
+                    </button>
+                    <button onClick={() => handleDelete(p.id)} disabled={deletingId === p.id} className="px-3 py-2 rounded-xl text-xs pressable"
+                      style={{ background:"rgba(239,68,68,0.07)", color:"#fca5a5", border:"1px solid rgba(239,68,68,0.15)" }}>
+                      {deletingId === p.id ? "…" : "✕"}
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ─── Placeholder ──────────────────────────────────────────────────────────────
 function PlaceholderPage({ title, desc }: { title: string; desc: string }) {
   return (
@@ -507,7 +756,7 @@ export default function CoachDashboard() {
     switch (activePage) {
       case "dashboard": return <DashboardPage members={members} loading={loading} />;
       case "team":      return <TeamPage members={members} loading={loading} refresh={refresh} onInvite={() => setInviteOpen(true)} />;
-      case "plans":     return <PlaceholderPage title="Edzéstervek" desc="Hozz létre részletes edzésterveket és rendeld hozzá csapattagjaidhoz." />;
+      case "plans":     return <PlansPage members={members} user={user} />;
       case "calendar":  return <PlaceholderPage title="Naptár" desc="Heti edzésmenetrend tervezése, szerkesztése és kiküldése." />;
       case "stats":     return <PlaceholderPage title="Statisztikák" desc="Csapatod teljesítményének részletes elemzése." />;
       default:          return <DashboardPage members={members} loading={loading} />;
