@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { InviteModal } from "@/components/coach/InviteModal";
 import { useCoachTeam, apiUpdateMember, apiRemoveMember } from "@/lib/useCoach";
 import { auth } from "@/lib/firebase";
@@ -481,18 +482,13 @@ function TeamPage({ members, loading, refresh, onInvite }: { members: TeamMember
 // ─── Plans Page ──────────────────────────────────────────────────────────────
 type CoachProgram = {
   id: string; name: string; description?: string; sport: string; level: string;
-  sessions: unknown[]; assignedTo: string[]; createdAt: number; updatedAt: number;
+  category: string; sessions: unknown[]; assignedTo: string[]; createdAt: number; updatedAt: number;
 };
 
-const SPORT_EMOJI_MAP: Record<string, string> = {
-  gym:"🏋️", home:"🏠", running:"🏃", boxing:"🥊", mma:"🥋", muay_thai:"🦵",
-  bjj:"🥋", kickboxing:"🥊", crossfit:"⚡", calisthenics:"🤸", hiit:"🔥",
-  cycling:"🚴", mobility:"🧘", yoga:"🧘", stretching:"🤸", foam_roll:"🟫",
-  warmup:"🔥", powerlifting:"🏋️", bodybuilding:"💪", hybrid:"⚡",
-};
 const LEVEL_LABEL: Record<string, string> = { beginner:"Kezdő", intermediate:"Középhaladó", advanced:"Haladó" };
 const LEVEL_COLOR: Record<string, string> = { beginner:"rgba(74,222,128,0.15)", intermediate:"rgba(34,211,238,0.15)", advanced:"rgba(251,191,36,0.15)" };
 const LEVEL_TEXT: Record<string, string>  = { beginner:"#4ade80", intermediate:"#22d3ee", advanced:"#fbbf24" };
+const DEFAULT_CATEGORIES = ["Erő", "Kardio", "Mobilitás", "Feltöltő"];
 
 async function apiCall(method: string, path: string, body?: unknown) {
   const { getAuth } = await import("firebase/auth");
@@ -505,6 +501,89 @@ async function apiCall(method: string, path: string, body?: unknown) {
   return res.json();
 }
 
+// ─── Category Manager Modal ───────────────────────────────────────────────────
+function CategoryManagerModal({ categories, onClose, onChange }: {
+  categories: string[]; onClose: () => void;
+  onChange: (cats: string[]) => void;
+}) {
+  const [list, setList] = React.useState<string[]>(categories);
+  const [creating, setCreating] = React.useState(false);
+  const [newName, setNewName] = React.useState("");
+  const [editIdx, setEditIdx] = React.useState<number | null>(null);
+  const [editVal, setEditVal] = React.useState("");
+
+  const addCat = () => {
+    if (!newName.trim() || list.includes(newName.trim())) return;
+    const updated = [...list, newName.trim()];
+    setList(updated); onChange(updated); setNewName(""); setCreating(false);
+  };
+  const renameCat = (idx: number) => {
+    if (!editVal.trim()) return;
+    const updated = list.map((c, i) => i === idx ? editVal.trim() : c);
+    setList(updated); onChange(updated); setEditIdx(null);
+  };
+  const deleteCat = (idx: number) => {
+    const updated = list.filter((_, i) => i !== idx);
+    setList(updated); onChange(updated);
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4" style={{ background:"rgba(0,0,0,0.7)", backdropFilter:"blur(8px)" }}>
+      <div className="w-full max-w-sm rounded-2xl flex flex-col gap-4 p-6" style={{ background:"var(--bg-surface)", border:"1px solid var(--border-subtle)" }}>
+        <div className="flex items-center justify-between">
+          <h2 className="font-bold text-base" style={{ color:"var(--text-primary)" }}>Kategóriák kezelése</h2>
+          <button onClick={onClose} className="p-1.5 rounded-lg pressable" style={{ color:"var(--text-muted)" }}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+        <div className="flex flex-col gap-2 max-h-72 overflow-y-auto">
+          {list.map((cat, idx) => (
+            <div key={cat + idx} className="flex items-center gap-2 px-3 py-2.5 rounded-xl" style={{ background:"var(--surface-1)", border:"1px solid var(--border-subtle)" }}>
+              {editIdx === idx ? (
+                <>
+                  <input autoFocus value={editVal} onChange={e => setEditVal(e.target.value)}
+                    onKeyDown={e => { if (e.key === "Enter") renameCat(idx); if (e.key === "Escape") setEditIdx(null); }}
+                    className="flex-1 bg-transparent text-sm outline-none" style={{ color:"var(--text-primary)" }} />
+                  <button onClick={() => renameCat(idx)} className="text-xs font-semibold px-2 py-1 rounded-lg pressable" style={{ background:"var(--accent-primary)", color:"#080B0F" }}>Ment</button>
+                  <button onClick={() => setEditIdx(null)} className="text-xs px-2 py-1 rounded-lg pressable" style={{ color:"var(--text-muted)" }}>×</button>
+                </>
+              ) : (
+                <>
+                  <span className="flex-1 text-sm font-medium" style={{ color:"var(--text-primary)" }}>{cat}</span>
+                  <button onClick={() => { setEditIdx(idx); setEditVal(cat); }} className="p-1.5 rounded-lg pressable" style={{ color:"var(--text-muted)" }}>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                  </button>
+                  <button onClick={() => deleteCat(idx)} className="p-1.5 rounded-lg pressable" style={{ color:"#ef4444" }}>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>
+                  </button>
+                </>
+              )}
+            </div>
+          ))}
+          {creating ? (
+            <div className="flex gap-2 mt-1">
+              <input autoFocus value={newName} onChange={e => setNewName(e.target.value)}
+                onKeyDown={e => { if (e.key === "Enter") addCat(); if (e.key === "Escape") setCreating(false); }}
+                placeholder="Kategória neve…" className="flex-1 px-3 py-2 rounded-xl text-sm outline-none"
+                style={{ background:"var(--surface-1)", border:"1px solid var(--accent-primary)", color:"var(--text-primary)" }} />
+              <button onClick={addCat} className="px-3 py-2 rounded-xl text-xs font-semibold pressable" style={{ background:"var(--accent-primary)", color:"#080B0F" }}>Hozzáad</button>
+              <button onClick={() => { setCreating(false); setNewName(""); }} className="px-3 py-2 rounded-xl text-xs pressable" style={{ background:"var(--surface-2)", color:"var(--text-muted)" }}>×</button>
+            </div>
+          ) : (
+            <button onClick={() => setCreating(true)} className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-semibold pressable mt-1"
+              style={{ background:"rgba(34,211,238,0.08)", color:"var(--accent-primary)", border:"1px dashed rgba(34,211,238,0.35)" }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Új kategória
+            </button>
+          )}
+        </div>
+        <button onClick={onClose} className="py-2.5 rounded-xl text-sm font-semibold pressable" style={{ background:"var(--surface-2)", color:"var(--text-secondary)" }}>Kész</button>
+      </div>
+    </div>
+  );
+}
+
+// ─── Assign Modal ─────────────────────────────────────────────────────────────
 function AssignModal({ program, members, onSave, onClose }: {
   program: CoachProgram; members: TeamMember[];
   onSave: (uids: string[]) => Promise<void>; onClose: () => void;
@@ -513,7 +592,6 @@ function AssignModal({ program, members, onSave, onClose }: {
   const [saving, setSaving] = React.useState(false);
   const toggle = (uid: string) => setSelected(prev => prev.includes(uid) ? prev.filter(x => x !== uid) : [...prev, uid]);
   const handleSave = async () => { setSaving(true); try { await onSave(selected); onClose(); } finally { setSaving(false); } };
-
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4" style={{ background:"rgba(0,0,0,0.7)", backdropFilter:"blur(8px)" }}>
       <div className="w-full max-w-sm rounded-2xl flex flex-col gap-4 p-6" style={{ background:"var(--bg-surface)", border:"1px solid var(--border-subtle)" }}>
@@ -534,7 +612,7 @@ function AssignModal({ program, members, onSave, onClose }: {
               const checked = selected.includes(m.uid);
               return (
                 <button key={m.uid} onClick={() => toggle(m.uid)}
-                  className="flex items-center gap-3 px-3 py-2.5 rounded-xl pressable text-left transition-all"
+                  className="flex items-center gap-3 px-3 py-2.5 rounded-xl pressable text-left"
                   style={{ background: checked ? "rgba(34,211,238,0.1)" : "var(--surface-1)", border: checked ? "1px solid rgba(34,211,238,0.3)" : "1px solid var(--border-subtle)" }}>
                   <Avatar name={m.displayName} size="sm" />
                   <div className="flex-1 min-w-0">
@@ -561,15 +639,21 @@ function AssignModal({ program, members, onSave, onClose }: {
   );
 }
 
-function CreateProgramModal({ onClose, onCreate }: { onClose: () => void; onCreate: (name: string, sport: string, level: string) => Promise<void> }) {
+// ─── Create Program Modal ─────────────────────────────────────────────────────
+function CreateProgramModal({ categories, onClose, onCreate }: {
+  categories: string[]; onClose: () => void;
+  onCreate: (name: string, category: string, level: string) => Promise<void>;
+}) {
   const [name, setName] = React.useState("");
-  const [sport, setSport] = React.useState("gym");
+  const [category, setCategory] = React.useState(categories[0] ?? "Általános");
   const [level, setLevel] = React.useState("beginner");
   const [saving, setSaving] = React.useState(false);
-  const sports = [["gym","🏋️ Terem"],["home","🏠 Otthon"],["running","🏃 Futás"],["boxing","🥊 Box"],["mma","🥋 MMA"],["crossfit","⚡ CrossFit"],["calisthenics","🤸 Calisthenics"],["mobility","🧘 Mobilitás"]];
   const levels = [["beginner","Kezdő"],["intermediate","Középhaladó"],["advanced","Haladó"]];
-  const handleCreate = async () => { if (!name.trim()) return; setSaving(true); try { await onCreate(name.trim(), sport, level); onClose(); } finally { setSaving(false); } };
-
+  const handleCreate = async () => {
+    if (!name.trim()) return;
+    setSaving(true);
+    try { await onCreate(name.trim(), category, level); onClose(); } finally { setSaving(false); }
+  };
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4" style={{ background:"rgba(0,0,0,0.7)", backdropFilter:"blur(8px)" }}>
       <div className="w-full max-w-sm rounded-2xl flex flex-col gap-5 p-6" style={{ background:"var(--bg-surface)", border:"1px solid var(--border-subtle)" }}>
@@ -581,16 +665,18 @@ function CreateProgramModal({ onClose, onCreate }: { onClose: () => void; onCrea
         </div>
         <div>
           <label className="label-xs block mb-1.5">PROGRAM NEVE *</label>
-          <input value={name} onChange={e => setName(e.target.value)} placeholder="pl. Haladó Push/Pull/Legs" maxLength={50} autoFocus
+          <input value={name} onChange={e => setName(e.target.value)} placeholder="pl. Haladó Push/Pull/Legs" maxLength={60} autoFocus
             className="w-full rounded-2xl px-4 py-3 text-sm outline-none"
             style={{ background:"var(--surface-1)", border:"1px solid var(--border-mid)", color:"var(--text-primary)" }} />
         </div>
         <div>
           <label className="label-xs block mb-2">KATEGÓRIA</label>
           <div className="flex flex-wrap gap-2">
-            {sports.map(([id, label]) => (
-              <button key={id} onClick={() => setSport(id)} className="rounded-full px-3 py-1.5 text-xs font-semibold pressable"
-                style={sport===id ? { background:"var(--accent-primary)", color:"#000" } : { background:"var(--surface-1)", color:"var(--text-secondary)", border:"1px solid var(--border-subtle)" }}>{label}</button>
+            {categories.map(cat => (
+              <button key={cat} onClick={() => setCategory(cat)} className="rounded-full px-3 py-1.5 text-xs font-semibold pressable transition-all"
+                style={category===cat ? { background:"var(--accent-primary)", color:"#000" } : { background:"var(--surface-1)", color:"var(--text-secondary)", border:"1px solid var(--border-subtle)" }}>
+                {cat}
+              </button>
             ))}
           </div>
         </div>
@@ -615,10 +701,60 @@ function CreateProgramModal({ onClose, onCreate }: { onClose: () => void; onCrea
   );
 }
 
+// ─── Program Card ─────────────────────────────────────────────────────────────
+function ProgramCard({ p, members, onAssign, onDelete, onEdit, deleting }: {
+  p: CoachProgram; members: TeamMember[];
+  onAssign: () => void; onDelete: () => void; onEdit: () => void; deleting: boolean;
+}) {
+  const assignedCount = (p.assignedTo ?? []).length;
+  const assignedNames = members.filter(m => (p.assignedTo ?? []).includes(m.uid)).map(m => m.displayName);
+  return (
+    <div className="rounded-2xl p-4 flex flex-col gap-3 transition-all"
+      style={{ background:"var(--surface-1)", border:"1px solid var(--border-subtle)" }}>
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex-1 min-w-0">
+          <button onClick={onEdit} className="font-bold text-sm truncate text-left w-full pressable hover:underline"
+            style={{ color:"var(--text-primary)" }}>{p.name}</button>
+          <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+            <span className="text-[10px] px-1.5 py-0.5 rounded-full font-semibold"
+              style={{ background:LEVEL_COLOR[p.level]??"rgba(34,211,238,0.1)", color:LEVEL_TEXT[p.level]??"#22d3ee" }}>
+              {LEVEL_LABEL[p.level] ?? p.level}
+            </span>
+            <span className="text-xs" style={{ color:"var(--text-muted)" }}>{(p.sessions ?? []).length} session</span>
+          </div>
+        </div>
+        <button onClick={onDelete} disabled={deleting} className="shrink-0 p-1.5 rounded-lg pressable" style={{ color:"#ef4444", opacity: deleting ? 0.4 : 1 }}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>
+        </button>
+      </div>
+      <div className="text-xs" style={{ color:"var(--text-muted)" }}>
+        {assignedCount > 0
+          ? <><span style={{ color:"var(--accent-primary)" }}>👤 {assignedCount} tag</span>: {assignedNames.slice(0,3).join(", ")}{assignedNames.length > 3 ? ` +${assignedNames.length-3}` : ""}</>
+          : "Nincs hozzárendelve"}
+      </div>
+      <div className="flex gap-2 mt-auto pt-1">
+        <button onClick={onEdit} className="flex-1 py-2 rounded-xl text-xs font-semibold pressable"
+          style={{ background:"var(--surface-2)", color:"var(--text-secondary)", border:"1px solid var(--border-subtle)" }}>
+          ✏️ Szerkesztés
+        </button>
+        <button onClick={onAssign} className="flex-1 py-2 rounded-xl text-xs font-semibold pressable"
+          style={{ background:"rgba(34,211,238,0.08)", color:"var(--accent-primary)", border:"1px solid rgba(34,211,238,0.2)" }}>
+          👤 Hozzárendelés
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ─── Plans Page Main ──────────────────────────────────────────────────────────
 function PlansPage({ members, user }: { members: TeamMember[]; user: User | null }) {
+  const router = useRouter();
   const [programs, setPrograms] = React.useState<CoachProgram[]>([]);
   const [loading, setLoading] = React.useState(true);
+  const [categories, setCategories] = React.useState<string[]>(DEFAULT_CATEGORIES);
+  const [activeCategory, setActiveCategory] = React.useState("Összes");
   const [showCreate, setShowCreate] = React.useState(false);
+  const [showCatManager, setShowCatManager] = React.useState(false);
   const [assignTarget, setAssignTarget] = React.useState<CoachProgram | null>(null);
   const [deletingId, setDeletingId] = React.useState<string | null>(null);
 
@@ -632,9 +768,10 @@ function PlansPage({ members, user }: { members: TeamMember[]; user: User | null
 
   React.useEffect(() => { if (user) loadPrograms(); }, [user, loadPrograms]);
 
-  const handleCreate = async (name: string, sport: string, level: string) => {
-    await apiCall("POST", "/api/coach/programs", { name, sport, level });
-    await loadPrograms();
+  const handleCreate = async (name: string, category: string, level: string) => {
+    const result = await apiCall("POST", "/api/coach/programs", { name, category, sport: "gym", level });
+    if (result.id) router.push(`/programs/${result.id}`);
+    else await loadPrograms();
   };
 
   const handleAssign = async (programId: string, uids: string[]) => {
@@ -649,9 +786,29 @@ function PlansPage({ members, user }: { members: TeamMember[]; user: User | null
     finally { setDeletingId(null); }
   };
 
+  // Collect all categories used + user-defined
+  const usedCategories = Array.from(new Set(programs.map(p => p.category).filter(Boolean)));
+  const allCategories = Array.from(new Set([...categories, ...usedCategories]));
+  const categoryTabs = ["Összes", ...allCategories];
+
+  const visiblePrograms = activeCategory === "Összes"
+    ? programs
+    : programs.filter(p => p.category === activeCategory);
+
+  // Group by category for "Összes" view
+  const grouped: Record<string, CoachProgram[]> = {};
+  if (activeCategory === "Összes") {
+    for (const p of programs) {
+      const cat = p.category || "Kategória nélkül";
+      grouped[cat] = grouped[cat] ?? [];
+      grouped[cat].push(p);
+    }
+  }
+
   return (
     <div className="flex flex-col h-full overflow-y-auto no-scrollbar animate-in">
-      {showCreate && <CreateProgramModal onClose={() => setShowCreate(false)} onCreate={handleCreate} />}
+      {showCreate && <CreateProgramModal categories={allCategories} onClose={() => setShowCreate(false)} onCreate={handleCreate} />}
+      {showCatManager && <CategoryManagerModal categories={categories} onClose={() => setShowCatManager(false)} onChange={setCategories} />}
       {assignTarget && <AssignModal program={assignTarget} members={members} onSave={uids => handleAssign(assignTarget.id, uids)} onClose={() => setAssignTarget(null)} />}
 
       {/* Header */}
@@ -660,11 +817,31 @@ function PlansPage({ members, user }: { members: TeamMember[]; user: User | null
           <h1 className="text-xl md:text-2xl font-bold" style={{ color:"var(--text-primary)" }}>Tervek</h1>
           <p className="text-sm mt-0.5" style={{ color:"var(--text-muted)" }}>{programs.length} edzésterv</p>
         </div>
-        <button onClick={() => setShowCreate(true)} className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold pressable"
-          style={{ background:"var(--accent-primary)", color:"#080B0F" }}>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          Új terv
-        </button>
+        <div className="flex items-center gap-2">
+          <button onClick={() => setShowCatManager(true)} className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold pressable"
+            style={{ background:"var(--surface-1)", border:"1px solid var(--border-mid)", color:"var(--text-secondary)" }}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+            Kategóriák
+          </button>
+          <button onClick={() => setShowCreate(true)} className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold pressable"
+            style={{ background:"var(--accent-primary)", color:"#080B0F" }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Új program
+          </button>
+        </div>
+      </div>
+
+      {/* Category tabs */}
+      <div className="px-4 md:px-6 lg:px-8 pt-3 pb-0">
+        <div className="flex gap-1 p-1 rounded-xl overflow-x-auto no-scrollbar" style={{ background:"var(--surface-1)", border:"1px solid var(--border-subtle)" }}>
+          {categoryTabs.map(cat => (
+            <button key={cat} onClick={() => setActiveCategory(cat)}
+              className="shrink-0 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all pressable"
+              style={{ background: activeCategory===cat ? "var(--accent-primary)" : "transparent", color: activeCategory===cat ? "#080B0F" : "var(--text-secondary)" }}>
+              {cat}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Content */}
@@ -677,50 +854,53 @@ function PlansPage({ members, user }: { members: TeamMember[]; user: User | null
             <h2 className="font-bold text-lg" style={{ color:"var(--text-primary)" }}>Még nincs edzésterved</h2>
             <p className="text-sm max-w-xs" style={{ color:"var(--text-muted)" }}>Hozz létre programokat és rendeld hozzá a csapattagjaidhoz.</p>
             <button onClick={() => setShowCreate(true)} className="px-6 py-3 rounded-2xl text-sm font-bold pressable"
-              style={{ background:"rgba(34,211,238,0.12)", color:"var(--accent-primary)", border:"1px solid rgba(34,211,238,0.25)" }}>+ Első terv létrehozása</button>
+              style={{ background:"rgba(34,211,238,0.12)", color:"var(--accent-primary)", border:"1px solid rgba(34,211,238,0.25)" }}>
+              + Első program létrehozása
+            </button>
+          </div>
+        ) : activeCategory === "Összes" ? (
+          // Grouped by category
+          <div className="flex flex-col gap-6">
+            {Object.entries(grouped).map(([cat, progs]) => (
+              <div key={cat}>
+                <div className="flex items-center gap-2 mb-3">
+                  <h2 className="text-sm font-bold" style={{ color:"var(--text-primary)" }}>{cat}</h2>
+                  <span className="text-xs px-1.5 py-0.5 rounded-full" style={{ background:"var(--surface-2)", color:"var(--text-muted)" }}>{progs.length}</span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
+                  {progs.map(p => (
+                    <ProgramCard key={p.id} p={p} members={members}
+                      onAssign={() => setAssignTarget(p)}
+                      onDelete={() => handleDelete(p.id)}
+                      onEdit={() => router.push(`/programs/${p.id}`)}
+                      deleting={deletingId === p.id} />
+                  ))}
+                </div>
+              </div>
+            ))}
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
-            {programs.map(p => {
-              const emoji = SPORT_EMOJI_MAP[p.sport] ?? "🏋️";
-              const assignedNames = members.filter(m => (p.assignedTo ?? []).includes(m.uid)).map(m => m.displayName);
-              return (
-                <div key={p.id} className="rounded-2xl p-4 flex flex-col gap-3"
-                  style={{ background:"var(--surface-1)", border:"1px solid var(--border-subtle)" }}>
-                  {/* Top row */}
-                  <div className="flex items-start gap-3">
-                    <div className="w-11 h-11 shrink-0 rounded-xl flex items-center justify-center text-2xl"
-                      style={{ background:"var(--surface-2)" }}>{emoji}</div>
-                    <div className="flex-1 min-w-0">
-                      <div className="font-bold text-sm truncate" style={{ color:"var(--text-primary)" }}>{p.name}</div>
-                      <div className="flex items-center gap-2 mt-1 flex-wrap">
-                        <span className="text-[10px] px-1.5 py-0.5 rounded-full font-semibold"
-                          style={{ background:LEVEL_COLOR[p.level], color:LEVEL_TEXT[p.level] }}>{LEVEL_LABEL[p.level]}</span>
-                        <span className="text-xs" style={{ color:"var(--text-muted)" }}>{(p.sessions ?? []).length} session</span>
-                      </div>
-                    </div>
-                  </div>
-                  {/* Assigned members */}
-                  <div className="text-xs" style={{ color:"var(--text-muted)" }}>
-                    {assignedNames.length > 0
-                      ? <span><span style={{ color:"var(--accent-primary)" }}>👤 {assignedNames.length} tag</span>: {assignedNames.slice(0,3).join(", ")}{assignedNames.length > 3 ? ` +${assignedNames.length-3}` : ""}</span>
-                      : "Még nincs hozzárendelve"}
-                  </div>
-                  {/* Actions */}
-                  <div className="flex gap-2 mt-auto">
-                    <button onClick={() => setAssignTarget(p)} className="flex-1 py-2 rounded-xl text-xs font-semibold pressable"
-                      style={{ background:"rgba(34,211,238,0.08)", color:"var(--accent-primary)", border:"1px solid rgba(34,211,238,0.2)" }}>
-                      👤 Hozzárendelés
-                    </button>
-                    <button onClick={() => handleDelete(p.id)} disabled={deletingId === p.id} className="px-3 py-2 rounded-xl text-xs pressable"
-                      style={{ background:"rgba(239,68,68,0.07)", color:"#fca5a5", border:"1px solid rgba(239,68,68,0.15)" }}>
-                      {deletingId === p.id ? "…" : "✕"}
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+          // Single category view
+          visiblePrograms.length === 0 ? (
+            <div className="card p-10 flex flex-col items-center gap-3 text-center">
+              <div className="text-4xl">📂</div>
+              <p className="text-sm" style={{ color:"var(--text-muted)" }}>Ebben a kategóriában még nincs program.</p>
+              <button onClick={() => setShowCreate(true)} className="px-4 py-2 rounded-xl text-xs font-semibold pressable"
+                style={{ background:"rgba(34,211,238,0.1)", color:"var(--accent-primary)", border:"1px solid rgba(34,211,238,0.2)" }}>
+                + Új program ide
+              </button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
+              {visiblePrograms.map(p => (
+                <ProgramCard key={p.id} p={p} members={members}
+                  onAssign={() => setAssignTarget(p)}
+                  onDelete={() => handleDelete(p.id)}
+                  onEdit={() => router.push(`/programs/${p.id}`)}
+                  deleting={deletingId === p.id} />
+              ))}
+            </div>
+          )
         )}
       </div>
     </div>

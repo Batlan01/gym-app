@@ -76,6 +76,7 @@ export async function POST(req: Request) {
     id: toFs(programId), coachUid: toFs(uid),
     name: toFs(body.name ?? "Névtelen program"),
     description: toFs(body.description ?? ""),
+    category: toFs(body.category ?? "Általános"),
     sport: toFs(body.sport ?? "gym"),
     level: toFs(body.level ?? "beginner"),
     sessions: toFs(body.sessions ?? []),
