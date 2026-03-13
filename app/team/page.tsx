@@ -183,60 +183,46 @@ export default function TeamPage() {
     return () => unsub();
   }, [user]);
 
-  // Memberships – hol vagyok tag
+  // Memberships – hol vagyok tag (premiumUsers doc alapján, index nélkül működik)
   React.useEffect(() => {
     if (!user) return;
-    // Keresés: teams/*/members/{user.uid}
     const loadMemberships = async () => {
       try {
-        const token = await user.getIdToken();
-        const FS = `https://firestore.googleapis.com/v1/projects/${process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID}/databases/(default)/documents`;
-        // Keresés collectionGroup "members" ahol uid == user.uid
-        const res = await fetch(`${FS}:runQuery`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
-          body: JSON.stringify({
-            structuredQuery: {
-              from: [{ collectionId: "members", allDescendants: true }],
-              where: {
-                compositeFilter: {
-                  op: "AND",
-                  filters: [
-                    { fieldFilter: { field: { fieldPath: "uid" }, op: "EQUAL", value: { stringValue: user.uid } } },
-                    { fieldFilter: { field: { fieldPath: "status" }, op: "EQUAL", value: { stringValue: "active" } } },
-                  ],
-                },
-              },
-            },
-          }),
-        });
-        if (!res.ok) return;
-        const results = await res.json();
-        const docs = results.filter((r: { document?: unknown }) => r.document).map((r: { document: { fields: Record<string, { stringValue?: string }> } }) => r.document);
-        const mems: Membership[] = await Promise.all(docs.map(async (d: { fields: Record<string, { stringValue?: string }> }) => {
-          const fields = d.fields ?? {};
-          const teamId = fields.teamId?.stringValue ?? "";
-          let teamName = "Névtelen csapat";
-          let coachName = "Ismeretlen edző";
-          try {
-            const teamSnap = await getDoc(doc(db, "teams", teamId));
-            const teamData = teamSnap.data();
-            teamName = teamData?.name ?? teamName;
-            if (teamData?.coachUid) {
-              const coachSnap = await getDoc(doc(db, "users", teamData.coachUid));
-              const coachData = coachSnap.data();
-              coachName = coachData?.displayName ?? coachData?.email ?? coachName;
-            }
-          } catch { /* ignore */ }
-          return {
-            teamId,
-            teamName,
-            coachName,
-            group: fields.group?.stringValue,
-            joinedAt: fields.joinedAt?.stringValue ?? new Date().toISOString(),
-          };
-        }));
-        setMemberships(mems);
+        // 1. Olvassuk a premiumUsers/{uid} doc-ot – tartalmazza a teamId-t
+        const premSnap = await getDoc(doc(db, "premiumUsers", user.uid));
+        if (!premSnap.exists()) return;
+        const premData = premSnap.data();
+        if (premData?.role !== "athlete" || !premData?.teamId) return;
+
+        const teamId: string = premData.teamId;
+
+        // 2. Ellenőrizzük hogy active-e a member doc
+        const memberSnap = await getDoc(doc(db, "teams", teamId, "members", user.uid));
+        if (!memberSnap.exists()) return;
+        const memberData = memberSnap.data();
+        if (memberData?.status === "removed") return;
+
+        // 3. Team és coach adatok betöltése
+        let teamName = "Névtelen csapat";
+        let coachName = "Ismeretlen edző";
+        try {
+          const teamSnap = await getDoc(doc(db, "teams", teamId));
+          const teamData = teamSnap.data();
+          teamName = teamData?.name ?? teamName;
+          if (teamData?.coachUid) {
+            const coachSnap = await getDoc(doc(db, "users", teamData.coachUid));
+            const coachData = coachSnap.data();
+            coachName = coachData?.displayName ?? coachData?.email ?? coachName;
+          }
+        } catch { /* ignore */ }
+
+        setMemberships([{
+          teamId,
+          teamName,
+          coachName,
+          group: memberData?.group,
+          joinedAt: memberData?.joinedAt ?? new Date().toISOString(),
+        }]);
       } catch { /* ignore */ }
     };
     loadMemberships();
@@ -253,12 +239,17 @@ export default function TeamPage() {
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ inviteId, displayName, email: user.email ?? "" }),
       });
-      if (res.ok) {
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.ok) {
         setResolved(prev => new Set([...prev, inviteId]));
-        // Frissítjük a tagságokat
         setTimeout(() => window.location.reload(), 800);
+      } else {
+        console.error("[team/accept] failed:", data);
+        alert(`Hiba az elfogadásnál: ${data.error ?? res.status}\n${data.memberBody ?? ""}`);
       }
-    } catch { /* ignore */ }
+    } catch (e) {
+      console.error("[team/accept] exception:", e);
+    }
     setBusy(null);
   };
 

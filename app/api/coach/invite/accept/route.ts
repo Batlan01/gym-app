@@ -15,7 +15,11 @@ async function fsGet(idToken: string, path: string) {
   const res = await fetch(`${FS_BASE}/${path}`, {
     headers: { Authorization: `Bearer ${idToken}` },
   });
-  if (!res.ok) return null;
+  if (!res.ok) {
+    const txt = await res.text().catch(() => "");
+    console.error(`[accept] fsGet FAILED ${path} → ${res.status}`, txt);
+    return null;
+  }
   const data = await res.json();
   return data?.fields ? data : null;
 }
@@ -37,18 +41,28 @@ async function fsQuery(idToken: string, collectionId: string, filters: { field: 
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${idToken}` },
     body: JSON.stringify({ structuredQuery: { from: [{ collectionId }], where: whereClause, limit: 1 } }),
   });
-  if (!res.ok) return null;
+  if (!res.ok) {
+    const txt = await res.text().catch(() => "");
+    console.error(`[accept] fsQuery FAILED ${collectionId} → ${res.status}`, txt);
+    return null;
+  }
   const data = await res.json();
   return data?.[0]?.document ?? null;
 }
 
-async function fsPatch(idToken: string, path: string, fields: Record<string, unknown>) {
+async function fsPatch(idToken: string, path: string, fields: Record<string, unknown>): Promise<{ ok: boolean; status: number; body: string }> {
   const res = await fetch(`${FS_BASE}/${path}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${idToken}` },
     body: JSON.stringify({ fields }),
   });
-  return res.ok;
+  const body = await res.text().catch(() => "");
+  if (!res.ok) {
+    console.error(`[accept] fsPatch FAILED ${path} → ${res.status}`, body);
+  } else {
+    console.log(`[accept] fsPatch OK ${path}`);
+  }
+  return { ok: res.ok, status: res.status, body };
 }
 
 export async function POST(req: NextRequest) {
@@ -62,6 +76,8 @@ export async function POST(req: NextRequest) {
     inviteCode?: string; inviteId?: string;
     displayName?: string; email?: string;
   };
+
+  console.log(`[accept] uid=${uid} inviteId=${inviteId} inviteCode=${inviteCode} email=${email}`);
 
   // ── 1. Invite keresése ────────────────────────────────────────────────────
   let inviteDoc: { name: string; fields: Record<string, { stringValue?: string }> } | null = null;
@@ -77,7 +93,10 @@ export async function POST(req: NextRequest) {
     return jsonError("inviteId or inviteCode required");
   }
 
-  if (!inviteDoc) return jsonError("Invite not found or already used", 404);
+  if (!inviteDoc) {
+    console.error("[accept] invite not found");
+    return jsonError("Invite not found or already used", 404);
+  }
 
   const f = inviteDoc.fields;
   const status = getStr(f, "status");
@@ -87,22 +106,25 @@ export async function POST(req: NextRequest) {
   const group = getStr(f, "group");
   const method = getStr(f, "method");
   const invEmail = getStr(f, "email");
-
-  // Firestore document name-ből kinyerjük az ID-t
   const docName = inviteDoc.name ?? "";
   const resolvedInviteId = docName.split("/").pop() ?? inviteId ?? "";
+
+  console.log(`[accept] invite found: status=${status} teamId=${teamId} coachUid=${coachUid} method=${method} resolvedInviteId=${resolvedInviteId}`);
 
   if (status !== "pending") return jsonError("Invite is no longer valid");
   if (new Date(expiresAt) < new Date()) {
     await fsPatch(idToken, `invites/${resolvedInviteId}`, { status: strVal("expired") });
     return jsonError("Invite has expired");
   }
-
-  // Email invite esetén egyeztetés
   if (method === "email" && invEmail && email) {
     if (invEmail !== email.trim().toLowerCase()) {
       return jsonError("This invite was sent to a different email address");
     }
+  }
+
+  if (!teamId) {
+    console.error("[accept] teamId is empty on invite doc!");
+    return jsonError("Invite has no teamId", 500);
   }
 
   const now = new Date().toISOString();
@@ -119,27 +141,41 @@ export async function POST(req: NextRequest) {
   };
   if (group) memberFields.group = strVal(group);
 
-  await fsPatch(idToken, `teams/${teamId}/members/${uid}`, memberFields);
+  const memberResult = await fsPatch(idToken, `teams/${teamId}/members/${uid}`, memberFields);
+  console.log(`[accept] member write → ok=${memberResult.ok} status=${memberResult.status}`);
 
   // ── 3. Invite lezárása ────────────────────────────────────────────────────
-  await fsPatch(idToken, `invites/${resolvedInviteId}`, {
+  const invResult = await fsPatch(idToken, `invites/${resolvedInviteId}`, {
     status: strVal("accepted"),
     acceptedBy: strVal(uid),
     acceptedAt: strVal(now),
   });
+  console.log(`[accept] invite close → ok=${invResult.ok} status=${invResult.status}`);
 
   // ── 4. PremiumUser (athlete) beállítása ───────────────────────────────────
-  await fsPatch(idToken, `premiumUsers/${uid}`, {
+  const premResult = await fsPatch(idToken, `premiumUsers/${uid}`, {
     uid: strVal(uid),
     role: strVal("athlete"),
     plan: strVal("premium"),
     teamId: strVal(teamId),
     createdAt: strVal(now),
   });
+  console.log(`[accept] premiumUser write → ok=${premResult.ok} status=${premResult.status}`);
 
   // ── 5. Team adatok visszaadása ────────────────────────────────────────────
   const teamDoc = await fsGet(idToken, `teams/${teamId}`);
   const teamName = teamDoc ? getStr(teamDoc.fields, "name") : "";
+
+  // Ha a member write sikertelen volt, jelezzük vissza
+  if (!memberResult.ok) {
+    return Response.json({ 
+      ok: false, 
+      error: "Member write failed", 
+      memberStatus: memberResult.status,
+      memberBody: memberResult.body,
+      teamId,
+    }, { status: 500 });
+  }
 
   return Response.json({ ok: true, team: { id: teamId, name: teamName } });
 }
