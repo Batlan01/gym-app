@@ -112,6 +112,7 @@ export async function POST(req: NextRequest) {
     uid: strVal(uid),
     displayName: strVal((displayName ?? "").trim() || "Névtelen"),
     email: strVal(email ?? invEmail ?? ""),
+    teamId: strVal(teamId),
     status: strVal("active"),
     joinedAt: strVal(now),
     addedBy: strVal(coachUid),

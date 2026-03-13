@@ -46,7 +46,11 @@ async function getOrCreateTeam(idToken: string, coachUid: string): Promise<strin
   // Keresés: van-e már team ehhez a coachhoz?
   const teamDoc = await fsQuery(idToken, "teams", [{ field: "coachUid", value: coachUid }]);
   if (teamDoc) {
-    return teamDoc.fields?.id?.stringValue ?? "";
+    // Előnyben részesítjük a document name-ből kinyert ID-t, fallback az id fielldre
+    const fromName = teamDoc.name?.split("/").pop() ?? "";
+    const fromField = teamDoc.fields?.id?.stringValue ?? "";
+    const resolvedId = fromName || fromField;
+    if (resolvedId) return resolvedId;
   }
 
   // Nincs team → létrehozás automatikusan
