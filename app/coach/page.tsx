@@ -432,7 +432,6 @@ function TeamPage({ members, loading, refresh, onInvite }: {
   const [hoveredRow, setHoveredRow] = React.useState<string | null>(null);
 
   const groups = Array.from(new Set(members.map(m => m.group ?? "").filter(Boolean)));
-  const groupTabs = ["Összes", ...allGroups];
 
   const filtered = members.filter(m => {
     const groupMatch = activeGroup === "Összes" || m.group === activeGroup;
@@ -474,6 +473,8 @@ function TeamPage({ members, loading, refresh, onInvite }: {
       setLocalGroups(prev => [...prev, name]);
     }
   };
+
+  const groupTabs = ["Összes", ...allGroups];
 
   return (
     <div className="flex flex-col h-full overflow-y-auto no-scrollbar animate-in">
