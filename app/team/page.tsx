@@ -239,17 +239,11 @@ export default function TeamPage() {
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ inviteId, displayName, email: user.email ?? "" }),
       });
-      const data = await res.json().catch(() => ({}));
-      if (res.ok && data.ok) {
+      if (res.ok) {
         setResolved(prev => new Set([...prev, inviteId]));
         setTimeout(() => window.location.reload(), 800);
-      } else {
-        console.error("[team/accept] failed:", data);
-        alert(`Hiba az elfogadásnál: ${data.error ?? res.status}\n${data.memberBody ?? ""}`);
       }
-    } catch (e) {
-      console.error("[team/accept] exception:", e);
-    }
+    } catch { /* ignore */ }
     setBusy(null);
   };
 
