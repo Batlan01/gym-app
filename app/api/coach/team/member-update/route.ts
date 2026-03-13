@@ -26,8 +26,8 @@ async function fsQuery(idToken: string, collectionId: string, filters: { field: 
 }
 
 async function fsPatch(idToken: string, path: string, fields: Record<string, unknown>) {
-  const fieldPaths = Object.keys(fields).join(",");
-  const res = await fetch(`${FS}/${path}?updateMask.fieldPaths=${fieldPaths}`, {
+  const maskParams = Object.keys(fields).map(k => `updateMask.fieldPaths=${encodeURIComponent(k)}`).join("&");
+  const res = await fetch(`${FS}/${path}?${maskParams}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${idToken}` },
     body: JSON.stringify({ fields }),
