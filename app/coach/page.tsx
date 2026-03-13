@@ -490,14 +490,27 @@ const LEVEL_COLOR: Record<string, string> = { beginner:"rgba(74,222,128,0.15)", 
 const LEVEL_TEXT: Record<string, string>  = { beginner:"#4ade80", intermediate:"#22d3ee", advanced:"#fbbf24" };
 const DEFAULT_CATEGORIES = ["Erő", "Kardio", "Mobilitás", "Feltöltő"];
 
+async function getToken(): Promise<string> {
+  const { getAuth, onAuthStateChanged } = await import("firebase/auth");
+  const auth = getAuth();
+  if (auth.currentUser) return auth.currentUser.getIdToken();
+  return new Promise((resolve, reject) => {
+    const unsub = onAuthStateChanged(auth, (user) => {
+      unsub();
+      if (user) user.getIdToken().then(resolve).catch(reject);
+      else reject(new Error("Not authenticated"));
+    });
+  });
+}
+
 async function apiCall(method: string, path: string, body?: unknown) {
-  const { getAuth } = await import("firebase/auth");
-  const token = await getAuth().currentUser?.getIdToken();
+  const token = await getToken();
   const res = await fetch(path, {
     method,
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
     body: body ? JSON.stringify(body) : undefined,
   });
+  if (!res.ok) throw new Error(`API error ${res.status}`);
   return res.json();
 }
 
@@ -751,12 +764,22 @@ function PlansPage({ members, user }: { members: TeamMember[]; user: User | null
   const router = useRouter();
   const [programs, setPrograms] = React.useState<CoachProgram[]>([]);
   const [loading, setLoading] = React.useState(true);
-  const [categories, setCategories] = React.useState<string[]>(DEFAULT_CATEGORIES);
+  const [categories, setCategories] = React.useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem("coach_categories");
+      return saved ? JSON.parse(saved) : DEFAULT_CATEGORIES;
+    } catch { return DEFAULT_CATEGORIES; }
+  });
   const [activeCategory, setActiveCategory] = React.useState("Összes");
   const [showCreate, setShowCreate] = React.useState(false);
   const [showCatManager, setShowCatManager] = React.useState(false);
   const [assignTarget, setAssignTarget] = React.useState<CoachProgram | null>(null);
   const [deletingId, setDeletingId] = React.useState<string | null>(null);
+
+  const saveCategories = (cats: string[]) => {
+    setCategories(cats);
+    try { localStorage.setItem("coach_categories", JSON.stringify(cats)); } catch {}
+  };
 
   const loadPrograms = React.useCallback(async () => {
     setLoading(true);
@@ -808,7 +831,7 @@ function PlansPage({ members, user }: { members: TeamMember[]; user: User | null
   return (
     <div className="flex flex-col h-full overflow-y-auto no-scrollbar animate-in">
       {showCreate && <CreateProgramModal categories={allCategories} onClose={() => setShowCreate(false)} onCreate={handleCreate} />}
-      {showCatManager && <CategoryManagerModal categories={categories} onClose={() => setShowCatManager(false)} onChange={setCategories} />}
+      {showCatManager && <CategoryManagerModal categories={categories} onClose={() => setShowCatManager(false)} onChange={saveCategories} />}
       {assignTarget && <AssignModal program={assignTarget} members={members} onSave={uids => handleAssign(assignTarget.id, uids)} onClose={() => setAssignTarget(null)} />}
 
       {/* Header */}
