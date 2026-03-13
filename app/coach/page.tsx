@@ -312,18 +312,28 @@ function MemberEditModal({ member, allGroups, onSave, onRemove, onClose }: {
 }
 
 // ─── Group Manager Modal ──────────────────────────────────────────────────────
-function GroupManagerModal({ groups, members, onClose, onRename, onDelete }: {
+function GroupManagerModal({ groups, members, onClose, onRename, onDelete, onCreate }: {
   groups: string[];
   members: TeamMember[];
   onClose: () => void;
   onRename: (oldName: string, newName: string) => Promise<void>;
   onDelete: (groupName: string) => Promise<void>;
+  onCreate: (name: string) => void;
 }) {
   const [editingGroup, setEditingGroup] = React.useState<string | null>(null);
   const [newName, setNewName] = React.useState("");
+  const [creating, setCreating] = React.useState(false);
+  const [createName, setCreateName] = React.useState("");
   const [saving, setSaving] = React.useState(false);
 
   const countInGroup = (g: string) => members.filter(m => m.group === g).length;
+
+  const handleCreate = () => {
+    if (!createName.trim()) return;
+    onCreate(createName.trim());
+    setCreateName("");
+    setCreating(false);
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4"
@@ -336,48 +346,71 @@ function GroupManagerModal({ groups, members, onClose, onRename, onDelete }: {
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
           </button>
         </div>
-        {groups.length === 0 ? (
-          <p className="text-sm text-center py-4" style={{ color: "var(--text-muted)" }}>Még nincs csoport. Tagok szerkesztésénél hozz létre egyet.</p>
-        ) : (
-          <div className="flex flex-col gap-2">
-            {groups.map(g => (
-              <div key={g} className="flex items-center gap-3 px-3 py-2.5 rounded-xl"
-                style={{ background: "var(--surface-1)", border: "1px solid var(--border-subtle)" }}>
-                {editingGroup === g ? (
-                  <>
-                    <input autoFocus value={newName} onChange={e => setNewName(e.target.value)}
-                      className="flex-1 bg-transparent text-sm outline-none"
-                      style={{ color: "var(--text-primary)" }} />
-                    <button disabled={saving} onClick={async () => {
-                      if (!newName.trim() || newName === g) { setEditingGroup(null); return; }
-                      setSaving(true);
-                      await onRename(g, newName.trim());
-                      setSaving(false); setEditingGroup(null);
-                    }} className="text-xs font-semibold px-2 py-1 rounded-lg pressable"
-                      style={{ background: "var(--accent-primary)", color: "#080B0F" }}>
-                      {saving ? "…" : "Ment"}
-                    </button>
-                    <button onClick={() => setEditingGroup(null)} className="text-xs px-2 py-1 rounded-lg pressable"
-                      style={{ color: "var(--text-muted)" }}>Mégse</button>
-                  </>
-                ) : (
-                  <>
-                    <span className="flex-1 text-sm font-medium" style={{ color: "var(--text-primary)" }}>{g}</span>
-                    <span className="text-xs" style={{ color: "var(--text-muted)" }}>{countInGroup(g)} tag</span>
-                    <button onClick={() => { setEditingGroup(g); setNewName(g); }}
-                      className="p-1.5 rounded-lg pressable" style={{ color: "var(--text-muted)" }}>
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                    </button>
-                    <button onClick={async () => { setSaving(true); await onDelete(g); setSaving(false); }}
-                      className="p-1.5 rounded-lg pressable" style={{ color: "#ef4444" }}>
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>
-                    </button>
-                  </>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
+
+        {/* Csoport lista */}
+        <div className="flex flex-col gap-2">
+          {groups.map(g => (
+            <div key={g} className="flex items-center gap-3 px-3 py-2.5 rounded-xl"
+              style={{ background: "var(--surface-1)", border: "1px solid var(--border-subtle)" }}>
+              {editingGroup === g ? (
+                <>
+                  <input autoFocus value={newName} onChange={e => setNewName(e.target.value)}
+                    className="flex-1 bg-transparent text-sm outline-none"
+                    style={{ color: "var(--text-primary)" }} />
+                  <button disabled={saving} onClick={async () => {
+                    if (!newName.trim() || newName === g) { setEditingGroup(null); return; }
+                    setSaving(true);
+                    await onRename(g, newName.trim());
+                    setSaving(false); setEditingGroup(null);
+                  }} className="text-xs font-semibold px-2 py-1 rounded-lg pressable"
+                    style={{ background: "var(--accent-primary)", color: "#080B0F" }}>
+                    {saving ? "…" : "Ment"}
+                  </button>
+                  <button onClick={() => setEditingGroup(null)} className="text-xs px-2 py-1 rounded-lg pressable"
+                    style={{ color: "var(--text-muted)" }}>Mégse</button>
+                </>
+              ) : (
+                <>
+                  <span className="flex-1 text-sm font-medium" style={{ color: "var(--text-primary)" }}>{g}</span>
+                  <span className="text-xs" style={{ color: "var(--text-muted)" }}>{countInGroup(g)} tag</span>
+                  <button onClick={() => { setEditingGroup(g); setNewName(g); }}
+                    className="p-1.5 rounded-lg pressable" style={{ color: "var(--text-muted)" }}>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                  </button>
+                  <button onClick={async () => { setSaving(true); await onDelete(g); setSaving(false); }}
+                    className="p-1.5 rounded-lg pressable" style={{ color: "#ef4444" }}>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>
+                  </button>
+                </>
+              )}
+            </div>
+          ))}
+
+          {/* Új csoport létrehozása */}
+          {creating ? (
+            <div className="flex gap-2 mt-1">
+              <input autoFocus value={createName} onChange={e => setCreateName(e.target.value)}
+                onKeyDown={e => { if (e.key === "Enter") handleCreate(); if (e.key === "Escape") setCreating(false); }}
+                placeholder="Csoport neve…"
+                className="flex-1 px-3 py-2 rounded-xl text-sm outline-none"
+                style={{ background: "var(--surface-1)", border: "1px solid var(--accent-primary)", color: "var(--text-primary)" }} />
+              <button onClick={handleCreate}
+                className="px-3 py-2 rounded-xl text-xs font-semibold pressable"
+                style={{ background: "var(--accent-primary)", color: "#080B0F" }}>Létrehoz</button>
+              <button onClick={() => { setCreating(false); setCreateName(""); }}
+                className="px-3 py-2 rounded-xl text-xs pressable"
+                style={{ background: "var(--surface-2)", color: "var(--text-muted)" }}>Mégse</button>
+            </div>
+          ) : (
+            <button onClick={() => setCreating(true)}
+              className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-semibold pressable mt-1"
+              style={{ background: "rgba(34,211,238,0.08)", color: "var(--accent-primary)", border: "1px dashed rgba(34,211,238,0.35)" }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Új csoport létrehozása
+            </button>
+          )}
+        </div>
+
         <button onClick={onClose} className="py-2.5 rounded-xl text-sm font-semibold pressable"
           style={{ background: "var(--surface-2)", color: "var(--text-secondary)" }}>Bezárás</button>
       </div>
@@ -399,7 +432,7 @@ function TeamPage({ members, loading, refresh, onInvite }: {
   const [hoveredRow, setHoveredRow] = React.useState<string | null>(null);
 
   const groups = Array.from(new Set(members.map(m => m.group ?? "").filter(Boolean)));
-  const groupTabs = ["Összes", ...groups];
+  const groupTabs = ["Összes", ...allGroups];
 
   const filtered = members.filter(m => {
     const groupMatch = activeGroup === "Összes" || m.group === activeGroup;
@@ -432,13 +465,23 @@ function TeamPage({ members, loading, refresh, onInvite }: {
     await refresh();
   };
 
+  // Új csoport létrehozása: csak lokálisan tároljuk, taghoz rendeléskor kerül Firestoreba
+  const [localGroups, setLocalGroups] = React.useState<string[]>([]);
+  const allGroups = Array.from(new Set([...groups, ...localGroups]));
+
+  const handleCreateGroup = (name: string) => {
+    if (!allGroups.includes(name)) {
+      setLocalGroups(prev => [...prev, name]);
+    }
+  };
+
   return (
     <div className="flex flex-col h-full overflow-y-auto no-scrollbar animate-in">
       {editMember && (
-        <MemberEditModal member={editMember} allGroups={groups} onSave={handleSave} onRemove={handleRemove} onClose={() => setEditMember(null)} />
+        <MemberEditModal member={editMember} allGroups={allGroups} onSave={handleSave} onRemove={handleRemove} onClose={() => setEditMember(null)} />
       )}
       {groupManagerOpen && (
-        <GroupManagerModal groups={groups} members={members} onClose={() => setGroupManagerOpen(false)} onRename={handleRenameGroup} onDelete={handleDeleteGroup} />
+        <GroupManagerModal groups={allGroups} members={members} onClose={() => setGroupManagerOpen(false)} onRename={handleRenameGroup} onDelete={handleDeleteGroup} onCreate={handleCreateGroup} />
       )}
 
       {/* ── Header bar ─────────────────────────────────────────────────────── */}
