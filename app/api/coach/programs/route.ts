@@ -93,7 +93,7 @@ export async function POST(req: Request) {
   if (!res.ok) {
     const err = await res.text();
     console.error("Firestore fsSet error:", res.status, err);
-    return jsonError("Mentési hiba", 500);
+    return Response.json({ error: "Mentési hiba", status: res.status, detail: err }, { status: 500 });
   }
   return Response.json({ id: programId });
 }
