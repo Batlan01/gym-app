@@ -1,25 +1,29 @@
 // app/api/coach/programs/route.ts
-import { verifyIdToken, jsonError, nanoid } from "../_authHelper";
+import { verifyIdTokenFull, jsonError, nanoid } from "../_authHelper";
 
 const PROJECT_ID = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID!;
 const FS = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents`;
 
-async function fsList(path: string) {
-  const res = await fetch(`${FS}/${path}`);
+function authHeaders(token: string) {
+  return { "Content-Type": "application/json", Authorization: `Bearer ${token}` };
+}
+
+async function fsList(path: string, token: string) {
+  const res = await fetch(`${FS}/${path}`, { headers: authHeaders(token) });
   if (!res.ok) return [];
   const data = await res.json();
   return data.documents ?? [];
 }
-async function fsGet(path: string) {
-  const res = await fetch(`${FS}/${path}`);
+async function fsGet(path: string, token: string) {
+  const res = await fetch(`${FS}/${path}`, { headers: authHeaders(token) });
   if (!res.ok) return null;
   return res.json();
 }
-async function fsSet(path: string, fields: Record<string, unknown>) {
-  return fetch(`${FS}/${path}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ fields }) });
+async function fsSet(path: string, fields: Record<string, unknown>, token: string) {
+  return fetch(`${FS}/${path}`, { method: "PATCH", headers: authHeaders(token), body: JSON.stringify({ fields }) });
 }
-async function fsDelete(path: string) {
-  return fetch(`${FS}/${path}`, { method: "DELETE" });
+async function fsDelete(path: string, token: string) {
+  return fetch(`${FS}/${path}`, { method: "DELETE", headers: authHeaders(token) });
 }
 
 function toFs(val: unknown): unknown {
@@ -56,9 +60,10 @@ function fromFs(fields: Record<string, unknown>): Record<string, unknown> {
 }
 
 export async function GET(req: Request) {
-  const uid = await verifyIdToken(req.headers.get("Authorization"));
-  if (!uid) return jsonError("Unauthorized", 401);
-  const docs = await fsList(`coachPrograms/${uid}/programs`);
+  const auth = await verifyIdTokenFull(req.headers.get("Authorization"));
+  if (!auth) return jsonError("Unauthorized", 401);
+  const { uid, token } = auth;
+  const docs = await fsList(`coachPrograms/${uid}/programs`, token);
   const programs = docs.map((d: Record<string, unknown>) => ({
     id: (d.name as string).split("/").pop(),
     ...fromFs((d.fields ?? {}) as Record<string, unknown>),
@@ -67,8 +72,9 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
-  const uid = await verifyIdToken(req.headers.get("Authorization"));
-  if (!uid) return jsonError("Unauthorized", 401);
+  const auth = await verifyIdTokenFull(req.headers.get("Authorization"));
+  if (!auth) return jsonError("Unauthorized", 401);
+  const { uid, token } = auth;
   const body = await req.json();
   const programId = nanoid();
   const now = Date.now();
@@ -83,33 +89,39 @@ export async function POST(req: Request) {
     assignedTo: toFs(body.assignedTo ?? []),
     createdAt: toFs(now), updatedAt: toFs(now),
   };
-  const res = await fsSet(`coachPrograms/${uid}/programs/${programId}`, fields);
-  if (!res.ok) return jsonError("Mentési hiba", 500);
+  const res = await fsSet(`coachPrograms/${uid}/programs/${programId}`, fields, token);
+  if (!res.ok) {
+    const err = await res.text();
+    console.error("Firestore fsSet error:", res.status, err);
+    return jsonError("Mentési hiba", 500);
+  }
   return Response.json({ id: programId });
 }
 
 export async function PATCH(req: Request) {
-  const uid = await verifyIdToken(req.headers.get("Authorization"));
-  if (!uid) return jsonError("Unauthorized", 401);
+  const auth = await verifyIdTokenFull(req.headers.get("Authorization"));
+  if (!auth) return jsonError("Unauthorized", 401);
+  const { uid, token } = auth;
   const body = await req.json();
   const { programId, ...rest } = body;
   if (!programId) return jsonError("programId required");
-  const existing = await fsGet(`coachPrograms/${uid}/programs/${programId}`);
+  const existing = await fsGet(`coachPrograms/${uid}/programs/${programId}`, token);
   if (!existing) return jsonError("Not found", 404);
   const updatedFields: Record<string, unknown> = { ...(existing.fields ?? {}) };
   for (const [k, v] of Object.entries(rest)) updatedFields[k] = toFs(v);
   updatedFields.updatedAt = toFs(Date.now());
-  const res = await fsSet(`coachPrograms/${uid}/programs/${programId}`, updatedFields);
+  const res = await fsSet(`coachPrograms/${uid}/programs/${programId}`, updatedFields, token);
   if (!res.ok) return jsonError("Mentési hiba", 500);
   return Response.json({ ok: true });
 }
 
 export async function DELETE(req: Request) {
-  const uid = await verifyIdToken(req.headers.get("Authorization"));
-  if (!uid) return jsonError("Unauthorized", 401);
+  const auth = await verifyIdTokenFull(req.headers.get("Authorization"));
+  if (!auth) return jsonError("Unauthorized", 401);
+  const { uid, token } = auth;
   const url = new URL(req.url);
   const programId = url.searchParams.get("programId");
   if (!programId) return jsonError("programId required");
-  await fsDelete(`coachPrograms/${uid}/programs/${programId}`);
+  await fsDelete(`coachPrograms/${uid}/programs/${programId}`, token);
   return Response.json({ ok: true });
 }

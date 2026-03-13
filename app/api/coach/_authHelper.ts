@@ -27,6 +27,26 @@ export async function verifyIdToken(authHeader: string | null): Promise<string |
   }
 }
 
+export async function verifyIdTokenFull(authHeader: string | null): Promise<{ uid: string; token: string } | null> {
+  if (!authHeader?.startsWith("Bearer ")) return null;
+  const idToken = authHeader.slice(7);
+  const apiKey = process.env.NEXT_PUBLIC_FIREBASE_API_KEY;
+  if (!apiKey) return null;
+  try {
+    const res = await fetch(
+      `https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${apiKey}`,
+      { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ idToken }) }
+    );
+    if (!res.ok) return null;
+    const data = await res.json();
+    const user = data?.users?.[0];
+    if (!user?.localId) return null;
+    return { uid: user.localId, token: idToken };
+  } catch {
+    return null;
+  }
+}
+
 export function jsonError(msg: string, status = 400) {
   return Response.json({ error: msg }, { status });
 }
