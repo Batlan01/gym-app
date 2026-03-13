@@ -311,6 +311,80 @@ function MemberEditModal({ member, allGroups, onSave, onRemove, onClose }: {
   );
 }
 
+// ─── Group Manager Modal ──────────────────────────────────────────────────────
+function GroupManagerModal({ groups, members, onClose, onRename, onDelete }: {
+  groups: string[];
+  members: TeamMember[];
+  onClose: () => void;
+  onRename: (oldName: string, newName: string) => Promise<void>;
+  onDelete: (groupName: string) => Promise<void>;
+}) {
+  const [editingGroup, setEditingGroup] = React.useState<string | null>(null);
+  const [newName, setNewName] = React.useState("");
+  const [saving, setSaving] = React.useState(false);
+
+  const countInGroup = (g: string) => members.filter(m => m.group === g).length;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4"
+      style={{ background: "rgba(0,0,0,0.7)", backdropFilter: "blur(8px)" }}>
+      <div className="w-full max-w-sm rounded-2xl flex flex-col gap-4 p-6"
+        style={{ background: "var(--bg-surface)", border: "1px solid var(--border-subtle)" }}>
+        <div className="flex items-center justify-between">
+          <h2 className="font-bold text-base" style={{ color: "var(--text-primary)" }}>Csoportok kezelése</h2>
+          <button onClick={onClose} className="p-1.5 rounded-lg pressable" style={{ color: "var(--text-muted)" }}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+        {groups.length === 0 ? (
+          <p className="text-sm text-center py-4" style={{ color: "var(--text-muted)" }}>Még nincs csoport. Tagok szerkesztésénél hozz létre egyet.</p>
+        ) : (
+          <div className="flex flex-col gap-2">
+            {groups.map(g => (
+              <div key={g} className="flex items-center gap-3 px-3 py-2.5 rounded-xl"
+                style={{ background: "var(--surface-1)", border: "1px solid var(--border-subtle)" }}>
+                {editingGroup === g ? (
+                  <>
+                    <input autoFocus value={newName} onChange={e => setNewName(e.target.value)}
+                      className="flex-1 bg-transparent text-sm outline-none"
+                      style={{ color: "var(--text-primary)" }} />
+                    <button disabled={saving} onClick={async () => {
+                      if (!newName.trim() || newName === g) { setEditingGroup(null); return; }
+                      setSaving(true);
+                      await onRename(g, newName.trim());
+                      setSaving(false); setEditingGroup(null);
+                    }} className="text-xs font-semibold px-2 py-1 rounded-lg pressable"
+                      style={{ background: "var(--accent-primary)", color: "#080B0F" }}>
+                      {saving ? "…" : "Ment"}
+                    </button>
+                    <button onClick={() => setEditingGroup(null)} className="text-xs px-2 py-1 rounded-lg pressable"
+                      style={{ color: "var(--text-muted)" }}>Mégse</button>
+                  </>
+                ) : (
+                  <>
+                    <span className="flex-1 text-sm font-medium" style={{ color: "var(--text-primary)" }}>{g}</span>
+                    <span className="text-xs" style={{ color: "var(--text-muted)" }}>{countInGroup(g)} tag</span>
+                    <button onClick={() => { setEditingGroup(g); setNewName(g); }}
+                      className="p-1.5 rounded-lg pressable" style={{ color: "var(--text-muted)" }}>
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                    </button>
+                    <button onClick={async () => { setSaving(true); await onDelete(g); setSaving(false); }}
+                      className="p-1.5 rounded-lg pressable" style={{ color: "#ef4444" }}>
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>
+                    </button>
+                  </>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+        <button onClick={onClose} className="py-2.5 rounded-xl text-sm font-semibold pressable"
+          style={{ background: "var(--surface-2)", color: "var(--text-secondary)" }}>Bezárás</button>
+      </div>
+    </div>
+  );
+}
+
 // ─── Team Page (live) ─────────────────────────────────────────────────────────
 function TeamPage({ members, loading, refresh, onInvite }: {
   members: TeamMember[];
@@ -321,6 +395,8 @@ function TeamPage({ members, loading, refresh, onInvite }: {
   const [activeGroup, setActiveGroup] = React.useState("Összes");
   const [search, setSearch] = React.useState("");
   const [editMember, setEditMember] = React.useState<TeamMember | null>(null);
+  const [groupManagerOpen, setGroupManagerOpen] = React.useState(false);
+  const [hoveredRow, setHoveredRow] = React.useState<string | null>(null);
 
   const groups = Array.from(new Set(members.map(m => m.group ?? "").filter(Boolean)));
   const groupTabs = ["Összes", ...groups];
@@ -344,34 +420,60 @@ function TeamPage({ members, loading, refresh, onInvite }: {
     await refresh();
   };
 
+  const handleRenameGroup = async (oldName: string, newName: string) => {
+    const toUpdate = members.filter(m => m.group === oldName);
+    await Promise.all(toUpdate.map(m => apiUpdateMember(m.uid, { group: newName, status: m.status })));
+    await refresh();
+  };
+
+  const handleDeleteGroup = async (groupName: string) => {
+    const toUpdate = members.filter(m => m.group === groupName);
+    await Promise.all(toUpdate.map(m => apiUpdateMember(m.uid, { group: "", status: m.status })));
+    await refresh();
+  };
+
   return (
-    <div className="flex flex-col gap-6 p-6 lg:p-8 h-full overflow-y-auto no-scrollbar animate-in">
+    <div className="flex flex-col h-full overflow-y-auto no-scrollbar animate-in">
       {editMember && (
-        <MemberEditModal
-          member={editMember}
-          allGroups={groups}
-          onSave={handleSave}
-          onRemove={handleRemove}
-          onClose={() => setEditMember(null)}
-        />
+        <MemberEditModal member={editMember} allGroups={groups} onSave={handleSave} onRemove={handleRemove} onClose={() => setEditMember(null)} />
+      )}
+      {groupManagerOpen && (
+        <GroupManagerModal groups={groups} members={members} onClose={() => setGroupManagerOpen(false)} onRename={handleRenameGroup} onDelete={handleDeleteGroup} />
       )}
 
-      <div className="flex items-center justify-between flex-wrap gap-3">
+      {/* ── Header bar ─────────────────────────────────────────────────────── */}
+      <div className="flex items-center justify-between gap-4 px-6 lg:px-8 pt-6 lg:pt-8 pb-4 flex-wrap"
+        style={{ borderBottom: "1px solid var(--border-subtle)" }}>
         <div>
           <h1 className="text-2xl font-bold" style={{ color: "var(--text-primary)" }}>Csapat</h1>
           <p className="text-sm mt-0.5" style={{ color: "var(--text-muted)" }}>{members.length} tag</p>
         </div>
-        <div className="flex gap-2">
-          <button onClick={refresh} className="p-2 rounded-xl pressable" style={{ background: "var(--surface-1)", border: "1px solid var(--border-subtle)", color: "var(--text-muted)" }} title="Frissítés">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/></svg>
+        {/* Csapat szintű akciók */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <button onClick={() => setGroupManagerOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold pressable"
+            style={{ background: "var(--surface-1)", border: "1px solid var(--border-mid)", color: "var(--text-secondary)" }}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0 0 1 4-4h4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="16" y1="11" x2="22" y2="11"/></svg>
+            Csoportok
           </button>
-          <button onClick={onInvite} className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold pressable"
-            style={{ background: "var(--accent-primary)", color: "#080B0F" }}>+ Tag meghívása</button>
+          <button onClick={refresh}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold pressable"
+            style={{ background: "var(--surface-1)", border: "1px solid var(--border-mid)", color: "var(--text-secondary)" }}
+            title="Frissítés">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/></svg>
+            Frissítés
+          </button>
+          <button onClick={onInvite}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold pressable"
+            style={{ background: "var(--accent-primary)", color: "#080B0F" }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Tag meghívása
+          </button>
         </div>
       </div>
 
-      {/* Csoport & Kereső szűrők */}
-      <div className="flex items-center gap-3 flex-wrap">
+      {/* ── Szűrők ─────────────────────────────────────────────────────────── */}
+      <div className="flex items-center gap-3 px-6 lg:px-8 py-4 flex-wrap">
         <div className="flex gap-1 p-1 rounded-xl" style={{ background: "var(--surface-1)", border: "1px solid var(--border-subtle)" }}>
           {groupTabs.map(g => (
             <button key={g} onClick={() => setActiveGroup(g)}
@@ -386,65 +488,72 @@ function TeamPage({ members, loading, refresh, onInvite }: {
           style={{ background: "var(--surface-1)", border: "1px solid var(--border-mid)", color: "var(--text-primary)", minWidth: 180 }} />
       </div>
 
-      {loading ? (
-        <div className="text-sm py-8 text-center" style={{ color: "var(--text-muted)" }}>Betöltés...</div>
-      ) : filtered.length === 0 ? (
-        <div className="card p-10 flex flex-col items-center gap-4 text-center">
-          <div className="text-5xl">{members.length === 0 ? "👥" : "🔍"}</div>
-          <p className="text-sm" style={{ color: "var(--text-muted)" }}>
-            {members.length === 0 ? "Még nincsenek csapattagok. Hívj meg valakit!" : "Nincs találat a keresésre."}
-          </p>
-        </div>
-      ) : (
-        <div className="card overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr style={{ borderBottom: "1px solid var(--border-subtle)" }}>
-                  {["Tag", "Csoport", "Státusz", "Email", "Compliance", ""].map((h, idx) => (
-                    <th key={idx} className="px-4 py-3 text-left label-xs">{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map((m, i) => (
-                  <tr key={m.uid} className="transition-colors"
-                    style={{ borderBottom: i < filtered.length - 1 ? "1px solid var(--border-subtle)" : "none" }}
-                    onMouseEnter={e => (e.currentTarget.style.background = "var(--surface-1)")}
-                    onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-2.5">
-                        <Avatar name={m.displayName} size="sm" />
-                        <span className="font-medium" style={{ color: "var(--text-primary)" }}>{m.displayName}</span>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3">
-                      {m.group ? (
-                        <span className="text-xs px-2 py-1 rounded-full font-medium" style={{ background: "var(--surface-2)", color: "var(--text-secondary)" }}>{m.group}</span>
-                      ) : <span style={{ color: "var(--text-muted)" }}>–</span>}
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-1.5">
-                        <StatusDot status={m.status} />
-                        <span className="text-xs" style={{ color: "var(--text-secondary)" }}>{statusLabel[m.status] ?? m.status}</span>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 text-xs" style={{ color: "var(--text-muted)" }}>{m.email ?? "–"}</td>
-                    <td className="px-4 py-3 min-w-[120px]"><ComplianceBar value={m.compliance ?? 80} /></td>
-                    <td className="px-4 py-3">
-                      <button onClick={() => setEditMember(m)}
-                        className="text-xs px-3 py-1.5 rounded-lg font-medium pressable"
-                        style={{ background: "var(--surface-2)", color: "var(--text-secondary)", border: "1px solid var(--border-subtle)" }}>
-                        ✏️ Szerkesztés
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+      {/* ── Tartalom ────────────────────────────────────────────────────────── */}
+      <div className="px-6 lg:px-8 pb-8">
+        {loading ? (
+          <div className="text-sm py-16 text-center" style={{ color: "var(--text-muted)" }}>Betöltés...</div>
+        ) : filtered.length === 0 ? (
+          <div className="card p-10 flex flex-col items-center gap-4 text-center">
+            <div className="text-5xl">{members.length === 0 ? "👥" : "🔍"}</div>
+            <p className="text-sm" style={{ color: "var(--text-muted)" }}>
+              {members.length === 0 ? "Még nincsenek csapattagok. Hívj meg valakit!" : "Nincs találat a keresésre."}
+            </p>
+            {members.length === 0 && (
+              <button onClick={onInvite} className="px-4 py-2 rounded-xl text-sm font-semibold pressable"
+                style={{ background: "var(--accent-primary)", color: "#080B0F" }}>+ Tag meghívása</button>
+            )}
           </div>
-        </div>
-      )}
+        ) : (
+          <div className="card overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr style={{ borderBottom: "1px solid var(--border-subtle)" }}>
+                    {["Tag", "Csoport", "Státusz", "Email", "Compliance"].map((h, idx) => (
+                      <th key={idx} className="px-4 py-3 text-left label-xs">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {filtered.map((m, i) => (
+                    <tr key={m.uid}
+                      onClick={() => setEditMember(m)}
+                      className="transition-colors cursor-pointer"
+                      style={{ borderBottom: i < filtered.length - 1 ? "1px solid var(--border-subtle)" : "none" }}
+                      onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-1)"; setHoveredRow(m.uid); }}
+                      onMouseLeave={e => { e.currentTarget.style.background = "transparent"; setHoveredRow(null); }}>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2.5">
+                          <Avatar name={m.displayName} size="sm" />
+                          <div>
+                            <span className="font-medium" style={{ color: "var(--text-primary)" }}>{m.displayName}</span>
+                            {hoveredRow === m.uid && (
+                              <span className="ml-2 text-xs" style={{ color: "var(--accent-primary)" }}>szerkesztés →</span>
+                            )}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        {m.group ? (
+                          <span className="text-xs px-2 py-1 rounded-full font-medium" style={{ background: "var(--surface-2)", color: "var(--text-secondary)" }}>{m.group}</span>
+                        ) : <span style={{ color: "var(--text-muted)" }}>–</span>}
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-1.5">
+                          <StatusDot status={m.status} />
+                          <span className="text-xs" style={{ color: "var(--text-secondary)" }}>{statusLabel[m.status] ?? m.status}</span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-xs" style={{ color: "var(--text-muted)" }}>{m.email ?? "–"}</td>
+                      <td className="px-4 py-3 min-w-[140px]"><ComplianceBar value={m.compliance ?? 0} /></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
