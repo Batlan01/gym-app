@@ -43,7 +43,28 @@ export async function GET(req: Request) {
   const premRes = await fetch(`${FS}/premiumUsers/${uid}`, { headers: ah(token) });
   if (!premRes.ok) return Response.json({ entries: [] });
   const premData = await premRes.json();
-  const coachUid = premData?.fields?.coachUid?.stringValue as string | undefined;
+  const premFields = premData?.fields ?? {};
+  let coachUid = premFields?.coachUid?.stringValue as string | undefined;
+  const teamId  = premFields?.teamId?.stringValue  as string | undefined;
+
+  // Fallback: ha nincs coachUid, keresünk a team member dokumentumban
+  if (!coachUid && teamId) {
+    const memRes = await fetch(`${FS}/teams/${teamId}/members/${uid}`, { headers: ah(token) });
+    if (memRes.ok) {
+      const memData = await memRes.json();
+      const addedBy = memData?.fields?.addedBy?.stringValue as string | undefined;
+      if (addedBy) {
+        coachUid = addedBy;
+        // Visszamentjük a premiumUsers-ba hogy legközelebb ne kelljen keresgélni
+        await fetch(`${FS}/premiumUsers/${uid}`, {
+          method: "PATCH",
+          headers: ah(token),
+          body: JSON.stringify({ fields: { ...premFields, coachUid: { stringValue: coachUid } } }),
+        });
+      }
+    }
+  }
+
   if (!coachUid) return Response.json({ entries: [] });
 
   // 2. schedules/{coachUid}/entries lekérése

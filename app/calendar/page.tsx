@@ -231,18 +231,24 @@ export default function CalendarPage() {
         });
         if (!user) return;
         const token = await user.getIdToken();
-        const now = weekDates[0];
-        const month = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}`;
-        const res = await fetch(`/api/athlete/schedule?month=${month}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (!res.ok) return;
-        const data = await res.json();
+        const firstDay = weekDates[0];
+        const lastDay  = weekDates[6];
+        const month1 = `${firstDay.getFullYear()}-${String(firstDay.getMonth()+1).padStart(2,"0")}`;
+        const month2 = `${lastDay.getFullYear()}-${String(lastDay.getMonth()+1).padStart(2,"0")}`;
+        const months = month1 === month2 ? [month1] : [month1, month2];
+
         const map: Record<string, { programName: string; sessionName: string }[]> = {};
-        for (const e of data.entries ?? []) {
-          map[e.date] = (e.assignments ?? []).map((a: { programName: string; sessionName: string }) => ({
-            programName: a.programName, sessionName: a.sessionName,
-          }));
+        for (const month of months) {
+          const res = await fetch(`/api/athlete/schedule?month=${month}`, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          if (!res.ok) continue;
+          const data = await res.json();
+          for (const e of data.entries ?? []) {
+            map[e.date] = (e.assignments ?? []).map((a: { programName: string; sessionName: string }) => ({
+              programName: a.programName, sessionName: a.sessionName,
+            }));
+          }
         }
         setCoachSchedule(map);
       } catch(e) { console.error(e); }

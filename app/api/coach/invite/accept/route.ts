@@ -122,6 +122,7 @@ export async function POST(req: NextRequest) {
     role: strVal("athlete"),
     plan: strVal("premium"),
     teamId: strVal(teamId),
+    coachUid: strVal(coachUid),
     createdAt: strVal(now),
   });
 
