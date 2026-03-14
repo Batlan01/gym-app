@@ -217,6 +217,10 @@ export default function CalendarPage() {
 
   React.useEffect(() => { setPrograms(readPrograms(pid)); }, [pid]);
 
+  const weekDates = React.useMemo(() => getWeekDates(weekOffset), [weekOffset]);
+  const today = todayIdx();
+  const isCurrentWeek = weekOffset === 0;
+
   // Betöltjük a coach által kijelölt edzéseket az aktuális hónapra
   React.useEffect(() => {
     (async () => {
@@ -244,9 +248,6 @@ export default function CalendarPage() {
       } catch(e) { console.error(e); }
     })();
   }, [weekDates]);
-  const weekDates = React.useMemo(() => getWeekDates(weekOffset), [weekOffset]);
-  const today = todayIdx();
-  const isCurrentWeek = weekOffset === 0;
 
   const schedule = React.useMemo(() => {
     const map: Record<number, string[]> = {};
