@@ -10,6 +10,7 @@ import { PROGRAM_TEMPLATES } from "@/lib/programTemplates";
 import { readPrograms } from "@/lib/programsStorage";
 import type { Workout } from "@/lib/types";
 import { useTranslation } from "@/lib/i18n";
+import { useCoachTodaySessions } from "@/lib/useCoachTodaySession";
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 function startOfDay(d: Date) {
@@ -209,6 +210,17 @@ export default function Home() {
   const name = meta?.fullName?.split(" ")[0] ?? null;
   const weekDays = WEEK_DAYS[lang] ?? WEEK_DAYS.hu;
   const todaySessions = React.useMemo(() => getHomeTodaySessions(profileId), [profileId]);
+  const coachTodaySessions = useCoachTodaySessions();
+  const allTodaySessions = React.useMemo(() => [
+    ...todaySessions,
+    ...coachTodaySessions.map(s => ({
+      slotId: s.slotId,
+      sessionName: s.sessionName,
+      programName: `🎽 ${s.programName}`,
+      exerciseCount: 0,
+      exercises: [],
+    })),
+  ], [todaySessions, coachTodaySessions]);
   const SLOT_EMOJIS: Record<string, string> = { warmup: "🔥", main: "💪", cardio: "🏃", cooldown: "🧘" };
 
   return (
@@ -240,7 +252,7 @@ export default function Home() {
             <div className="relative p-5">
               <div className="flex items-start justify-between mb-4">
                 <div className="text-[10px] font-black tracking-widest" style={{ color: "rgba(0,0,0,0.5)" }}>
-                  {hasActiveToday ? "MA TELJESÍTVE" : todaySessions.length > 0 ? "MAI EDZÉS" : "EDZÉS"}
+                  {hasActiveToday ? "MA TELJESÍTVE" : allTodaySessions.length > 0 ? "MAI EDZÉS" : "EDZÉS"}
                 </div>
                 {streak > 0 && (
                   <div className="flex items-center gap-1 rounded-full px-2.5 py-1" style={{ background: "rgba(0,0,0,0.15)" }}>
@@ -250,23 +262,23 @@ export default function Home() {
                 )}
               </div>
 
-              {!hasActiveToday && todaySessions.length > 0 ? (
+              {!hasActiveToday && allTodaySessions.length > 0 ? (
                 <>
                   <div className="text-xs font-black tracking-widest mb-1" style={{ color: "rgba(0,0,0,0.45)" }}>
                     KÉSZEN ÁLLSZ A
                   </div>
                   <div className="text-2xl font-black leading-tight mb-1" style={{ color: "#000" }}>
-                    "{todaySessions[0].sessionName}"
-                    {todaySessions.length > 1 && (
+                    "{allTodaySessions[0].sessionName}"
+                    {allTodaySessions.length > 1 && (
                       <span className="text-base font-semibold" style={{ color: "rgba(0,0,0,0.5)" }}>
-                        {" "}+{todaySessions.length - 1}
+                        {" "}+{allTodaySessions.length - 1}
                       </span>
                     )}
                   </div>
                   <div className="text-xs mb-3" style={{ color: "rgba(0,0,0,0.5)" }}>
-                    {todaySessions[0].programName}
-                    {todaySessions[0].exercises.length > 0 && (
-                      <> · {todaySessions[0].exercises.slice(0, 3).join(", ")}{todaySessions[0].exerciseCount > 3 ? `… +${todaySessions[0].exerciseCount - 3}` : ""}</>
+                    {allTodaySessions[0].programName}
+                    {allTodaySessions[0].exercises.length > 0 && (
+                      <> · {allTodaySessions[0].exercises.slice(0, 3).join(", ")}{allTodaySessions[0].exerciseCount > 3 ? `… +${allTodaySessions[0].exerciseCount - 3}` : ""}</>
                     )}
                   </div>
                   <div className="inline-flex items-center gap-1.5 rounded-2xl px-4 py-2 text-sm font-black"

@@ -31,6 +31,7 @@ import {
 import { profileKey } from "@/lib/profiles";
 import { updatePRsFromWorkout } from "@/lib/prStorage";
 import { useTranslation } from "@/lib/i18n";
+import { useCoachTodaySessions } from "@/lib/useCoachTodaySession";
 
 import { auth } from "@/lib/firebase";
 import { saveWorkoutToCloud } from "@/lib/workoutsCloud";
@@ -119,6 +120,15 @@ export default function WorkoutPage() {
   const [customExercises, setCustomExercises] = React.useState<CustomExercise[]>([]);
   React.useEffect(() => { setCustomExercises(readCustomExercises(profileId)); }, [profileId]);
   const todaySessions = React.useMemo(() => getTodaySessions(profileId), [profileId]);
+  const coachTodaySessions = useCoachTodaySessions();
+  const allTodaySessions = React.useMemo(() => [
+    ...todaySessions,
+    ...coachTodaySessions.map(s => ({
+      slotId: s.slotId,
+      sessionName: s.sessionName,
+      exercises: s.exercises,
+    })),
+  ], [todaySessions, coachTodaySessions]);
   const allExercises = React.useMemo(() => [...EXERCISES, ...customExercises], [customExercises]);
   const [editOpen, setEditOpen] = React.useState(false);
   const [editExerciseId, setEditExerciseId] = React.useState<string | null>(null);
@@ -137,7 +147,7 @@ export default function WorkoutPage() {
   React.useEffect(() => {
     const notifSettings = lsGet<NotifSettings>(LS_NOTIF_SETTINGS, DEFAULT_NOTIF_SETTINGS);
     if (history.length > 0) checkAndSendStreakBreakNotif(history[0].startedAt, notifSettings);
-    scheduleCalendarReminder(todaySessions.length, notifSettings);
+    scheduleCalendarReminder(allTodaySessions.length, notifSettings);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -171,8 +181,8 @@ export default function WorkoutPage() {
     setActive((prev) => {
       if (prev) return prev;
       const base = newWorkout();
-      if (todaySessions.length > 0) {
-        const exercises = todaySessions.flatMap(sess =>
+      if (allTodaySessions.length > 0) {
+        const exercises = allTodaySessions.flatMap(sess =>
           sess.exercises.map(exName => {
             const found = allExercises.find(e => e.name === exName);
             const id = found?.id ?? `custom_${exName.replace(/\s+/g, "_").toLowerCase()}`;
@@ -183,7 +193,7 @@ export default function WorkoutPage() {
       }
       return base;
     });
-  }, [setActive, todaySessions, allExercises]);
+  }, [setActive, allTodaySessions, allExercises]);
 
   const discardWorkout = React.useCallback(() => {
     if (!active) return;
@@ -419,13 +429,13 @@ export default function WorkoutPage() {
             <h1 className="text-2xl font-black mb-4" style={{ color: 'var(--text-primary)' }}>{t.workout.today}</h1>
 
             {/* Tervezett program */}
-            {todaySessions.length > 0 && (
+            {allTodaySessions.length > 0 && (
               <div className="mb-4 rounded-2xl p-4 space-y-2"
                 style={{ background:"var(--surface-0)", border:"1px solid var(--border-subtle)" }}>
                 <div className="text-[9px] font-black tracking-widest mb-3" style={{ color:"var(--text-muted)" }}>
                   MAI PROGRAM
                 </div>
-                {todaySessions.map((sess, i) => {
+                {allTodaySessions.map((sess, i) => {
                   const SLOT_EMOJIS: Record<string, string> = { warmup: "🔥", main: "💪", cardio: "🏃", cooldown: "🧘" };
                   return (
                     <div key={i} className="flex items-start gap-2">
@@ -444,7 +454,7 @@ export default function WorkoutPage() {
 
             {/* Start gomb — solid accent */}
             <button
-              onClick={() => { startWorkout(); if (todaySessions.length === 0) setAddOpen(true); }}
+              onClick={() => { startWorkout(); if (allTodaySessions.length === 0) setAddOpen(true); }}
               className="w-full rounded-2xl py-5 text-base font-black pressable"
               style={{ background: 'var(--accent-primary)', color: '#000' }}>
               {t.workout.start}

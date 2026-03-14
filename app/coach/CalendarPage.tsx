@@ -9,9 +9,11 @@ export interface ScheduleAssignment {
   memberUid: string; memberName: string;
   programId: string; programName: string;
   sessionId: string; sessionName: string;
+  exercises?: string[];  // gyakorlatnevek a session blokkjaiból
 }
 interface ScheduleEntry { date: string; assignments: ScheduleAssignment[]; }
-interface CoachProg { id: string; name: string; sessions: { id: string; name: string }[]; }
+interface CoachProgSession { id: string; name: string; blocks?: { name: string }[]; }
+interface CoachProg { id: string; name: string; sessions: CoachProgSession[]; }
 
 // ── Helpers ──────────────────────────────────────────────────
 const MONTHS = ["Január","Február","Március","Április","Május","Június",
@@ -75,10 +77,12 @@ function DayAssignModal({ date, members, programs, existing, onSave, onClose }: 
     const program = programs.find(p=>p.id===prog);
     const session = sessions.find(s=>s.id===sess);
     if (!member||!program||!session) return;
+    const exercises = (session.blocks??[]).map(b=>b.name).filter(Boolean);
     const a: ScheduleAssignment = {
       memberUid:member.uid, memberName:member.displayName||member.email||"",
       programId:program.id, programName:program.name,
       sessionId:session.id, sessionName:session.name,
+      exercises,
     };
     setList(prev=>[...prev.filter(x=>!(x.memberUid===a.memberUid&&x.sessionId===a.sessionId)),a]);
     setMem(""); setProg(""); setSess("");
@@ -88,14 +92,14 @@ function DayAssignModal({ date, members, programs, existing, onSave, onClose }: 
     const program = programs.find(p=>p.id===gprog);
     const session = gsessions.find(s=>s.id===gsess);
     if (!program||!session) return;
-    const groupMembers = grp
-      ? members.filter(m=>m.group===grp)
-      : members; // ha nincs csoport kiválasztva, mindenki
+    const groupMembers = grp ? members.filter(m=>m.group===grp) : members;
     if (groupMembers.length===0) return;
+    const exercises = (session.blocks??[]).map(b=>b.name).filter(Boolean);
     const newEntries: ScheduleAssignment[] = groupMembers.map(m=>({
       memberUid:m.uid, memberName:m.displayName||m.email||"",
       programId:program.id, programName:program.name,
       sessionId:session.id, sessionName:session.name,
+      exercises,
     }));
     setList(prev=>{
       const filtered = prev.filter(x=>!newEntries.some(n=>n.memberUid===x.memberUid&&n.sessionId===x.sessionId));
