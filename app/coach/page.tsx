@@ -8,6 +8,7 @@ import { useCoachTeam, apiUpdateMember, apiRemoveMember } from "@/lib/useCoach";
 import { auth } from "@/lib/firebase";
 import type { User } from "firebase/auth";
 import type { TeamMember } from "@/lib/coachTypes";
+import { CoachCalendarPage } from "./CalendarPage";
 
 // ─── Shared primitives ────────────────────────────────────────────────────────
 function StatCard({ label, value, sub, accent = false }: { label: string; value: string | number; sub?: string; accent?: boolean }) {
@@ -960,7 +961,7 @@ export default function CoachDashboard() {
       case "dashboard": return <DashboardPage members={members} loading={loading} />;
       case "team":      return <TeamPage members={members} loading={loading} refresh={refresh} onInvite={() => setInviteOpen(true)} />;
       case "plans":     return <PlansPage members={members} user={user} />;
-      case "calendar":  return <PlaceholderPage title="Naptár" desc="Heti edzésmenetrend tervezése, szerkesztése és kiküldése." />;
+      case "calendar":  return <CoachCalendarPage members={members} />;
       case "stats":     return <PlaceholderPage title="Statisztikák" desc="Csapatod teljesítményének részletes elemzése." />;
       default:          return <DashboardPage members={members} loading={loading} />;
     }

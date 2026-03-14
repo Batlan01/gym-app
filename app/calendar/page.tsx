@@ -8,6 +8,7 @@ import { readPrograms, upsertProgram } from "@/lib/programsStorage";
 import type { UserProgram, ProgramSessionTemplate } from "@/lib/programsTypes";
 import type { Workout } from "@/lib/types";
 import { profileKey } from "@/lib/profiles";
+import { getAuth, onAuthStateChanged } from "firebase/auth";
 
 const DAY_NAMES = ["Hétfő","Kedd","Szerda","Csütörtök","Péntek","Szombat","Vasárnap"];
 const DAY_SHORT = ["H","K","Sz","Cs","P","Sz","V"];
@@ -207,11 +208,42 @@ export default function CalendarPage() {
   const [weekOffset, setWeekOffset] = React.useState(0);
   const [picker, setPicker] = React.useState<{ dayIdx: number } | null>(null);
 
+  // Coach által kijelölt edzések (dátum → assignmentok)
+  const [coachSchedule, setCoachSchedule] = React.useState<Record<string, { programName: string; sessionName: string }[]>>({});
+
   const [workouts] = useLocalStorageState<Workout[]>(
     React.useMemo(() => profileKey(pid, "workouts"), [pid]), []
   );
 
   React.useEffect(() => { setPrograms(readPrograms(pid)); }, [pid]);
+
+  // Betöltjük a coach által kijelölt edzéseket az aktuális hónapra
+  React.useEffect(() => {
+    (async () => {
+      try {
+        const auth = getAuth();
+        const user = await new Promise<import("firebase/auth").User|null>(res => {
+          const u = onAuthStateChanged(auth, user => { u(); res(user); });
+        });
+        if (!user) return;
+        const token = await user.getIdToken();
+        const now = weekDates[0];
+        const month = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}`;
+        const res = await fetch(`/api/athlete/schedule?month=${month}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        const map: Record<string, { programName: string; sessionName: string }[]> = {};
+        for (const e of data.entries ?? []) {
+          map[e.date] = (e.assignments ?? []).map((a: { programName: string; sessionName: string }) => ({
+            programName: a.programName, sessionName: a.sessionName,
+          }));
+        }
+        setCoachSchedule(map);
+      } catch(e) { console.error(e); }
+    })();
+  }, [weekDates]);
   const weekDates = React.useMemo(() => getWeekDates(weekOffset), [weekOffset]);
   const today = todayIdx();
   const isCurrentWeek = weekOffset === 0;
@@ -380,13 +412,46 @@ export default function CalendarPage() {
                           ))}
                         </div>
                       ))}
+                      {/* Coach kijelölések */}
+                      {(() => {
+                        const dk = `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,"0")}-${String(date.getDate()).padStart(2,"0")}`;
+                        const ca = coachSchedule[dk];
+                        return ca?.length ? (
+                          <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                            <span className="text-xs">🎽</span>
+                            {ca.map((a,i)=>(
+                              <span key={i} className="rounded-lg px-2 py-0.5 text-xs font-black"
+                                style={{ background:"rgba(168,85,247,0.15)", color:"#c084fc" }}>
+                                {a.sessionName}
+                              </span>
+                            ))}
+                          </div>
+                        ) : null;
+                      })()}
                     </div>
-                  ) : (
-                    <div className="text-sm font-semibold"
-                      style={{ color: isToday ? "rgba(255,255,255,0.5)" : "rgba(255,255,255,0.2)" }}>
-                      {isToday ? "Koppints a beállításhoz" : "Pihenőnap"}
-                    </div>
-                  )}
+                  ) : (() => {
+                    const dk = `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,"0")}-${String(date.getDate()).padStart(2,"0")}`;
+                    const ca = coachSchedule[dk];
+                    return ca?.length ? (
+                      <div className="space-y-1.5">
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <span className="text-xs">🎽</span>
+                          <span className="text-xs font-bold" style={{ color:"#c084fc" }}>Coach terv</span>
+                          {ca.map((a,i)=>(
+                            <span key={i} className="rounded-lg px-2 py-0.5 text-xs font-black"
+                              style={{ background:"rgba(168,85,247,0.15)", color:"#c084fc" }}>
+                              {a.programName} · {a.sessionName}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="text-sm font-semibold"
+                        style={{ color: isToday ? "rgba(255,255,255,0.5)" : "rgba(255,255,255,0.2)" }}>
+                        {isToday ? "Koppints a beállításhoz" : "Pihenőnap"}
+                      </div>
+                    );
+                  })()}
                 </div>
 
                 {/* + / ✎ gomb */}
