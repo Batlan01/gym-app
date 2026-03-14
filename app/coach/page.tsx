@@ -9,6 +9,7 @@ import { auth } from "@/lib/firebase";
 import type { User } from "firebase/auth";
 import type { TeamMember } from "@/lib/coachTypes";
 import { CoachCalendarPage } from "./CalendarPage";
+import { CoachStatsPage } from "./StatsPage";
 
 // ─── Shared primitives ────────────────────────────────────────────────────────
 function StatCard({ label, value, sub, accent = false }: { label: string; value: string | number; sub?: string; accent?: boolean }) {
@@ -129,58 +130,292 @@ function MobileTabBar({ activePage, setActivePage }: { activePage: string; setAc
   );
 }
 
-// ─── Dashboard Page ───────────────────────────────────────────────────────────
-function DashboardPage({ members, loading }: { members: TeamMember[]; loading: boolean }) {
+// ─── Dashboard Page ─────────────────────────────────────────────────────────
+function DashboardPage({ members, loading, user }: { members: TeamMember[]; loading: boolean; user: User | null }) {
+  const router = useRouter();
   const totalMembers = members.length;
-  const activeToday = members.filter(m => m.status === "active").length;
-  const avgCompliance = totalMembers > 0 ? Math.round(members.reduce((s, m) => s + (m.compliance ?? 0), 0) / totalMembers) : 0;
-  const alerts = members.filter(m => m.status === "inactive").length;
-  const today = new Date().toLocaleDateString("hu-HU", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
+  const activeMembers = members.filter(m => m.status === "active").length;
+  const inactiveAlerts = members.filter(m => m.status === "inactive").length;
+  const avgCompliance = totalMembers > 0
+    ? Math.round(members.reduce((s, m) => s + (m.compliance ?? 0), 0) / totalMembers) : 0;
+
+  // Mai schedule betöltése
+  const [todaySchedule, setTodaySchedule] = React.useState<{memberName:string;programName:string;sessionName:string}[]>([]);
+  const [scheduleLoading, setScheduleLoading] = React.useState(true);
+  React.useEffect(() => {
+    const today = new Date();
+    const dateKey = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,"0")}-${String(today.getDate()).padStart(2,"0")}`;
+    const month = dateKey.slice(0,7);
+    (async () => {
+      try {
+        const token = await user?.getIdToken();
+        if (!token) { setScheduleLoading(false); return; }
+        const res = await fetch(`/api/coach/schedule?month=${month}`, { headers: { Authorization: `Bearer ${token}` } });
+        if (!res.ok) { setScheduleLoading(false); return; }
+        const data = await res.json();
+        const todayEntry = (data.entries ?? []).find((e: {date:string}) => e.date === dateKey);
+        setTodaySchedule(todayEntry?.assignments ?? []);
+      } catch(e) { console.error(e); }
+      finally { setScheduleLoading(false); }
+    })();
+  }, [user]);
+
+  const todayDate = new Date().toLocaleDateString("hu-HU", { weekday:"long", month:"long", day:"numeric" });
+
+  // Tagok compliance szerint rendezve (legrosszabb elöl)
+  const membersByCompliance = [...members].sort((a,b) => (a.compliance??0) - (b.compliance??0));
+  const needsAttention = membersByCompliance.filter(m => (m.compliance??0) < 50 || m.status === "inactive");
 
   return (
-    <div className="flex flex-col gap-5 p-4 md:p-6 lg:p-8 pb-20 md:pb-8 overflow-y-auto no-scrollbar animate-in">
-      <div>
-        <h1 className="text-2xl lg:text-3xl font-bold" style={{ color: "var(--text-primary)" }}>Jó napot! 👋</h1>
-        <p className="text-sm mt-0.5 capitalize" style={{ color: "var(--text-muted)" }}>{today}</p>
+    <div className="flex flex-col gap-4 p-4 md:p-6 lg:p-8 pb-20 md:pb-8 overflow-y-auto no-scrollbar">
+
+      {/* Header */}
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-xl font-black" style={{ color:"var(--text-primary)" }}>Dashboard</h1>
+          <p className="text-xs mt-0.5 capitalize" style={{ color:"var(--text-muted)" }}>{todayDate}</p>
+        </div>
+        <button onClick={() => router.push("/coach")}
+          className="text-xs px-3 py-1.5 rounded-lg pressable"
+          style={{ background:"var(--surface-1)", color:"var(--text-muted)", border:"1px solid var(--border-subtle)" }}>
+          Frissítés
+        </button>
       </div>
+
       {loading ? (
-        <div className="text-sm" style={{ color: "var(--text-muted)" }}>Betöltés...</div>
-      ) : (
-        <>
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-            <StatCard label="Csapattagok"      value={totalMembers}       sub="összes tag" />
-            <StatCard label="Aktív"            value={activeToday}        sub="jelenleg" accent />
-            <StatCard label="Átlag compliance" value={`${avgCompliance}%`} sub="elmúlt 30 nap" />
-            <StatCard label="Figyelmeztetés"   value={alerts}             sub="inaktív tag" />
+        <div className="text-sm py-8 text-center" style={{ color:"var(--text-muted)" }}>Betöltés…</div>
+      ) : totalMembers === 0 ? (
+        <div className="flex flex-col items-center gap-3 py-16 text-center">
+          <span className="text-4xl">👥</span>
+          <div className="text-sm font-semibold" style={{ color:"var(--text-primary)" }}>Még nincs csapatod</div>
+          <div className="text-xs" style={{ color:"var(--text-muted)" }}>Hívj meg sportolókat a Csapat oldalon.</div>
+        </div>
+      ) : (<>
+
+        {/* Stat sor */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5">
+          {[
+            { label:"Csapattagok", value:totalMembers, sub:"összesen", color:"var(--text-primary)" },
+            { label:"Aktív", value:activeMembers, sub:"jelenleg", color:"#22d3ee" },
+            { label:"Compliance", value:`${avgCompliance}%`, sub:"átlag", color: avgCompliance >= 70 ? "#22c55e" : avgCompliance >= 40 ? "#f59e0b" : "#ef4444" },
+            { label:"Figyelmeztetés", value:inactiveAlerts, sub:"inaktív tag", color: inactiveAlerts > 0 ? "#ef4444" : "var(--text-muted)" },
+          ].map(s => (
+            <div key={s.label} className="rounded-xl p-3.5 flex flex-col gap-1"
+              style={{ background:"var(--surface-1)", border:"1px solid var(--border-subtle)" }}>
+              <div className="text-xs" style={{ color:"var(--text-muted)" }}>{s.label}</div>
+              <div className="text-2xl font-black leading-none" style={{ color:s.color }}>{s.value}</div>
+              <div className="text-[10px]" style={{ color:"var(--text-muted)" }}>{s.sub}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* Mai schedule */}
+        <div className="rounded-xl overflow-hidden" style={{ border:"1px solid var(--border-subtle)" }}>
+          <div className="flex items-center justify-between px-4 py-3"
+            style={{ background:"var(--surface-1)", borderBottom:"1px solid var(--border-subtle)" }}>
+            <div className="text-xs font-bold uppercase tracking-widest" style={{ color:"var(--text-muted)" }}>
+              📅 Mai edzésterv
+            </div>
+            <span className="text-xs font-bold" style={{ color:"var(--accent-primary)" }}>
+              {scheduleLoading ? "…" : `${todaySchedule.length} tag`}
+            </span>
           </div>
-          {totalMembers > 0 && (
-            <div className="card p-4 md:p-5 flex flex-col gap-3">
-              <h2 className="font-semibold text-sm" style={{ color: "var(--text-primary)" }}>Csapat áttekintés</h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
-                {members.slice(0, 4).map(m => (
-                  <div key={m.uid} className="flex items-center gap-3 p-3 rounded-xl" style={{ background: "var(--surface-1)", border: "1px solid var(--border-subtle)" }}>
-                    <Avatar name={m.displayName} size="sm" />
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-1.5 mb-1">
-                        <StatusDot status={m.status} />
-                        <span className="text-sm font-medium truncate" style={{ color: "var(--text-primary)" }}>{m.displayName}</span>
-                      </div>
-                      <ComplianceBar value={m.compliance ?? 0} />
+          {scheduleLoading ? (
+            <div className="px-4 py-6 text-xs text-center" style={{ color:"var(--text-muted)" }}>Betöltés…</div>
+          ) : todaySchedule.length === 0 ? (
+            <div className="px-4 py-6 text-xs text-center" style={{ color:"var(--text-muted)" }}>
+              Ma nincs kijelölt edzés —{" "}
+              <button onClick={() => {}} className="underline pressable" style={{ color:"var(--accent-primary)" }}>
+                add hozzá a Naptárban
+              </button>
+            </div>
+          ) : (
+            <div className="divide-y" style={{ borderColor:"var(--border-subtle)" }}>
+              {todaySchedule.map((a, i) => (
+                <div key={i} className="flex items-center gap-3 px-4 py-2.5">
+                  <Avatar name={a.memberName} size="sm" />
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-semibold truncate" style={{ color:"var(--text-primary)" }}>{a.memberName}</div>
+                    <div className="text-xs truncate" style={{ color:"var(--text-muted)" }}>
+                      {a.programName} · <span style={{ color:"var(--accent-primary)" }}>{a.sessionName}</span>
                     </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Csapat áttekintés — compliance szerint rendezve */}
+        <div className="rounded-xl overflow-hidden" style={{ border:"1px solid var(--border-subtle)" }}>
+          <div className="flex items-center justify-between px-4 py-3"
+            style={{ background:"var(--surface-1)", borderBottom:"1px solid var(--border-subtle)" }}>
+            <div className="text-xs font-bold uppercase tracking-widest" style={{ color:"var(--text-muted)" }}>
+              👥 Csapat
+            </div>
+            <div className="text-xs" style={{ color:"var(--text-muted)" }}>compliance szerint</div>
+          </div>
+          <div className="divide-y" style={{ borderColor:"var(--border-subtle)" }}>
+            {members.map(m => {
+              const comp = m.compliance ?? 0;
+              const compColor = comp >= 70 ? "#22c55e" : comp >= 40 ? "#f59e0b" : "#ef4444";
+              const statusColors: Record<string,string> = { active:"#22c55e", idle:"#f59e0b", inactive:"#ef4444", invited:"#22d3ee", removed:"#888" };
+              return (
+                <div key={m.uid} className="flex items-center gap-3 px-4 py-2.5">
+                  <Avatar name={m.displayName} size="sm" />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-sm font-semibold truncate" style={{ color:"var(--text-primary)" }}>{m.displayName}</span>
+                      {m.group && <span className="text-[10px] px-1.5 py-0.5 rounded-md shrink-0"
+                        style={{ background:"var(--surface-2)", color:"var(--text-muted)" }}>{m.group}</span>}
+                    </div>
+                    {/* Compliance bar */}
+                    <div className="flex items-center gap-2">
+                      <div className="flex-1 h-1 rounded-full overflow-hidden" style={{ background:"var(--surface-2)" }}>
+                        <div className="h-full rounded-full transition-all" style={{ width:`${comp}%`, background:compColor }}/>
+                      </div>
+                      <span className="text-[10px] font-bold w-8 text-right" style={{ color:compColor }}>{comp}%</span>
+                    </div>
+                  </div>
+                  <div className="shrink-0 w-1.5 h-1.5 rounded-full" style={{ background: statusColors[m.status] ?? "#888" }}/>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Figyelmet igénylők */}
+        {needsAttention.length > 0 && (
+          <div className="rounded-xl p-4" style={{ background:"rgba(239,68,68,0.06)", border:"1px solid rgba(239,68,68,0.15)" }}>
+            <div className="text-xs font-bold uppercase tracking-widest mb-3" style={{ color:"#f87171" }}>
+              ⚠️ Figyelmet igényel ({needsAttention.length})
+            </div>
+            <div className="space-y-2">
+              {needsAttention.slice(0, 5).map(m => (
+                <div key={m.uid} className="flex items-center gap-2">
+                  <Avatar name={m.displayName} size="sm" />
+                  <span className="text-sm flex-1 truncate" style={{ color:"var(--text-primary)" }}>{m.displayName}</span>
+                  <span className="text-xs" style={{ color:"#f87171" }}>
+                    {m.status === "inactive" ? "inaktív" : `${m.compliance ?? 0}% compliance`}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+      </>)}
+    </div>
+  );
+}
+
+
+// ─── Member Detail Panel ─────────────────────────────────────────────────────
+function MemberDetailPanel({ member, programs, onEdit, onClose }: {
+  member: TeamMember;
+  programs: { id:string; name:string; assignedTo?:string[]; sessions?:{ id:string; name:string }[] }[];
+  onEdit: () => void;
+  onClose: () => void;
+}) {
+  const comp = member.compliance ?? 0;
+  const compColor = comp >= 70 ? "#22c55e" : comp >= 40 ? "#f59e0b" : "#ef4444";
+  const statusLabel: Record<string,string> = { active:"Aktív", idle:"Inaktív", inactive:"Kieső", invited:"Meghívott", removed:"Eltávolítva" };
+  const statusColor: Record<string,string> = { active:"#22c55e", idle:"#f59e0b", inactive:"#ef4444", invited:"#22d3ee", removed:"#888" };
+
+  const assignedPrograms = programs.filter(p =>
+    Array.isArray(p.assignedTo) && p.assignedTo.includes(member.uid)
+  );
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end md:items-stretch md:justify-end"
+      style={{ background:"rgba(0,0,0,0.5)", backdropFilter:"blur(4px)" }}
+      onClick={e=>{ if(e.target===e.currentTarget) onClose(); }}>
+      <div className="w-full md:w-80 lg:w-96 h-auto md:h-full flex flex-col rounded-t-2xl md:rounded-none overflow-hidden"
+        style={{ background:"var(--bg-elevated)", borderLeft:"1px solid var(--border-subtle)", maxHeight:"90dvh" }}>
+
+        {/* Header */}
+        <div className="flex items-center gap-3 px-5 py-4 shrink-0"
+          style={{ borderBottom:"1px solid var(--border-subtle)" }}>
+          <Avatar name={member.displayName} size="md" />
+          <div className="flex-1 min-w-0">
+            <div className="text-sm font-black truncate" style={{ color:"var(--text-primary)" }}>{member.displayName}</div>
+            <div className="text-xs truncate" style={{ color:"var(--text-muted)" }}>{member.email}</div>
+          </div>
+          <button onClick={onClose} className="pressable text-lg leading-none shrink-0" style={{ color:"var(--text-muted)" }}>×</button>
+        </div>
+
+        {/* Body */}
+        <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
+
+          {/* Status + csoport */}
+          <div className="flex gap-2 flex-wrap">
+            <span className="text-xs px-2.5 py-1 rounded-full font-bold"
+              style={{ background:`${statusColor[member.status]}18`, color:statusColor[member.status] }}>
+              {statusLabel[member.status] ?? member.status}
+            </span>
+            {member.group && (
+              <span className="text-xs px-2.5 py-1 rounded-full font-bold"
+                style={{ background:"var(--surface-2)", color:"var(--text-secondary)" }}>
+                {member.group}
+              </span>
+            )}
+          </div>
+
+          {/* Compliance */}
+          <div className="rounded-xl p-3.5" style={{ background:"var(--surface-1)", border:"1px solid var(--border-subtle)" }}>
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-bold uppercase tracking-widest" style={{ color:"var(--text-muted)" }}>Compliance</span>
+              <span className="text-lg font-black" style={{ color:compColor }}>{comp}%</span>
+            </div>
+            <div className="h-2 rounded-full overflow-hidden" style={{ background:"var(--surface-2)" }}>
+              <div className="h-full rounded-full transition-all" style={{ width:`${comp}%`, background:compColor }}/>
+            </div>
+            <div className="text-[10px] mt-1.5" style={{ color:"var(--text-muted)" }}>Elmúlt 30 nap betartása</div>
+          </div>
+
+          {/* Csatlakozás */}
+          {member.joinedAt && (
+            <div className="flex items-center justify-between py-2"
+              style={{ borderBottom:"1px solid var(--border-subtle)" }}>
+              <span className="text-xs" style={{ color:"var(--text-muted)" }}>Csatlakozott</span>
+              <span className="text-xs font-semibold" style={{ color:"var(--text-primary)" }}>
+                {new Date(member.joinedAt).toLocaleDateString("hu-HU", { year:"numeric", month:"short", day:"numeric" })}
+              </span>
+            </div>
+          )}
+
+          {/* Hozzárendelt programok */}
+          <div>
+            <div className="text-xs font-bold uppercase tracking-widest mb-2" style={{ color:"var(--text-muted)" }}>
+              Programok ({assignedPrograms.length})
+            </div>
+            {assignedPrograms.length === 0 ? (
+              <div className="text-xs py-2" style={{ color:"var(--text-muted)" }}>Nincs hozzárendelt program</div>
+            ) : (
+              <div className="space-y-1.5">
+                {assignedPrograms.map(p => (
+                  <div key={p.id} className="flex items-center gap-2 rounded-lg px-3 py-2"
+                    style={{ background:"var(--surface-1)", border:"1px solid var(--border-subtle)" }}>
+                    <span className="text-xs flex-1 font-medium truncate" style={{ color:"var(--text-primary)" }}>{p.name}</span>
+                    <span className="text-[10px]" style={{ color:"var(--text-muted)" }}>
+                      {p.sessions?.length ?? 0} session
+                    </span>
                   </div>
                 ))}
               </div>
-            </div>
-          )}
-          {totalMembers === 0 && (
-            <div className="card p-10 flex flex-col items-center gap-4 text-center">
-              <div className="text-5xl">👥</div>
-              <h2 className="font-bold text-lg" style={{ color: "var(--text-primary)" }}>Még nincs csapatod</h2>
-              <p className="text-sm max-w-xs" style={{ color: "var(--text-muted)" }}>Hívj meg sportolókat a Csapat oldalon.</p>
-            </div>
-          )}
-        </>
-      )}
+            )}
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="px-5 py-4 shrink-0" style={{ borderTop:"1px solid var(--border-subtle)" }}>
+          <button onClick={onEdit}
+            className="w-full rounded-xl py-2.5 text-sm font-bold pressable"
+            style={{ background:"rgba(34,211,238,0.1)", color:"var(--accent-primary)", border:"1px solid rgba(34,211,238,0.2)" }}>
+            ✎ Szerkesztés
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
@@ -343,8 +578,23 @@ function TeamPage({ members, loading, refresh, onInvite }: { members: TeamMember
   const [activeGroup, setActiveGroup] = React.useState("Összes");
   const [search, setSearch] = React.useState("");
   const [editMember, setEditMember] = React.useState<TeamMember | null>(null);
+  const [detailMember, setDetailMember] = React.useState<TeamMember | null>(null);
   const [groupManagerOpen, setGroupManagerOpen] = React.useState(false);
   const [localGroups, setLocalGroups] = React.useState<string[]>([]);
+  const [teamPrograms, setTeamPrograms] = React.useState<{id:string;name:string;assignedTo?:string[];sessions?:{id:string;name:string}[]}[]>([]);
+  React.useEffect(() => {
+    (async () => {
+      try {
+        const { getAuth } = await import("firebase/auth");
+        const token = await getAuth().currentUser?.getIdToken();
+        if (!token) return;
+        const res = await fetch("/api/coach/programs", { headers:{ Authorization:`Bearer ${token}` } });
+        if (!res.ok) return;
+        const data = await res.json();
+        setTeamPrograms(data.programs ?? []);
+      } catch {}
+    })();
+  }, []);
 
   const groups = Array.from(new Set(members.map(m => m.group ?? "").filter(Boolean)));
   const allGroups = Array.from(new Set([...groups, ...localGroups]));
@@ -372,6 +622,9 @@ function TeamPage({ members, loading, refresh, onInvite }: { members: TeamMember
   return (
     <div className="flex flex-col h-full overflow-y-auto no-scrollbar animate-in">
       {editMember && <MemberEditModal member={editMember} allGroups={allGroups} onSave={handleSave} onRemove={handleRemove} onClose={() => setEditMember(null)} />}
+      {detailMember && <MemberDetailPanel member={detailMember} programs={teamPrograms}
+        onEdit={() => { setEditMember(detailMember); setDetailMember(null); }}
+        onClose={() => setDetailMember(null)} />}
       {groupManagerOpen && <GroupManagerModal groups={allGroups} members={members} onClose={() => setGroupManagerOpen(false)} onRename={handleRenameGroup} onDelete={handleDeleteGroup} onCreate={handleCreateGroup} />}
 
       {/* Header */}
@@ -427,7 +680,7 @@ function TeamPage({ members, loading, refresh, onInvite }: { members: TeamMember
             {/* Mobil: kártyák */}
             <div className="flex flex-col gap-2 md:hidden">
               {filtered.map(m => (
-                <button key={m.uid} onClick={() => setEditMember(m)} className="w-full text-left pressable rounded-2xl p-4 flex items-center gap-3"
+                <button key={m.uid} onClick={() => setDetailMember(m)} className="w-full text-left pressable rounded-2xl p-4 flex items-center gap-3"
                   style={{ background: "var(--surface-1)", border: "1px solid var(--border-subtle)" }}>
                   <Avatar name={m.displayName} size="md" />
                   <div className="flex-1 min-w-0">
@@ -458,7 +711,7 @@ function TeamPage({ members, loading, refresh, onInvite }: { members: TeamMember
                   </thead>
                   <tbody>
                     {filtered.map((m, i) => (
-                      <tr key={m.uid} onClick={() => setEditMember(m)} className="transition-colors cursor-pointer"
+                      <tr key={m.uid} onClick={() => setDetailMember(m)} className="transition-colors cursor-pointer"
                         style={{ borderBottom: i < filtered.length - 1 ? "1px solid var(--border-subtle)" : "none" }}
                         onMouseEnter={e => e.currentTarget.style.background = "var(--surface-1)"}
                         onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
@@ -803,6 +1056,24 @@ function PlansPage({ members, user }: { members: TeamMember[]; user: User | null
     await loadPrograms();
   };
 
+  const handleDuplicate = async (p: CoachProgram) => {
+    try {
+      const token = await getToken();
+      const res = await fetch("/api/coach/programs", {
+        method: "POST",
+        headers: { "Content-Type":"application/json", Authorization:`Bearer ${token}` },
+        body: JSON.stringify({
+          name: p.name + " (másolat)",
+          category: p.category,
+          sport: p.sport ?? "gym",
+          level: p.level,
+          sessions: p.sessions ?? [],
+        }),
+      });
+      if (res.ok) await loadPrograms();
+    } catch(e) { console.error(e); }
+  };
+
   const handleDelete = async (programId: string) => {
     if (!confirm("Biztosan törlöd ezt a programot?")) return;
     setDeletingId(programId);
@@ -958,12 +1229,12 @@ export default function CoachDashboard() {
 
   const renderPage = () => {
     switch (activePage) {
-      case "dashboard": return <DashboardPage members={members} loading={loading} />;
+      case "dashboard": return <DashboardPage members={members} loading={loading} user={user} />;
       case "team":      return <TeamPage members={members} loading={loading} refresh={refresh} onInvite={() => setInviteOpen(true)} />;
       case "plans":     return <PlansPage members={members} user={user} />;
       case "calendar":  return <CoachCalendarPage members={members} />;
-      case "stats":     return <PlaceholderPage title="Statisztikák" desc="Csapatod teljesítményének részletes elemzése." />;
-      default:          return <DashboardPage members={members} loading={loading} />;
+      case "stats":     return <CoachStatsPage members={members} />;
+      default:          return <DashboardPage members={members} loading={loading} user={user} />;
     }
   };
 
