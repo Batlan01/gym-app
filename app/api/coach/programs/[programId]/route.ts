@@ -57,22 +57,22 @@ function fromFs(fields: Record<string, unknown>): Record<string, unknown> {
   return out;
 }
 
-export async function GET(req: Request, { params }: { params: { programId: string } }) {
+export async function GET(req: Request, { params }: { params: Promise<{ programId: string }> }) {
   const auth = await verifyIdTokenFull(req.headers.get("Authorization"));
   if (!auth) return jsonError("Unauthorized", 401);
   const { uid, token } = auth;
-  const { programId } = params;
+  const { programId } = await params;
   const doc = await fsGet(`coachPrograms/${uid}/programs/${programId}`, token);
   if (!doc?.fields) return jsonError("Not found", 404);
   const program = { id: programId, ...fromFs(doc.fields as Record<string, unknown>) };
   return Response.json({ program });
 }
 
-export async function PATCH(req: Request, { params }: { params: { programId: string } }) {
+export async function PATCH(req: Request, { params }: { params: Promise<{ programId: string }> }) {
   const auth = await verifyIdTokenFull(req.headers.get("Authorization"));
   if (!auth) return jsonError("Unauthorized", 401);
   const { uid, token } = auth;
-  const { programId } = params;
+  const { programId } = await params;
   const body = await req.json();
 
   // Betöltjük a meglévő mezőket
