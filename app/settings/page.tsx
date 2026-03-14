@@ -21,6 +21,7 @@ import {
   cancelDailyReminder,
   showLocalNotification,
 } from "@/lib/notifications";
+import { getFCMToken } from "@/lib/fcm";
 
 // Toggle switch component
 function Toggle({ value, onChange, disabled }: {
@@ -124,6 +125,31 @@ export default function SettingsPage() {
       }
     }
     setNotifSettings(s => ({ ...s, enabled: enable }));
+
+    // FCM token regisztráció / törlés
+    if (enable) {
+      try {
+        const fcmToken = await getFCMToken();
+        if (fcmToken && auth.currentUser) {
+          const idToken = await auth.currentUser.getIdToken();
+          await fetch("/api/push/register", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${idToken}` },
+            body: JSON.stringify({ fcmToken }),
+          });
+        }
+      } catch (e) { console.warn("[FCM] Token regisztráció sikertelen:", e); }
+    } else {
+      try {
+        if (auth.currentUser) {
+          const idToken = await auth.currentUser.getIdToken();
+          await fetch("/api/push/register", {
+            method: "DELETE",
+            headers: { Authorization: `Bearer ${idToken}` },
+          });
+        }
+      } catch {}
+    }
   }
 
   async function handleGoogleLink() {

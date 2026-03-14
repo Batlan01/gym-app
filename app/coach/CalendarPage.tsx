@@ -301,6 +301,28 @@ export function CoachCalendarPage({ members }: { members: TeamMember[] }) {
           method:"POST", headers:{ "Content-Type":"application/json", Authorization:`Bearer ${token}` },
           body: JSON.stringify({ date, assignments }),
         });
+        // Push értesítés küldése az érintett athletéknek
+        const today = new Date();
+        const dateKey = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,"0")}-${String(today.getDate()).padStart(2,"0")}`;
+        const isToday = date === dateKey;
+        const d = new Date(date + "T12:00:00");
+        const dayLabel = `${d.getMonth()+1}/${d.getDate()}`;
+        const uniqueUids = [...new Set(assignments.map(a => a.memberUid))];
+        // Csoportosítsuk sessioneket tagonként az értesítés szövegéhez
+        for (const uid of uniqueUids) {
+          const memberAssignments = assignments.filter(a => a.memberUid === uid);
+          const sessionNames = memberAssignments.map(a => a.sessionName).join(", ");
+          await fetch("/api/push/send", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+            body: JSON.stringify({
+              targetUids: [uid],
+              title: isToday ? "💪 Mai edzésed megérkezett!" : `📅 Új edzés: ${dayLabel}`,
+              body: sessionNames,
+              url: "/calendar",
+            }),
+          }).catch(() => {}); // Push hiba ne akassza meg a mentést
+        }
       }
     } catch(e) { console.error(e); }
   }
