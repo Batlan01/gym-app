@@ -92,8 +92,8 @@ export async function POST(req: Request) {
   const res = await fsSet(`coachPrograms/${uid}/programs/${programId}`, fields, token);
   if (!res.ok) {
     const err = await res.text();
-    console.error("Firestore fsSet error:", res.status, err);
-    return Response.json({ error: "Mentési hiba", status: res.status, detail: err }, { status: 500 });
+    console.error("Firestore POST error:", res.status, err);
+    return jsonError("Mentési hiba", 500);
   }
   return Response.json({ id: programId });
 }
