@@ -42,17 +42,35 @@ function DayAssignModal({ date, members, programs, existing, onSave, onClose }: 
   date: string; members: TeamMember[]; programs: CoachProg[];
   existing: ScheduleAssignment[]; onSave:(a:ScheduleAssignment[])=>void; onClose:()=>void;
 }) {
-  const [list, setList] = React.useState<ScheduleAssignment[]>(existing);
-  const [mem, setMem]   = React.useState("");
-  const [prog, setProg] = React.useState("");
-  const [sess, setSess] = React.useState("");
+  const [list, setList]   = React.useState<ScheduleAssignment[]>(existing);
+  const [mode, setMode]   = React.useState<"individual"|"group">("individual");
+  // individual
+  const [mem,  setMem]    = React.useState("");
+  const [prog, setProg]   = React.useState("");
+  const [sess, setSess]   = React.useState("");
+  // group
+  const [grp,  setGrp]    = React.useState("");
+  const [gprog,setGprog]  = React.useState("");
+  const [gsess,setGsess]  = React.useState("");
 
-  const selProg = programs.find(p=>p.id===prog);
-  const sessions = selProg?.sessions ?? [];
+  const sel  = "w-full rounded-lg px-3 py-2 text-sm outline-none appearance-none";
+  const selS = { background:"var(--surface-1)", border:"1px solid var(--border-subtle)", color:"var(--text-primary)" };
+
+  const selProg  = programs.find(p=>p.id===prog);
+  const selGprog = programs.find(p=>p.id===gprog);
+  const sessions  = selProg?.sessions  ?? [];
+  const gsessions = selGprog?.sessions ?? [];
+
+  // Egyedi csoportok a tagokból
+  const groups = React.useMemo(() => {
+    const s = new Set(members.map(m=>m.group).filter(Boolean) as string[]);
+    return [...s].sort();
+  }, [members]);
+
   const d = new Date(date+"T12:00:00");
   const label = `${d.getDate()}. ${MONTHS[d.getMonth()]}`;
 
-  function add() {
+  function addIndividual() {
     const member  = members.find(m=>m.uid===mem);
     const program = programs.find(p=>p.id===prog);
     const session = sessions.find(s=>s.id===sess);
@@ -66,8 +84,28 @@ function DayAssignModal({ date, members, programs, existing, onSave, onClose }: 
     setMem(""); setProg(""); setSess("");
   }
 
-  const sel = "w-full rounded-lg px-3 py-2 text-sm outline-none appearance-none";
-  const selS = { background:"var(--surface-1)", border:"1px solid var(--border-subtle)", color:"var(--text-primary)" };
+  function addGroup() {
+    const program = programs.find(p=>p.id===gprog);
+    const session = gsessions.find(s=>s.id===gsess);
+    if (!program||!session) return;
+    const groupMembers = grp
+      ? members.filter(m=>m.group===grp)
+      : members; // ha nincs csoport kiválasztva, mindenki
+    if (groupMembers.length===0) return;
+    const newEntries: ScheduleAssignment[] = groupMembers.map(m=>({
+      memberUid:m.uid, memberName:m.displayName||m.email||"",
+      programId:program.id, programName:program.name,
+      sessionId:session.id, sessionName:session.name,
+    }));
+    setList(prev=>{
+      const filtered = prev.filter(x=>!newEntries.some(n=>n.memberUid===x.memberUid&&n.sessionId===x.sessionId));
+      return [...filtered, ...newEntries];
+    });
+    setGrp(""); setGprog(""); setGsess("");
+  }
+
+  const canAdd  = !!(mem&&prog&&sess);
+  const canGAdd = !!(gprog&&gsess);
 
   return (
     <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center"
@@ -75,6 +113,7 @@ function DayAssignModal({ date, members, programs, existing, onSave, onClose }: 
       onClick={e=>{ if(e.target===e.currentTarget) onClose(); }}>
       <div className="w-full md:max-w-lg rounded-t-2xl md:rounded-2xl flex flex-col overflow-hidden"
         style={{ background:"var(--bg-elevated)", maxHeight:"92dvh", borderTop:"2px solid var(--accent-primary)" }}>
+
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 shrink-0"
           style={{ borderBottom:"1px solid var(--border-subtle)" }}>
@@ -85,35 +124,80 @@ function DayAssignModal({ date, members, programs, existing, onSave, onClose }: 
           <button onClick={onClose} className="text-xl leading-none pressable" style={{ color:"var(--text-muted)" }}>×</button>
         </div>
 
+        {/* Mode tabs */}
+        <div className="flex px-5 pt-3 gap-1 shrink-0">
+          {(["individual","group"] as const).map(t=>(
+            <button key={t} onClick={()=>setMode(t)}
+              className="px-3 py-1.5 rounded-lg text-xs font-bold pressable transition-all"
+              style={{
+                background: mode===t?"rgba(34,211,238,0.12)":"transparent",
+                color: mode===t?"var(--accent-primary)":"var(--text-muted)",
+                border: mode===t?"1px solid rgba(34,211,238,0.25)":"1px solid transparent",
+              }}>
+              {t==="individual" ? "👤 Egyéni" : "👥 Csoport"}
+            </button>
+          ))}
+        </div>
+
         {/* Form */}
-        <div className="px-5 py-4 space-y-2.5 shrink-0" style={{ borderBottom:"1px solid var(--border-subtle)" }}>
-          <div className="text-xs font-bold uppercase tracking-widest mb-1" style={{ color:"var(--text-muted)" }}>Hozzáadás</div>
-          <select value={mem} onChange={e=>setMem(e.target.value)} className={sel} style={selS}>
-            <option value="">— Tag kiválasztása —</option>
-            {members.map(m=><option key={m.uid} value={m.uid}>{m.displayName||m.email}</option>)}
-          </select>
-          <select value={prog} onChange={e=>{ setProg(e.target.value); setSess(""); }} className={sel} style={selS}>
-            <option value="">— Program kiválasztása —</option>
-            {programs.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}
-          </select>
-          <select value={sess} onChange={e=>setSess(e.target.value)} className={sel} style={selS} disabled={!prog}>
-            <option value="">— Session kiválasztása —</option>
-            {sessions.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}
-          </select>
-          <button onClick={add} disabled={!mem||!prog||!sess}
-            className="w-full rounded-lg py-2.5 text-sm font-bold pressable transition-all"
-            style={{
-              background: (mem&&prog&&sess)?"var(--accent-primary)":"var(--surface-1)",
-              color: (mem&&prog&&sess)?"#000":"var(--text-muted)",
-              border: "1px solid var(--border-subtle)",
-            }}>
-            + Hozzáadás
-          </button>
+        <div className="px-5 py-3 space-y-2 shrink-0" style={{ borderBottom:"1px solid var(--border-subtle)" }}>
+          {mode==="individual" ? (<>
+            <select value={mem} onChange={e=>setMem(e.target.value)} className={sel} style={selS}>
+              <option value="">— Tag kiválasztása —</option>
+              {members.map(m=>(
+                <option key={m.uid} value={m.uid}>
+                  {m.displayName||m.email}{m.group ? ` (${m.group})` : ""}
+                </option>
+              ))}
+            </select>
+            <select value={prog} onChange={e=>{ setProg(e.target.value); setSess(""); }} className={sel} style={selS}>
+              <option value="">— Program —</option>
+              {programs.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}
+            </select>
+            <select value={sess} onChange={e=>setSess(e.target.value)} className={sel} style={selS} disabled={!prog}>
+              <option value="">— Session —</option>
+              {sessions.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}
+            </select>
+            <button onClick={addIndividual} disabled={!canAdd}
+              className="w-full rounded-lg py-2 text-sm font-bold pressable"
+              style={{ background:canAdd?"var(--accent-primary)":"var(--surface-1)",
+                color:canAdd?"#000":"var(--text-muted)", border:"1px solid var(--border-subtle)" }}>
+              + Hozzáadás
+            </button>
+          </>) : (<>
+            <select value={grp} onChange={e=>setGrp(e.target.value)} className={sel} style={selS}>
+              <option value="">— Összes tag —</option>
+              {groups.map(g=>(
+                <option key={g} value={g}>{g} ({members.filter(m=>m.group===g).length} fő)</option>
+              ))}
+            </select>
+            <select value={gprog} onChange={e=>{ setGprog(e.target.value); setGsess(""); }} className={sel} style={selS}>
+              <option value="">— Program —</option>
+              {programs.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}
+            </select>
+            <select value={gsess} onChange={e=>setGsess(e.target.value)} className={sel} style={selS} disabled={!gprog}>
+              <option value="">— Session —</option>
+              {gsessions.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}
+            </select>
+            {canGAdd && (
+              <div className="text-xs px-1" style={{ color:"var(--text-muted)" }}>
+                {grp
+                  ? `${members.filter(m=>m.group===grp).length} tagnak lesz kijelölve`
+                  : `Mind a ${members.length} tagnak lesz kijelölve`}
+              </div>
+            )}
+            <button onClick={addGroup} disabled={!canGAdd}
+              className="w-full rounded-lg py-2 text-sm font-bold pressable"
+              style={{ background:canGAdd?"var(--accent-primary)":"var(--surface-1)",
+                color:canGAdd?"#000":"var(--text-muted)", border:"1px solid var(--border-subtle)" }}>
+              + Csoport hozzáadása
+            </button>
+          </>)}
         </div>
 
         {/* Lista */}
         <div className="flex-1 overflow-y-auto px-5 py-3 space-y-1.5">
-          {list.length === 0 && (
+          {list.length===0 && (
             <div className="py-6 text-center text-sm" style={{ color:"var(--text-muted)" }}>
               Még nincs hozzárendelés erre a napra
             </div>
@@ -122,7 +206,11 @@ function DayAssignModal({ date, members, programs, existing, onSave, onClose }: 
             <div key={i} className="flex items-center gap-3 rounded-xl px-3 py-2.5"
               style={{ background:"var(--surface-1)", border:"1px solid var(--border-subtle)" }}>
               <div className="flex-1 min-w-0">
-                <div className="text-sm font-semibold truncate" style={{ color:"var(--text-primary)" }}>{a.memberName}</div>
+                <div className="text-sm font-semibold truncate" style={{ color:"var(--text-primary)" }}>
+                  {a.memberName}
+                  {(() => { const m = members.find(x=>x.uid===a.memberUid); return m?.group ?
+                    <span className="ml-1.5 text-xs font-normal" style={{ color:"var(--text-muted)" }}>({m.group})</span> : null; })()}
+                </div>
                 <div className="text-xs truncate" style={{ color:"var(--text-muted)" }}>
                   {a.programName} · <span style={{ color:"var(--accent-primary)" }}>{a.sessionName}</span>
                 </div>
