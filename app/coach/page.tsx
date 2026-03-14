@@ -793,7 +793,7 @@ function PlansPage({ members, user }: { members: TeamMember[]; user: User | null
 
   const handleCreate = async (name: string, category: string, level: string) => {
     const result = await apiCall("POST", "/api/coach/programs", { name, category, sport: "gym", level });
-    if (result.id) router.push(`/programs/${result.id}`);
+    if (result.id) router.push(`/coach/programs/${result.id}`);
     else await loadPrograms();
   };
 
@@ -895,7 +895,7 @@ function PlansPage({ members, user }: { members: TeamMember[]; user: User | null
                     <ProgramCard key={p.id} p={p} members={members}
                       onAssign={() => setAssignTarget(p)}
                       onDelete={() => handleDelete(p.id)}
-                      onEdit={() => router.push(`/programs/${p.id}`)}
+                      onEdit={() => router.push(`/coach/programs/${p.id}`)}
                       deleting={deletingId === p.id} />
                   ))}
                 </div>
@@ -919,7 +919,7 @@ function PlansPage({ members, user }: { members: TeamMember[]; user: User | null
                 <ProgramCard key={p.id} p={p} members={members}
                   onAssign={() => setAssignTarget(p)}
                   onDelete={() => handleDelete(p.id)}
-                  onEdit={() => router.push(`/programs/${p.id}`)}
+                  onEdit={() => router.push(`/coach/programs/${p.id}`)}
                   deleting={deletingId === p.id} />
               ))}
             </div>
