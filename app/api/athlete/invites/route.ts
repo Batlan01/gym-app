@@ -23,7 +23,7 @@ export async function GET(req: Request) {
         { fieldFilter: { field: { fieldPath: "status" }, op: "EQUAL", value: { stringValue: "pending" } } },
       ]}},
       limit: 20,
-    }}},
+    }}),
   });
 
   const queryData = queryRes.ok ? await queryRes.json() : [];
