@@ -88,7 +88,7 @@ export function BottomNav() {
             backdropFilter: 'blur(20px)',
             WebkitBackdropFilter: 'blur(20px)',
             border:"1px solid var(--border-subtle)",
-            boxShadow: '0 -1px 0 0 rgba(255,255,255,0.04), 0 8px 32px rgba(0,0,0,0.5)',
+            boxShadow: '0 -1px 0 0 var(--border-subtle), 0 8px 32px rgba(0,0,0,0.4)',
           }}>
           <div className="flex items-center justify-between px-2 py-2">
             {items.map((it) => {
@@ -96,17 +96,17 @@ export function BottomNav() {
               return (
                 <Link key={it.href} href={it.href}
                   className="flex flex-1 flex-col items-center gap-1 rounded-xl px-1 py-2 transition-all duration-200"
-                  style={{ color: active ? 'var(--accent-primary)' : 'rgba(255,255,255,0.45)' }}>
+                  style={{ color: active ? 'var(--accent-primary)' : 'var(--text-muted)' }}>
                   <span className="relative flex items-center justify-center rounded-xl transition-all duration-200"
-                    style={{ background: active ? 'rgba(34,211,238,0.12)' : 'transparent', padding: '6px' }}>
+                    style={{ background: active ? 'var(--accent-primary-dim)' : 'transparent', padding: '6px' }}>
                     {it.icon(active)}
                     {active && (
                       <span className="absolute inset-0 rounded-xl"
-                        style={{ boxShadow: '0 0 12px 2px rgba(34,211,238,0.2)', pointerEvents: 'none' }} />
+                        style={{ boxShadow: '0 0 12px 2px var(--accent-primary-ring)', pointerEvents: 'none' }} />
                     )}
                   </span>
                   <span className="text-[10px] font-medium transition-all duration-200"
-                    style={{ color: active ? 'var(--accent-primary)' : 'rgba(255,255,255,0.35)', letterSpacing: active ? '0.02em' : '0' }}>
+                    style={{ color: active ? 'var(--accent-primary)' : 'var(--text-muted)', letterSpacing: active ? '0.02em' : '0' }}>
                     {it.label}
                   </span>
                 </Link>

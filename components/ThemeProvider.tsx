@@ -1,24 +1,61 @@
 "use client";
 
 import * as React from "react";
+import {
+  type ColorMode,
+  type ThemeId,
+  applyColorMode,
+  applyTheme,
+  loadSavedTheme,
+  getSavedColorMode,
+  getSavedThemeId,
+} from "@/lib/theme";
 
-type Theme = "dark" | "light";
-
-function applyTheme(theme: Theme) {
-  const root = document.documentElement;
-  if (theme === "dark") root.classList.add("dark");
-  else root.classList.remove("dark");
+interface ThemeCtx {
+  colorMode: ColorMode;
+  themeId: ThemeId;
+  setColorMode: (m: ColorMode) => void;
+  setTheme: (id: ThemeId, customHex?: string) => void;
 }
 
-export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  React.useEffect(() => {
-    const saved = (localStorage.getItem("theme") as Theme | null) ?? null;
-    const prefersDark =
-      window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+const ThemeContext = React.createContext<ThemeCtx>({
+  colorMode: "dark",
+  themeId: "cyan",
+  setColorMode: () => {},
+  setTheme: () => {},
+});
 
-    const initial: Theme = saved ?? (prefersDark ? "dark" : "light");
-    applyTheme(initial);
+export const useTheme = () => React.useContext(ThemeContext);
+
+export function ThemeProvider({ children }: { children: React.ReactNode }) {
+  const [colorMode, setColorModeState] = React.useState<ColorMode>("dark");
+  const [themeId, setThemeIdState] = React.useState<ThemeId>("cyan");
+
+  // Initial load
+  React.useEffect(() => {
+    loadSavedTheme();
+    setColorModeState(getSavedColorMode());
+    setThemeIdState(getSavedThemeId());
   }, []);
 
-  return <>{children}</>;
+  const setColorMode = React.useCallback((m: ColorMode) => {
+    applyColorMode(m);
+    setColorModeState(m);
+  }, []);
+
+  const setTheme = React.useCallback((id: ThemeId, customHex?: string) => {
+    applyTheme(id, customHex);
+    setThemeIdState(id);
+  }, []);
+
+  const value = React.useMemo(
+    () => ({ colorMode, themeId, setColorMode, setTheme }),
+    [colorMode, themeId, setColorMode, setTheme],
+  );
+
+  return (
+    <ThemeContext.Provider value={value}>
+      {children}
+    </ThemeContext.Provider>
+  );
 }

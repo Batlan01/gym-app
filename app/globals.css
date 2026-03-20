@@ -10,9 +10,13 @@
 :root {
   color-scheme: dark;
 
-  --accent-primary:      #22d3ee;
-  --accent-green:        #4ade80;
-  --accent-amber:        #fbbf24;
+  --accent-primary:        #22d3ee;
+  --accent-primary-dim:    rgba(34,211,238,0.12);
+  --accent-primary-border: rgba(34,211,238,0.25);
+  --accent-primary-ring:   rgba(34,211,238,0.35);
+  --accent-primary-solid:  rgba(34,211,238,0.90);
+  --accent-green:          #4ade80;
+  --accent-amber:          #fbbf24;
 
   --bg-base:             #080B0F;
   --bg-surface:          #0F1318;
@@ -22,7 +26,7 @@
 
   --border-subtle:       rgba(255,255,255,0.07);
   --border-mid:          rgba(255,255,255,0.12);
-  --border-accent:       rgba(34,211,238,0.3);
+  --border-accent:       var(--accent-primary-border);
 
   --text-primary:        #F0F4F8;
   --text-secondary:      rgba(240,244,248,0.6);
@@ -59,7 +63,7 @@
 
   --border-subtle:       rgba(0,0,0,0.08);
   --border-mid:          rgba(0,0,0,0.15);
-  --border-accent:       rgba(34,211,238,0.5);
+  --border-accent:       var(--accent-primary-border);
 
   --text-primary:        #0F172A;
   --text-secondary:      rgba(15,23,42,0.62);
@@ -162,8 +166,8 @@ main, nav, header, footer { position: relative; z-index: 1; }
   100% { transform: translateX(-25%) rotate(10deg); opacity: 0.10; }
 }
 @keyframes pulseGlow {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(34,211,238,0); }
-  50%       { box-shadow: 0 0 20px 4px rgba(34,211,238,0.15); }
+  0%, 100% { box-shadow: 0 0 0 0 var(--accent-primary-dim); }
+  50%       { box-shadow: 0 0 20px 4px var(--accent-primary-border); }
 }
 
 .animate-gymSweep  { animation: gymSweep  10s ease-in-out infinite; }

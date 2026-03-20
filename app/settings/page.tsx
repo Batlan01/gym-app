@@ -10,6 +10,7 @@ import { useLocalStorageState } from "@/lib/useLocalStorageState";
 import { auth } from "@/lib/firebase";
 import { onAuthStateChanged, linkWithPopup, GoogleAuthProvider, unlink, type User } from "firebase/auth";
 import { useTranslation } from "@/lib/i18n";
+import { ThemeCustomizer } from "@/components/ThemeCustomizer";
 import {
   LS_NOTIF_SETTINGS,
   DEFAULT_NOTIF_SETTINGS,
@@ -211,6 +212,9 @@ export default function SettingsPage() {
 
       <div className="space-y-4">
 
+        {/* MEGJELENÉS & SZÍN TÉMA */}
+        <ThemeCustomizer />
+
         {/* ÉRTESÍTÉSEK */}
         <Section title={t.settings.notif_section}>
           {!supported && (
@@ -330,9 +334,9 @@ export default function SettingsPage() {
                   style={{
                     background: testSent
                       ? "rgba(74,222,128,0.15)"
-                      : "rgba(34,211,238,0.08)",
+                      : "var(--accent-primary-dim)",
                     color: testSent ? "#4ade80" : "var(--accent-primary)",
-                    border: `1px solid ${testSent ? "rgba(74,222,128,0.3)" : "rgba(34,211,238,0.2)"}`,
+                    border: `1px solid ${testSent ? "rgba(74,222,128,0.3)" : "var(--accent-primary-border)"}`,
                   }}
                 >
                   {testSent ? t.settings.notif_sent : t.settings.notif_test}
