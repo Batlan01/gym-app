@@ -396,9 +396,9 @@ export default function ProfilePage() {
               {THEMES.map(th => (
                 <button key={th.id} onClick={() => { applyTheme(th.id); setSavedTheme(th.id); }}
                   className="flex flex-col items-center gap-1.5 rounded-2xl py-3 pressable"
-                  style={savedTheme===th.id ? { background: th.vars["--accent-primary"] } : { background:"var(--surface-1)" }}>
+                  style={savedTheme===th.id ? { background: th.hex } : { background:"var(--surface-1)" }}>
                   <div className="h-4 w-4 rounded-full"
-                    style={{ background: savedTheme===th.id ? "rgba(0,0,0,0.25)" : th.vars["--accent-primary"] }} />
+                    style={{ background: savedTheme===th.id ? "rgba(0,0,0,0.25)" : th.hex }} />
                   <div className="text-[9px] font-black"
                     style={{color: savedTheme===th.id ? "#000" : "rgba(255,255,255,0.35)"}}>{th.name}</div>
                 </button>
