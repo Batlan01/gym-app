@@ -35,8 +35,8 @@ export async function GET(req: Request) {
   if (!auth) return jsonError("Unauthorized", 401);
   const { uid, token } = auth;
 
-  // workouts/{uid}/sessions kollekcio
-  const res = await fetch(`${FS}/workouts/${uid}/sessions`, { headers: ah(token) });
+  // users/{uid}/workouts kollekcio
+  const res = await fetch(`${FS}/users/${uid}/workouts`, { headers: ah(token) });
   const data = res.ok ? await res.json() : {};
   const docs = data.documents ?? [];
 
@@ -53,7 +53,10 @@ export async function GET(req: Request) {
   const sessionDates = new Set(
     sessions
       .map((s: Record<string,unknown>) => {
+        // Web app: startedAt is ISO string, API-created: completedAt is timestamp
+        const startedAt = s.startedAt as string | undefined;
         const ts = s.completedAt ?? s.createdAt;
+        if (startedAt && typeof startedAt === 'string') return startedAt.slice(0, 10);
         if (!ts) return null;
         return new Date(Number(ts)).toISOString().slice(0, 10);
       })
@@ -76,19 +79,32 @@ export async function GET(req: Request) {
 
   // Edzések száma ebben a hónapban
   const workoutsThisMonth = sessions.filter((s: Record<string,unknown>) => {
+    const startedAt = s.startedAt as string | undefined;
     const ts = s.completedAt ?? s.createdAt;
-    if (!ts) return false;
-    return new Date(Number(ts)).toISOString().startsWith(monthStr);
+    const dateStr = startedAt && typeof startedAt === 'string' ? startedAt : (ts ? new Date(Number(ts)).toISOString() : '');
+    return dateStr.startsWith(monthStr);
   }).length;
 
   // Volume ebben a hónapban (kg)
   const volumeThisMonth = sessions
     .filter((s: Record<string,unknown>) => {
+      const startedAt = s.startedAt as string | undefined;
       const ts = s.completedAt ?? s.createdAt;
-      if (!ts) return false;
-      return new Date(Number(ts)).toISOString().startsWith(monthStr);
+      const dateStr = startedAt && typeof startedAt === 'string' ? startedAt : (ts ? new Date(Number(ts)).toISOString() : '');
+      return dateStr.startsWith(monthStr);
     })
-    .reduce((sum: number, s: Record<string,unknown>) => sum + (Number(s.totalVolume) || 0), 0);
+    .reduce((sum: number, s: Record<string,unknown>) => {
+      let vol = Number(s.totalVolume) || 0;
+      // Fallback: calculate from exercises if totalVolume not stored
+      if (!vol && Array.isArray(s.exercises)) {
+        for (const ex of s.exercises as any[]) {
+          for (const st of (ex?.sets ?? []) as any[]) {
+            vol += (Number(st?.weight) || 0) * (Number(st?.reps) || 0);
+          }
+        }
+      }
+      return sum + vol;
+    }, 0);
 
   // Heti edzések: utolsó 7 nap
   const weekWorkouts: { date: string; count: number }[] = [];
@@ -97,9 +113,10 @@ export async function GET(req: Request) {
     d.setDate(d.getDate() - i);
     const dateStr = d.toISOString().slice(0, 10);
     const count = sessions.filter((s: Record<string,unknown>) => {
+      const startedAt = s.startedAt as string | undefined;
       const ts = s.completedAt ?? s.createdAt;
-      if (!ts) return false;
-      return new Date(Number(ts)).toISOString().slice(0, 10) === dateStr;
+      const sDate = startedAt && typeof startedAt === 'string' ? startedAt.slice(0,10) : (ts ? new Date(Number(ts)).toISOString().slice(0, 10) : '');
+      return sDate === dateStr;
     }).length;
     weekWorkouts.push({ date: dateStr, count });
   }

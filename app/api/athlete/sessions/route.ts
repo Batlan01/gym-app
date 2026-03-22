@@ -35,7 +35,7 @@ export async function GET(req: Request) {
   if (!auth) return jsonError("Unauthorized", 401);
   const { uid, token } = auth;
 
-  const res = await fetch(`${FS}/workouts/${uid}/sessions`, { headers: ah(token) });
+  const res = await fetch(`${FS}/users/${uid}/workouts`, { headers: ah(token) });
   if (!res.ok) return Response.json({ sessions: [] });
   const data = await res.json();
   const docs = data.documents ?? [];
@@ -45,9 +45,11 @@ export async function GET(req: Request) {
       id: (d.name as string).split("/").pop()!,
       ...fromFs((d.fields ?? {}) as Record<string,unknown>),
     }))
-    .sort((a: Record<string,unknown>, b: Record<string,unknown>) =>
-      Number(b.completedAt ?? 0) - Number(a.completedAt ?? 0)
-    )
+    .sort((a: Record<string,unknown>, b: Record<string,unknown>) => {
+      const ta = a.startedAt ? new Date(String(a.startedAt)).getTime() : Number(b.completedAt ?? 0);
+      const tb = b.startedAt ? new Date(String(b.startedAt)).getTime() : Number(b.completedAt ?? 0);
+      return tb - ta;
+    })
     .slice(0, 20);
 
   return Response.json({ sessions });

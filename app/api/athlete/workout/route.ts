@@ -45,7 +45,7 @@ export async function POST(req: Request) {
   };
 
   const res = await fetch(
-    `${FS}/workouts/${userId}/sessions/${sessionId}`,
+    `${FS}/users/${userId}/workouts/${sessionId}`,
     { method: "PATCH", headers: ah(token), body: JSON.stringify({ fields }) }
   );
 
