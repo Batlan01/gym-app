@@ -9,7 +9,7 @@ function ah(token: string) {
 function toFs(val: unknown): unknown {
   if (val === null || val === undefined) return { nullValue: null };
   if (typeof val === "string")  return { stringValue: val };
-  if (typeof val === "number")  return { integerValue: String(val) };
+  if (typeof val === "number")  return Number.isInteger(val) ? { integerValue: String(val) } : { doubleValue: val };
   if (typeof val === "boolean") return { booleanValue: val };
   if (Array.isArray(val))       return { arrayValue: { values: val.map(toFs) } };
   if (typeof val === "object")  return { mapValue: { fields: Object.fromEntries(Object.entries(val as Record<string,unknown>).map(([k,v]) => [k, toFs(v)])) } };

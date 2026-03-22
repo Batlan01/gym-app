@@ -12,8 +12,10 @@ function fromFs(fields: Record<string,unknown>): Record<string,unknown> {
     const fv = v as Record<string,unknown>;
     if ("stringValue" in fv) out[k] = fv.stringValue;
     else if ("integerValue" in fv) out[k] = Number(fv.integerValue);
+    else if ("doubleValue" in fv) out[k] = Number(fv.doubleValue);
     else if ("booleanValue" in fv) out[k] = fv.booleanValue;
     else if ("nullValue" in fv) out[k] = null;
+    else if ("timestampValue" in fv) out[k] = fv.timestampValue;
     else if ("arrayValue" in fv) {
       const vals = ((fv.arrayValue as Record<string,unknown>)?.values as unknown[]) ?? [];
       out[k] = vals.map((x: unknown) => {
@@ -21,7 +23,10 @@ function fromFs(fields: Record<string,unknown>): Record<string,unknown> {
         if ("mapValue" in xf) return fromFs((xf.mapValue as Record<string,unknown>).fields as Record<string,unknown>);
         if ("stringValue" in xf) return xf.stringValue;
         if ("integerValue" in xf) return Number(xf.integerValue);
+        if ("doubleValue" in xf) return Number(xf.doubleValue);
         if ("booleanValue" in xf) return xf.booleanValue;
+        if ("nullValue" in xf) return null;
+        if ("timestampValue" in xf) return xf.timestampValue;
         return null;
       });
     } else if ("mapValue" in fv) out[k] = fromFs((fv.mapValue as Record<string,unknown>).fields as Record<string,unknown>);
