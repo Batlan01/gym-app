@@ -43,8 +43,10 @@ export async function GET(req: Request) {
 
   // users/{uid}/workouts kollekcio
   const res = await fetch(`${FS}/users/${uid}/workouts`, { headers: ah(token) });
+  console.log(`[dashboard] uid=${uid} firestore_status=${res.status}`);
   const data = res.ok ? await res.json() : {};
   const docs = data.documents ?? [];
+  console.log(`[dashboard] docs_found=${docs.length}`);
 
   const sessions = docs.map((d: Record<string,unknown>) => ({
     id: (d.name as string).split("/").pop()!,

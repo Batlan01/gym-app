@@ -41,9 +41,15 @@ export async function GET(req: Request) {
   const { uid, token } = auth;
 
   const res = await fetch(`${FS}/users/${uid}/workouts`, { headers: ah(token) });
-  if (!res.ok) return Response.json({ sessions: [] });
+  console.log(`[sessions] uid=${uid} firestore_status=${res.status}`);
+  if (!res.ok) {
+    const errText = await res.text();
+    console.log(`[sessions] firestore_error: ${errText.slice(0, 500)}`);
+    return Response.json({ sessions: [] });
+  }
   const data = await res.json();
   const docs = data.documents ?? [];
+  console.log(`[sessions] docs_found=${docs.length} first_doc_fields=${docs[0]?.fields ? Object.keys(docs[0].fields).join(',') : 'none'}`);
 
   const sessions = docs
     .map((d: Record<string,unknown>) => ({
