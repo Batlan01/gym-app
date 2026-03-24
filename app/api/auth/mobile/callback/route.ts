@@ -53,6 +53,7 @@ export async function GET(req: NextRequest) {
   // 3. Deep link visszairanyitas a mobilra a tokenekkel
   const params = new URLSearchParams({
     idToken: firebaseData.idToken,
+    refreshToken: firebaseData.refreshToken ?? '',
     uid: firebaseData.localId,
     email: firebaseData.email ?? '',
     displayName: firebaseData.displayName ?? '',
